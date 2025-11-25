@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Python IDE v11 - Cloud Enterprise</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/eclipse.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/python-hint.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #0F1115;
+            --text-color: #e0e0e0;
+            --panel-bg: #1e1e1e;
+            --border-color: #2b2b2b;
+            --accent-color: #2196F3;
+            --output-bg: #181818;
+            
+            /* Glass Variables */
+            --glass-bg: rgba(20, 20, 20, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            --glass-blur: 20px;
+            
+            --modal-bg: #222;
+            --input-field-bg: #333;
+            
+            --btn-hover: rgba(255, 255, 255, 0.1);
+            --run-color: #2196F3;
+            --run-glow: rgba(33, 150, 243, 0.6);
+
+            --hint-bg: #252526;
+            --hint-text: #e0e0e0;
+            --hint-select-bg: #0e639c;
+            --hint-select-text: #ffffff;
+        }
+
+        body.light-mode {
+            --bg-color: #f5f5f7;
+            --text-color: #333333;
+            --panel-bg: #ffffff;
+            --border-color: #d1d1d1;
+            --output-bg: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(0, 0, 0, 0.05);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+            --modal-bg: #ffffff;
+            --input-field-bg: #e6e6e6;
+            --btn-hover: rgba(0, 0, 0, 0.05);
+            --run-color: #1976D2;
+            --run-glow: rgba(25, 118, 210, 0.4);
+
+            --hint-bg: #f3f3f3;
+            --hint-text: #333333;
+            --hint-select-bg: #b4d7ff;
+            --hint-select-text: #000000;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+            transition: background 0.3s ease;
+        }
+
+        /* --- AUTOCOMPLETE --- */
+        .CodeMirror-hints {
+            position: absolute; z-index: 100000; overflow: hidden; list-style: none; margin: 0; padding: 2px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.4); border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--hint-bg); font-family: 'JetBrains Mono', monospace; font-size: 13px; max-height: 200px; overflow-y: auto;
+        }
+        .CodeMirror-hint { margin: 0; padding: 4px 8px; border-radius: 3px; white-space: pre; color: var(--hint-text); cursor: pointer; }
+        li.CodeMirror-hint-active { background: var(--hint-select-bg); color: var(--hint-select-text); }
+
+        /* --- HEADER --- */
+        .header-wrapper {
+            position: fixed; top: 25px; left: 0; width: 100%;
+            display: flex; justify-content: space-between; padding: 0 40px;
+            z-index: 1000; pointer-events: none;
+        }
+
+        .glass-bubble {
+            pointer-events: auto; background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); border-radius: 100px; padding: 6px 10px;
+            display: flex; align-items: center; gap: 10px; transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .glass-bubble:hover { transform: translateY(-2px); box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.6); }
+
+        .app-title { font-weight: 700; font-size: 14px; padding-left: 15px; padding-right: 10px; letter-spacing: 0.5px; color: var(--text-color); display: flex; align-items: center; gap: 8px; }
+        .vertical-divider { width: 1px; height: 24px; background-color: var(--border-color); margin: 0 5px; }
+
+        button.icon-btn { background: transparent; border: none; color: var(--text-color); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; position: relative;}
+        button.icon-btn:hover { background: var(--btn-hover); transform: scale(1.1); }
+
+        button.run-btn { background: var(--run-color); color: white; border: none; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-right: 2px; box-shadow: 0 4px 15px var(--run-glow); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        button.run-btn:hover { transform: scale(1.15); box-shadow: 0 6px 25px var(--run-glow); }
+
+        /* --- CLOUD DROPDOWN MENU --- */
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content {
+            display: none; position: absolute; right: 0; top: 50px;
+            background-color: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
+            min-width: 160px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5);
+            border-radius: 12px; border: 1px solid var(--glass-border);
+            z-index: 2000; overflow: hidden;
+            animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* HOVER MECHANIZMUS: Ha a gomb VAGY a menü fölött van az egér, maradjon nyitva */
+        .dropdown:hover .dropdown-content { display: block; }
+        
+        .dropdown-content a {
+            color: var(--text-color); padding: 12px 16px; text-decoration: none;
+            display: flex; align-items: center; gap: 10px; font-size: 13px;
+            transition: background 0.2s; cursor: pointer;
+        }
+        .dropdown-content a:hover { background-color: var(--accent-color); color: white; }
+
+        /* --- AUTH LOGIN OVERLAY --- */
+        #auth-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); backdrop-filter: blur(10px);
+            z-index: 99999; display: flex; justify-content: center; align-items: center;
+        }
+        .auth-box {
+            background: var(--panel-bg); width: 350px; padding: 30px;
+            border-radius: 20px; border: 1px solid var(--border-color);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5); text-align: center;
+        }
+        .auth-tabs { display: flex; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); }
+        .auth-tab { flex: 1; padding: 10px; cursor: pointer; color: #888; border-bottom: 2px solid transparent; }
+        .auth-tab.active { color: var(--accent-color); border-bottom: 2px solid var(--accent-color); font-weight: bold; }
+        .auth-form input {
+            width: 100%; padding: 12px; margin-bottom: 15px;
+            background: var(--input-field-bg); border: 1px solid var(--border-color);
+            color: var(--text-color); border-radius: 8px; outline: none;
+        }
+        .auth-btn {
+            width: 100%; padding: 12px; background: var(--accent-color);
+            color: white; border: none; border-radius: 8px; cursor: pointer;
+            font-weight: bold; font-size: 14px;
+        }
+        .auth-btn:hover { opacity: 0.9; }
+
+        /* --- LAYOUT --- */
+        .main-container { display: flex; height: 100vh; width: 100%; }
+        .editor-container { flex: 6; display: flex; flex-direction: column; border-right: 1px solid var(--border-color); background: transparent; }
+        .CodeMirror { flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 14px; background: transparent !important; height: 100%; }
+        .CodeMirror-gutters { background: var(--bg-color) !important; border-right: 1px solid var(--border-color); }
+        .CodeMirror-scroll { padding-top: 100px; padding-bottom: 50px; }
+        .side-panel { flex: 4; display: flex; flex-direction: column; background-color: var(--bg-color); min-width: 300px; padding-top: 100px; }
+        .panel-header { padding: 8px 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; opacity: 0.6; margin-bottom: 5px; }
+        .terminal-wrapper { flex: 1; display: flex; flex-direction: column; background-color: var(--output-bg); border-radius: 16px; margin: 0 20px 20px 20px; overflow: hidden; border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        #output { flex: 1; padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; white-space: pre-wrap; overflow-y: auto; color: var(--text-color); }
+        #gemini-response { height: 35%; margin: 0 20px 20px 20px; background-color: var(--output-bg); border-radius: 16px; border: 1px solid var(--border-color); padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; overflow-y: auto; }
+
+        /* UI Elements */
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-color); z-index: 9998; display: none; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s ease; }
+        .gear { width: 60px; height: 60px; fill: var(--accent-color); animation: spin 2s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        #terminal-input-bar { display: none; background: var(--panel-bg); padding: 12px; border-top: 1px solid var(--border-color); align-items: center; gap: 10px; }
+        #terminal-input-bar.visible { display: flex; }
+        #term-input { flex: 1; background: transparent; border: none; color: var(--text-color); outline: none; font-family: 'JetBrains Mono'; font-size: 13px;}
+        
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10001; backdrop-filter: blur(8px); justify-content: center; align-items: center; }
+        .modal { background: var(--modal-bg); width: 400px; padding: 25px; border-radius: 24px; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .modal button { background: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; float: right; margin-top: 15px; font-weight: 600; }
+        
+        .user-input { color: var(--run-color); font-weight: bold; }
+        .error { color: #ff5555; }
+        .success { color: #50fa7b; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-overlay">
+        <div class="auth-box">
+            <h2 style="color:white; margin-top:0;">Pro Python IDE</h2>
+            <div class="auth-tabs">
+                <div class="auth-tab active" onclick="switchTab('login')">Bejelentkezés</div>
+                <div class="auth-tab" onclick="switchTab('register')">Regisztráció</div>
+            </div>
+
+            <div id="login-form" class="auth-form">
+                <input type="text" id="login-username" placeholder="Felhasználónév">
+                <button class="auth-btn" onclick="handleLogin()">Belépés</button>
+            </div>
+
+            <div id="register-form" class="auth-form" style="display:none;">
+                <input type="text" id="reg-username" placeholder="Új Felhasználónév">
+                <input type="password" id="reg-key" placeholder="Mester Kulcs (Authenticator)">
+                <button class="auth-btn" onclick="handleRegister()">Regisztráció</button>
+            </div>
+            
+            <div id="auth-message" style="margin-top:15px; color: #ff5555; font-size:13px; min-height:20px;"></div>
+        </div>
+    </div>
+
+    <div id="loading-overlay">
+        <svg class="gear" viewBox="0 0 512 512"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>
+        <div style="margin-top:20px; color:#666">Művelet folyamatban...</div>
+    </div>
+
+    <div class="header-wrapper">
+        <div class="glass-bubble left-bubble">
+            <div class="app-title"><span style="font-size: 18px;">🐍</span>Pro Python IDE</div>
+            <div class="vertical-divider"></div>
+            <button class="run-btn" onclick="runPython()" title="Futtatás (Ctrl+Enter)"><span class="material-icons">play_arrow</span></button>
+        </div>
+
+        <div class="glass-bubble right-bubble">
+            <span id="user-display" style="font-size:12px; opacity:0.7; margin-right:5px;">Vendég</span>
+            
+            <div class="dropdown">
+                <button class="icon-btn" title="Felhő Mentés/Betöltés">
+                    <span class="material-icons">cloud_queue</span>
+                </button>
+                <div class="dropdown-content">
+                    <a onclick="handleDriveSave()"><span class="material-icons">save</span> Mentés Drive-ra</a>
+                    <a onclick="handleDriveLoad()"><span class="material-icons">folder_open</span> Betöltés</a>
+                </div>
+            </div>
+
+            <button class="icon-btn" onclick="askGemini()" title="Gemini AI"><span class="material-icons">auto_awesome</span></button>
+            <button class="icon-btn" onclick="toggleTheme()" title="Téma"><span class="material-icons">dark_mode</span></button>
+            <button class="icon-btn" onclick="downloadCode()" title="Letöltés (.txt)"><span class="material-icons">download</span></button>
+            <button class="icon-btn" onclick="openSettings()" title="Beállítások"><span class="material-icons">settings</span></button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="editor-container">
+            <textarea id="code-editor">
+# Pro Python IDE v11 ☁️
+# Cloud Enterprise Edition
+# Jelentkezz be, és használd a felhő ikont a mentéshez!
+
+def udvozles():
+    print("Google Drive Integráció aktív.")
+    for i in range(5):
+        print(f"Rendszer ellenőrzés... {i+1}")
+
+udvozles()
+            </textarea>
+        </div>
+
+        <div class="side-panel">
+            <div class="panel-header">TERMINAL</div>
+            <div class="terminal-wrapper">
+                <div id="output">Konzol kész. Jelentkezz be a használathoz.</div>
+                <div id="terminal-input-bar">
+                    <span style="color:var(--run-color); font-weight:bold;">></span>
+                    <input type="text" id="term-input" autocomplete="off">
+                </div>
+            </div>
+            <div class="panel-header">AI ASSZISZTENS</div>
+            <div id="gemini-response">Kattints a csillag ikonra a segítséghez.</div>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal">
+            <h3 style="margin-top:0; color:var(--text-color)">Beállítások</h3>
+            <div style="margin-bottom:15px">
+                <label style="display:block; margin-bottom:8px; font-size:13px; color:var(--text-color)">Gemini API Kulcs</label>
+                <input type="password" id="apiKeyInput" placeholder="Illeszd be a kulcsot..." style="width:100%; padding:12px; background:var(--input-field-bg); border:1px solid var(--border-color); color:var(--text-color); border-radius:8px;">
+            </div>
+            <button onclick="saveSettings()">Mentés</button>
+            <button onclick="closeSettings()" style="background:transparent; margin-right:10px; color:var(--text-color)">Mégse</button>
+        </div>
+    </div>
+
+    <div id="loadModal" class="modal-overlay">
+        <div class="modal">
+            <h3 style="margin-top:0; color:var(--text-color)">Fájl Betöltése</h3>
+            <div id="file-list" style="max-height:200px; overflow-y:auto; margin-bottom:15px; border:1px solid var(--border-color); border-radius:8px; padding:5px;">
+                </div>
+            <button onclick="document.getElementById('loadModal').style.display='none'" style="background:transparent; color:var(--text-color)">Mégse</button>
+        </div>
+    </div>
+
+    <script>
+        // --- KONFIGURÁCIÓ (Ezt kell kitöltened!) ---
+        // A Google Cloud Console-ban hozz létre egy projektet, és engedélyezd a Drive API-t.
+        // Hozz létre OAuth Client ID-t és API Key-t.
+        const CLIENT_ID = '138100233309-v575n23j2b6pdek9t9clvkg3immlkrdi.apps.googleusercontent.com'; 
+        const API_KEY = 'AIzaSyAfC2viqoOsVVjcShnqY2rrRsxdV7WHMEg'; 
+        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
+        // Mester Kulcs a regisztrációhoz (Google Authenticator helyett most fix kód a demóhoz)
+        // Biztonságosabb környezetben ezt szerver oldalon kellene ellenőrizni.
+        const MASTER_KEY = "Jaky10c"; 
+
+        // --- AUTH LOGIKA ---
+        let currentUser = null;
+        let tokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+
+        function switchTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            if(tab === 'login') {
+                document.querySelector('.auth-tab:first-child').classList.add('active');
+                document.getElementById('login-form').style.display = 'block';
+                document.getElementById('register-form').style.display = 'none';
+            } else {
+                document.querySelector('.auth-tab:last-child').classList.add('active');
+                document.getElementById('login-form').style.display = 'none';
+                document.getElementById('register-form').style.display = 'block';
+            }
+            document.getElementById('auth-message').innerText = "";
+        }
+
+        function handleLogin() {
+            const user = document.getElementById('login-username').value;
+            if(!user) return;
+            // Demó: ellenőrizzük, hogy létezik-e (localStorage)
+            if(localStorage.getItem('user_' + user)) {
+                completeAuth(user);
+            } else {
+                document.getElementById('auth-message').innerText = "Nincs ilyen felhasználó!";
+            }
+        }
+
+        function handleRegister() {
+            const user = document.getElementById('reg-username').value;
+            const key = document.getElementById('reg-key').value;
+            
+            if(!user || !key) {
+                document.getElementById('auth-message').innerText = "Tölts ki minden mezőt!";
+                return;
+            }
+
+            if(key === MASTER_KEY) {
+                if(localStorage.getItem('user_' + user)) {
+                    document.getElementById('auth-message').innerText = "A felhasználó már létezik!";
+                } else {
+                    localStorage.setItem('user_' + user, 'active');
+                    completeAuth(user);
+                }
+            } else {
+                document.getElementById('auth-message').innerText = "Hibás Mester Kulcs!";
+            }
+        }
+
+        function completeAuth(user) {
+            currentUser = user;
+            document.getElementById('auth-overlay').style.display = 'none';
+            document.getElementById('user-display').innerText = user;
+            addToOutput(`Bejelentkezve mint: ${user}\nGoogle Drive kapcsolat előkészítése...`);
+            
+            // Google Auth indítása (ha még nincs belépve)
+            if(gapiInited && gisInited) {
+                tokenClient.callback = async (resp) => {
+                    if (resp.error !== undefined) throw (resp);
+                    addToOutput("Google Fiók sikeresen csatlakoztatva!\n");
+                    await ensureUserFolder();
+                };
+                // Kérjünk engedélyt, ha még nincs
+                if (gapi.client.getToken() === null) {
+                    tokenClient.requestAccessToken({prompt: 'consent'});
+                } else {
+                    ensureUserFolder();
+                }
+            }
+        }
+
+        // --- GOOGLE API LOADERS ---
+        function gapiLoaded() {
+            gapi.load('client', async () => {
+                await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC], });
+                gapiInited = true;
+            });
+        }
+        function gisLoaded() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID, scope: SCOPES, callback: '', // Callback defined later
+            });
+            gisInited = true;
+        }
+
+        // --- DRIVE LOGIKA ---
+        let userFolderId = null;
+
+        async function ensureUserFolder() {
+            showLoading(true);
+            try {
+                const folderName = `ProPythonIDE_${currentUser}`;
+                // Keresés
+                const response = await gapi.client.drive.files.list({
+                    q: `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`,
+                    fields: 'files(id, name)',
+                });
+
+                if (response.result.files && response.result.files.length > 0) {
+                    userFolderId = response.result.files[0].id;
+                    addToOutput(`Mappa megtalálva: ${folderName}`);
+                } else {
+                    // Létrehozás
+                    const fileMetadata = {
+                        'name': folderName,
+                        'mimeType': 'application/vnd.google-apps.folder'
+                    };
+                    const createRes = await gapi.client.drive.files.create({
+                        resource: fileMetadata, fields: 'id'
+                    });
+                    userFolderId = createRes.result.id;
+                    addToOutput(`Új mappa létrehozva: ${folderName}`);
+                }
+            } catch (err) {
+                addToOutput(`Hiba a Drive eléréskor: ${err.message}`, "error");
+            }
+            showLoading(false);
+        }
+
+        async function handleDriveSave() {
+            if(!userFolderId) { alert("Nincs csatlakoztatva Google Drive, vagy nincs mappa!"); return; }
+            showLoading(true);
+            const content = editor.getValue();
+            const filename = `${currentUser}_${new Date().toISOString().slice(0,10)}.py`;
+            
+            const file = new Blob([content], {type: 'text/plain'});
+            const metadata = {
+                'name': filename,
+                'mimeType': 'text/plain',
+                'parents': [userFolderId]
+            };
+
+            const accessToken = gapi.client.getToken().access_token;
+            const form = new FormData();
+            form.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
+            form.append('file', file);
+
+            fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                method: 'POST',
+                headers: new Headers({'Authorization': 'Bearer ' + accessToken}),
+                body: form
+            }).then(res => res.json()).then(val => {
+                addToOutput(`Sikeres mentés: ${filename}`, "success");
+                showLoading(false);
+            }).catch(err => {
+                addToOutput("Mentési hiba!", "error");
+                showLoading(false);
+            });
+        }
+
+        async function handleDriveLoad() {
+            if(!userFolderId) return;
+            showLoading(true);
+            
+            const response = await gapi.client.drive.files.list({
+                q: `'${userFolderId}' in parents and trashed=false`,
+                fields: 'files(id, name)',
+            });
+            
+            const files = response.result.files;
+            const listDiv = document.getElementById('file-list');
+            listDiv.innerHTML = "";
+            
+            if (files && files.length > 0) {
+                files.forEach(file => {
+                    const div = document.createElement('div');
+                    div.style.padding = "8px";
+                    div.style.cursor = "pointer";
+                    div.style.borderBottom = "1px solid #444";
+                    div.innerText = file.name;
+                    div.onclick = () => loadFileContent(file.id);
+                    div.onmouseover = () => div.style.background = "#444";
+                    div.onmouseout = () => div.style.background = "transparent";
+                    listDiv.appendChild(div);
+                });
+                document.getElementById('loadModal').style.display = 'flex';
+            } else {
+                alert("Nincs fájl a mappában.");
+            }
+            showLoading(false);
+        }
+
+        async function loadFileContent(fileId) {
+            document.getElementById('loadModal').style.display = 'none';
+            showLoading(true);
+            try {
+                const response = await gapi.client.drive.files.get({
+                    fileId: fileId,
+                    alt: 'media'
+                });
+                editor.setValue(response.body);
+                addToOutput("Fájl betöltve.", "success");
+            } catch(e) {
+                addToOutput("Hiba betöltéskor.", "error");
+            }
+            showLoading(false);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
+        }
+
+
+        // --- EREDETI FUNKCIÓK (EDITOR, PYODIDE, STB) ---
+        let editor = CodeMirror.fromTextArea(document.getElementById("code-editor"), {
+            mode: {name: "python", version: 3}, theme: "dracula",
+            lineNumbers: true, indentUnit: 4, smartIndent: true, matchBrackets: true, autoCloseBrackets: true,
+            extraKeys: { "Ctrl-Space": "autocomplete", "Ctrl-Enter": function() { runPython(); } },
+            hintOptions: { completeSingle: false }
+        });
+
+        editor.on("keyup", function (cm, event) {
+            const excludedKeys = [8, 9, 13, 27, 37, 38, 39, 40, 46]; 
+            if (!excludedKeys.includes(event.keyCode) && !cm.state.completionActive) {
+                if ((event.keyCode >= 65 && event.keyCode <= 90) || event.keyCode === 190) { 
+                    CodeMirror.commands.autocomplete(cm, null, {completeSingle: false});
+                }
+            }
+        });
+
+        let pyodide = null; let pyodideReady = false; let inputResolver = null;
+        const outputElement = document.getElementById("output");
+
+        async function initPyodide() {
+            try {
+                pyodide = await loadPyodide();
+                
+                // JAVÍTÁS: Szépen formázott Python kód, nem egy sorba sűrítve
+                await pyodide.runPythonAsync(`
+                    import js
+                    import asyncio
+                    import sys
+                    
+                    async def custom_input(p=""):
+                        if p:
+                            print(p, end="")
+                            sys.stdout.flush()
+                        
+                        # Várakozás a JavaScript válaszára
+                        val = await js.waitForInput()
+                        return str(val)
+                `);
+
+                pyodideReady = true;
+                // Ha van loader (pl. V11-ben nincs mindig látható loader, de a kód hivatkozik rá)
+                if(document.getElementById("loading-overlay")) {
+                     document.getElementById("loading-overlay").style.display = "none";
+                }
+                addToOutput("Rendszer kész.", "success");
+                
+            } catch (e) { 
+                console.error(e);
+                // Ha esetleg a loader hiba miatt nem tűnne el:
+                if(document.getElementById("loading-overlay")) {
+                     document.getElementById("loading-overlay").innerHTML = `<div style="color:red">Hiba: ${e}</div>`;
+                }
+            }
+        }
+        initPyodide();
+
+        const inputBar = document.getElementById("terminal-input-bar");
+        const inputField = document.getElementById("term-input");
+        window.waitForInput = () => new Promise(resolve => { inputResolver = resolve; inputBar.style.display = "flex"; inputField.value = ""; inputField.focus(); });
+        inputField.addEventListener("keydown", (e) => { e.stopPropagation(); if (e.key === "Enter" && inputResolver) { const val = inputField.value; inputBar.style.display = "none"; addToOutput(val + "\n", "user-input"); inputResolver(val); inputResolver = null; editor.focus(); } });
+
+        function addToOutput(text, cls="") {
+            const s = document.createElement("span"); s.textContent = text; if(cls) s.className = cls;
+            outputElement.appendChild(s); outputElement.scrollTop = outputElement.scrollHeight;
+        }
+
+        async function runPython() {
+            if(!pyodideReady) return; outputElement.textContent = "";
+            let code = editor.getValue().replace(/\binput\s*\(/g, "await custom_input(");
+            try {
+                pyodide.setStdout({ batched: (m) => addToOutput(m) }); pyodide.setStderr({ batched: (m) => addToOutput(m) });
+                await pyodide.runPythonAsync(`import asyncio\nasync def w():\n try:\n${code.split('\n').map(l => '        ' + l).join('\n')}\n except Exception as e: print(e)\nawait w()`);
+            } catch(e) { addToOutput(e, "error"); }
+        }
+
+        function downloadCode() {
+            let code = editor.getValue(); let filename = prompt("Fájlnév?", "program");
+            if (filename) {
+                if (!filename.endsWith(".txt")) filename += ".txt";
+                const blob = new Blob([code], { type: 'text/plain' });
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            }
+        }
+
+        const storedKey = localStorage.getItem("gemini_api_key");
+        if(storedKey) document.getElementById("apiKeyInput").value = storedKey;
+        function openSettings() { document.getElementById("settingsModal").style.display = "flex"; }
+        function closeSettings() { document.getElementById("settingsModal").style.display = "none"; }
+        function saveSettings() { localStorage.setItem("gemini_api_key", document.getElementById("apiKeyInput").value); closeSettings(); }
+        async function askGemini() {
+            const key = localStorage.getItem("gemini_api_key"); if(!key) { openSettings(); return; }
+            const div = document.getElementById("gemini-response"); div.innerHTML = "Elemzés...";
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${key}`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({contents:[{parts:[{text:"Elemezd:\n"+editor.getValue()}]}]}) });
+                const d = await res.json(); div.innerHTML = d.candidates[0].content.parts[0].text.replace(/\*\*(.*?)\*\*/g,"<b>$1</b>").replace(/\n/g,"<br>");
+            } catch(e) { div.innerHTML = "Hiba történt."; }
+        }
+
+        let isDark=true;
+        function toggleTheme() { isDark = !isDark; document.body.className = isDark ? "" : "light-mode"; editor.setOption("theme", isDark ? "dracula" : "eclipse"); }
+    </script>
+</body>
+</html>
