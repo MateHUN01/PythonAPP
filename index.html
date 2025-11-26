@@ -147,7 +147,7 @@
         .dropdown-content a:hover { background-color: var(--accent-color); color: white; }
 
         /* --- TEAMWORK DROPDOWN STYLE --- */
-        .teamwork-dropdown { padding: 15px; display: flex; flex-direction: column; gap: 10px; min-width: 180px; }
+        .teamwork-dropdown { padding: 15px; display: flex; flex-direction: column; gap: 10px; min-width: 200px; }
         .tw-create-btn {
             background-color: white; color: black; border: none; 
             padding: 8px; border-radius: 20px; font-weight: 600; cursor: pointer;
@@ -162,10 +162,13 @@
         }
         .tw-input::placeholder { color: rgba(255,255,255,0.5); }
         
-        /* Aktív kód kijelzése a menüben */
-        #active-session-display {
-            display: none; font-size: 11px; text-align: center; color: var(--run-color); border-top: 1px solid var(--border-color); padding-top: 8px;
-        }
+        /* Teamwork Vezérlőpult */
+        #teamwork-controls { display: none; flex-direction: row; justify-content: space-between; gap: 5px; border-top: 1px solid var(--border-color); padding-top: 10px; }
+        .tw-ctrl-btn { background: transparent; border: 1px solid var(--border-color); color: var(--text-color); border-radius: 8px; padding: 5px; cursor: pointer; flex: 1; display: flex; justify-content: center; align-items: center; transition: all 0.2s; }
+        .tw-ctrl-btn:hover { background: var(--btn-hover); }
+        .tw-ctrl-btn.active { background: var(--accent-color); color: white; border-color: var(--accent-color); }
+
+        #active-session-display { display: none; font-size: 11px; text-align: center; color: var(--run-color); border-top: 1px solid var(--border-color); padding-top: 8px; }
 
         /* --- LAYOUT --- */
         .main-container { display: flex; height: 100vh; width: 100%; }
@@ -264,6 +267,12 @@
                     <button class="tw-create-btn" onclick="createTeamworkSession()">Létrehoz</button>
                     <input type="text" class="tw-input" id="teamwork-code-input" placeholder="Code ..." onkeydown="if(event.key==='Enter') joinTeamworkSession(this.value)">
                     <div id="active-session-display"></div>
+                    
+                    <div id="teamwork-controls">
+                        <button class="tw-ctrl-btn" onclick="setTeamworkMode('pause')" title="Szünet"><span class="material-icons">pause</span></button>
+                        <button class="tw-ctrl-btn active" onclick="setTeamworkMode('play')" title="Indítás"><span class="material-icons">play_arrow</span></button>
+                        <button class="tw-ctrl-btn" onclick="setTeamworkMode('read')" title="Csak Olvasás"><span class="material-icons">visibility</span></button>
+                    </div>
                 </div>
             </div>
 
@@ -412,15 +421,22 @@ print("Hello WRLD")
             }
         }
 
-        // --- TEAMWORK LOGIC (OPTIMIZED FOR NO LAG) ---
+        // --- TEAMWORK LOGIC (NO-LAG + USER TRACKING) ---
         let teamworkActive = false;
         let teamworkCode = null;
         let teamworkFileId = null;
+        let teamworkUsersFileId = null;
         let syncInterval = null;
+        let userCheckInterval = null;
+        let knownUsers = new Set();
+        
+        // Állapotok: 'play' (szinkronizál), 'pause' (leáll), 'read' (csak olvas)
+        let teamworkMode = 'play'; 
+        
+        // Gépelés érzékelés a laggolás ellen
         let isUserTyping = false;
         let typingTimeout = null;
 
-        // Kód generálás: 4 karakter (A-Z, 0-9)
         function generateRandomCode() {
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
             let result = '';
@@ -430,19 +446,31 @@ print("Hello WRLD")
             return result;
         }
 
-        // Mappa létrehozása vagy keresése
+        function setTeamworkMode(mode) {
+            teamworkMode = mode;
+            // Gombok frissítése
+            const btns = document.querySelectorAll('.tw-ctrl-btn');
+            btns.forEach(b => b.classList.remove('active'));
+            if(mode === 'pause') btns[0].classList.add('active');
+            if(mode === 'play') btns[1].classList.add('active');
+            if(mode === 'read') btns[2].classList.add('active');
+            
+            // Szerkesztő tiltása ha 'read' mód van
+            editor.setOption('readOnly', mode === 'read');
+            
+            logSystem(`Munkamenet mód: ${mode.toUpperCase()}`);
+        }
+
         async function findOrCreateFolder(folderName) {
-            if(!gapi.client.getToken()) { alert("Teamworkhöz jelentkezz be a Drive-on!"); return null; }
+            if(!gapi.client.getToken()) { alert("Jelentkezz be a Drive-on!"); return null; }
             const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
             const response = await gapi.client.drive.files.list({q: q, fields: 'files(id)'});
             if (response.result.files.length > 0) return response.result.files[0].id;
-            
             const meta = { 'name': folderName, 'mimeType': 'application/vnd.google-apps.folder' };
             const res = await gapi.client.drive.files.create({ resource: meta, fields: 'id' });
             return res.result.id;
         }
 
-        // Fájl keresése mappában
         async function findFileInFolder(folderId, fileName) {
             const q = `'${folderId}' in parents and name='${fileName}' and trashed=false`;
             const response = await gapi.client.drive.files.list({q: q, fields: 'files(id)'});
@@ -450,13 +478,35 @@ print("Hello WRLD")
             return null;
         }
 
-        function updateTeamworkUI(code) {
-            // Kijelzés a menüben
-            const display = document.getElementById('active-session-display');
-            display.style.display = 'block';
-            display.innerText = `SESSION: ${code}`;
-            // Kijelzés a terminálban
-            addToOutput(`TEAMWORK CODE: ${code}`, "teamwork-msg");
+        // Új user regisztrálása a users.json-be
+        async function registerUserInSession(folderId) {
+            const fileName = 'users.json';
+            let fileId = await findFileInFolder(folderId, fileName);
+            let users = [];
+
+            if (fileId) {
+                // Letöltjük a meglévő listát
+                const res = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
+                try { users = JSON.parse(res.body); } catch(e) { users = []; }
+                teamworkUsersFileId = fileId;
+            } else {
+                // Létrehozzuk
+                const meta = { 'name': fileName, 'mimeType': 'application/json', 'parents': [folderId] };
+                const res = await gapi.client.drive.files.create({ resource: meta, fields: 'id' });
+                teamworkUsersFileId = res.result.id;
+            }
+
+            // Hozzáadjuk magunkat ha nem vagyunk benne
+            if (!users.includes(currentUser)) {
+                users.push(currentUser);
+                await fetch(`https://www.googleapis.com/upload/drive/v3/files/${teamworkUsersFileId}?uploadType=media`, {
+                    method: 'PATCH',
+                    headers: new Headers({ 'Authorization': 'Bearer ' + gapi.client.getToken().access_token, 'Content-Type': 'application/json' }),
+                    body: JSON.stringify(users)
+                });
+            }
+            // Ismert userek feltöltése, hogy ne jelezze ki azokat akik már ott voltak
+            users.forEach(u => knownUsers.add(u));
         }
 
         async function createTeamworkSession() {
@@ -468,8 +518,7 @@ print("Hello WRLD")
             
             try {
                 const folderId = await findOrCreateFolder(folderName);
-                if(!folderId) throw new Error("Nem sikerült mappát létrehozni");
-
+                
                 // Fájl létrehozása
                 const content = editor.getValue();
                 const file = new Blob([content], {type: 'text/plain'});
@@ -490,14 +539,12 @@ print("Hello WRLD")
                 teamworkCode = code;
                 teamworkActive = true;
                 
-                updateTeamworkUI(code);
-                logSystem(`Teamwork LÉTREHOZVA!`);
+                await registerUserInSession(folderId);
+                
+                initTeamworkUI(code);
                 startSyncLoop();
                 
-            } catch(e) {
-                console.error(e);
-                logSystem("Teamwork hiba: " + e.message);
-            }
+            } catch(e) { console.error(e); logSystem("Hiba: " + e.message); }
             showLoading(false);
         }
 
@@ -513,20 +560,12 @@ print("Hello WRLD")
                 const qFolder = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
                 const resFolder = await gapi.client.drive.files.list({q: qFolder, fields: 'files(id)'});
                 
-                if(resFolder.result.files.length === 0) {
-                    alert("Nincs ilyen Teamwork kód!");
-                    showLoading(false);
-                    return;
-                }
+                if(resFolder.result.files.length === 0) { alert("Hibás kód!"); showLoading(false); return; }
                 
                 const folderId = resFolder.result.files[0].id;
                 const fileId = await findFileInFolder(folderId, 'main.py');
                 
-                if(!fileId) {
-                    alert("A mappa üres!");
-                    showLoading(false);
-                    return;
-                }
+                if(!fileId) { alert("Üres munkamenet!"); showLoading(false); return; }
                 
                 teamworkFileId = fileId;
                 teamworkCode = code;
@@ -536,29 +575,36 @@ print("Hello WRLD")
                 const resContent = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
                 editor.setValue(resContent.body);
                 
-                updateTeamworkUI(code);
-                logSystem(`Csatlakoztál a munkamenethez.`);
+                await registerUserInSession(folderId);
+                
+                initTeamworkUI(code);
                 startSyncLoop();
                 
-            } catch(e) {
-                logSystem("Csatlakozási hiba.");
-            }
+            } catch(e) { logSystem("Csatlakozási hiba."); }
             showLoading(false);
+        }
+
+        function initTeamworkUI(code) {
+            document.getElementById('active-session-display').style.display = 'block';
+            document.getElementById('active-session-display').innerText = `SESSION: ${code}`;
+            document.getElementById('teamwork-controls').style.display = 'flex';
+            addToOutput(`TEAMWORK STARTED: ${code}`, "teamwork-msg");
         }
 
         function startSyncLoop() {
             if(syncInterval) clearInterval(syncInterval);
+            if(userCheckInterval) clearInterval(userCheckInterval);
             
-            // Debounced Upload: Csak akkor töltünk fel, ha a felhasználó megállt az írással
+            // Feltöltés logika (Debounce)
             editor.on('change', (cm, change) => {
-                if(!teamworkActive || change.origin === 'setValue') return;
+                if(!teamworkActive || teamworkMode !== 'play' || change.origin === 'setValue') return;
                 
                 isUserTyping = true;
                 clearTimeout(typingTimeout);
                 
-                // 1 másodperc múlva, ha nem ír, akkor feltöltés
+                // Ha 5 másodpercig nem ír, akkor engedjük a letöltést újra
+                // Feltöltés viszont 1 másodperc tétlenség után megy
                 typingTimeout = setTimeout(async () => {
-                    isUserTyping = false;
                     const content = cm.getValue();
                     try {
                         await fetch(`https://www.googleapis.com/upload/drive/v3/files/${teamworkFileId}?uploadType=media`, {
@@ -569,15 +615,18 @@ print("Hello WRLD")
                             }),
                             body: content
                         });
-                        // logSystem("Mentve (Teamwork)"); // Opcionális feedback
-                    } catch(e) { console.log("Sync upload err"); }
-                }, 1000); // 1000ms késleltetés a feltöltésnél
+                    } catch(e) { console.log("Upload err"); }
+                    
+                    // Még várunk 4 másodpercet, hogy "lehűljön" az írás jelző, és engedjük a letöltést
+                    setTimeout(() => { isUserTyping = false; }, 4000); 
+                    
+                }, 1000); 
             });
 
-            // Letöltés (Polling): 3 másodpercenként
+            // Letöltés (Polling)
             syncInterval = setInterval(async () => {
-                // HA ÉPPEN ÍRSZ, AKKOR NE TÖLTSÖN LE SEMMIT! (Ez okozta a laggot)
-                if(!teamworkActive || !teamworkFileId || isUserTyping) return;
+                // Ha szünet van, vagy éppen ír a user, NEM töltünk le
+                if(!teamworkActive || teamworkMode === 'pause' || isUserTyping) return;
                 
                 try {
                     const res = await gapi.client.drive.files.get({ fileId: teamworkFileId, alt: 'media' });
@@ -586,13 +635,26 @@ print("Hello WRLD")
                     
                     if(remoteContent && remoteContent !== localContent) {
                         const cursor = editor.getCursor();
-                        const scrollInfo = editor.getScrollInfo();
                         editor.setValue(remoteContent);
                         editor.setCursor(cursor);
-                        editor.scrollTo(scrollInfo.left, scrollInfo.top);
                     }
-                } catch(e) { console.log("Sync check err"); }
-            }, 2000); // 2 másodpercenként ellenőriz
+                } catch(e) {}
+            }, 3000); // 3mp
+
+            // Új felhasználók figyelése
+            userCheckInterval = setInterval(async () => {
+                if(!teamworkUsersFileId) return;
+                try {
+                    const res = await gapi.client.drive.files.get({ fileId: teamworkUsersFileId, alt: 'media' });
+                    const users = JSON.parse(res.body);
+                    users.forEach(u => {
+                        if (!knownUsers.has(u)) {
+                            knownUsers.add(u);
+                            if(u !== currentUser) logSystem(`${u} csatlakozott.`);
+                        }
+                    });
+                } catch(e) {}
+            }, 5000); // 5mp
         }
 
 
