@@ -177,15 +177,14 @@
         }
 
         .panel-header { padding: 8px 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; opacity: 0.6; margin-bottom: 5px; }
-        .terminal-wrapper { flex: 1; display: flex; flex-direction: column; background-color: var(--output-bg); border-radius: 16px; margin: 0 20px 20px 20px; overflow: hidden; border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0,0,0,0.2); position: relative;}
+        .terminal-wrapper { flex: 1; display: flex; flex-direction: column; background-color: var(--output-bg); border-radius: 16px; margin: 0 20px 20px 20px; overflow: hidden; border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0,0,0,0.2); position: relative; }
         
-        #output { flex: 1; padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; white-space: pre-wrap; overflow-y: auto; color: var(--text-color); padding-bottom: 50px;}
+        #output { flex: 1; padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; white-space: pre-wrap; overflow-y: auto; color: var(--text-color); padding-bottom: 50px; }
         
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-color); z-index: 9998; display: none; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s ease; }
         .gear { width: 60px; height: 60px; fill: var(--accent-color); animation: spin 2s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
         
-        /* TERMINAL INPUT - ALWAYS VISIBLE */
         #terminal-input-bar { 
             display: flex; background: var(--panel-bg); padding: 12px; 
             border-top: 1px solid var(--border-color); align-items: center; gap: 10px; 
@@ -208,7 +207,6 @@
         .success { color: #50fa7b; }
         .system-msg { color: var(--system-msg-color); font-style: italic; }
         .list-item { color: #f1fa8c; display: block; }
-        .list-selected { background: rgba(255,255,255,0.1); }
     </style>
 </head>
 <body>
@@ -236,8 +234,8 @@
                     <span class="material-icons">cloud_queue</span>
                 </button>
                 <div class="dropdown-content">
-                    <a onclick="handleDriveSave()"><span class="material-icons">save</span> Mentés Drive-ra</a>
-                    <a onclick="handleDriveLoad()"><span class="material-icons">folder_open</span> Betöltés</a>
+                    <a onclick="handleManualSave()"><span class="material-icons">save</span> Mentés Drive-ra</a>
+                    <a onclick="handleManualLoad()"><span class="material-icons">folder_open</span> Betöltés</a>
                 </div>
             </div>
 
@@ -325,6 +323,15 @@ print("Hello WRLD")
         </div>
     </div>
 
+    <div id="loadModal" class="modal-overlay">
+        <div class="modal">
+            <h3 style="margin-top:0; color:var(--text-color)">Fájl Betöltése</h3>
+            <div id="file-list" style="max-height:200px; overflow-y:auto; margin-bottom:15px; border:1px solid var(--border-color); border-radius:8px; padding:5px;">
+            </div>
+            <button onclick="document.getElementById('loadModal').style.display='none'" style="background:transparent; color:var(--text-color)">Mégse</button>
+        </div>
+    </div>
+
     <script>
         // --- KONFIGURÁCIÓ ---
         const CLIENT_ID = '138100233309-v575n23j2b6pdek9t9clvkg3immlkrdi.apps.googleusercontent.com'; 
@@ -365,7 +372,7 @@ print("Hello WRLD")
             document.getElementById('loginModal').style.display = 'none';
             logSystem(msg);
             if(gapiInited && gisInited && !gapi.client.getToken()) { tokenClient.requestAccessToken({prompt: ''}); }
-            startAutoSave();
+            startAutoSave(); // Indul az autosave belépéskor
         }
 
         // --- GOOGLE DRIVE API ---
@@ -386,7 +393,83 @@ print("Hello WRLD")
             gisInited = true;
         }
 
-        // --- AUTOSAVE LOGIC ---
+        // --- SEGÉDFÜGGVÉNYEK DRIVE-HOZ ---
+        async function findOrCreateFolder(folderName) {
+            if(!gapi.client.getToken()) return null;
+            const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
+            const response = await gapi.client.drive.files.list({q: q, fields: 'files(id)'});
+            if (response.result.files.length > 0) return response.result.files[0].id;
+            const meta = { 'name': folderName, 'mimeType': 'application/vnd.google-apps.folder' };
+            const res = await gapi.client.drive.files.create({ resource: meta, fields: 'id' });
+            return res.result.id;
+        }
+
+        // --- MANUÁLIS MENTÉS (RÉGI RENDSZER) ---
+        async function handleManualSave() {
+            showLoading(true);
+            // Saját mappába ment (nem az autosave-be)
+            const folderId = await findOrCreateFolder(`ProPythonIDE_${currentUser}`);
+            if(!folderId) { showLoading(false); return; }
+
+            const content = editor.getValue();
+            const dateStr = new Date().toISOString().slice(0,10);
+            const filename = `${currentUser}_${dateStr}.py`;
+            
+            const file = new Blob([content], {type: 'text/plain'});
+            const metadata = { 'name': filename, 'mimeType': 'text/plain', 'parents': [folderId] };
+            const form = new FormData();
+            form.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
+            form.append('file', file);
+
+            fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                method: 'POST',
+                headers: new Headers({'Authorization': 'Bearer ' + gapi.client.getToken().access_token}),
+                body: form
+            }).then(res => res.json()).then(val => {
+                logSystem(`Kézi mentés kész: ${filename}`);
+                showLoading(false);
+            }).catch(err => {
+                logSystem("Mentési hiba!");
+                showLoading(false);
+            });
+        }
+
+        // --- MANUÁLIS BETÖLTÉS (ABLACOS) ---
+        async function handleManualLoad() {
+            showLoading(true);
+            const folderId = await findOrCreateFolder(`ProPythonIDE_${currentUser}`);
+            if(!folderId) { showLoading(false); return; }
+
+            const response = await gapi.client.drive.files.list({
+                q: `'${folderId}' in parents and trashed=false`,
+                fields: 'files(id, name)',
+            });
+            
+            const files = response.result.files;
+            const listDiv = document.getElementById('file-list');
+            listDiv.innerHTML = "";
+            
+            if (files && files.length > 0) {
+                files.forEach(file => {
+                    const div = document.createElement('div');
+                    div.style.padding = "8px"; div.style.cursor = "pointer"; div.style.borderBottom = "1px solid #444";
+                    div.innerText = file.name;
+                    div.onclick = () => {
+                        loadFileContent(file.id);
+                        document.getElementById('loadModal').style.display = 'none';
+                    };
+                    div.onmouseover = () => div.style.background = "#444";
+                    div.onmouseout = () => div.style.background = "transparent";
+                    listDiv.appendChild(div);
+                });
+                document.getElementById('loadModal').style.display = 'flex';
+            } else {
+                alert("Nincs fájl a mappában.");
+            }
+            showLoading(false);
+        }
+
+        // --- AUTOSAVE LOGIC (HÁTTÉRBEN) ---
         let autosaveInterval = null;
         let currentAutoSaveId = null;
         let currentAutoSaveName = "";
@@ -394,14 +477,12 @@ print("Hello WRLD")
         async function startAutoSave() {
             if(autosaveInterval) clearInterval(autosaveInterval);
             
-            // Mappa keresés/létrehozás
             let folderId = await findOrCreateFolder("ProPythonIDE_Autosaves");
             if(!folderId) return;
 
             autosaveInterval = setInterval(async () => {
                 if(!currentUser) return;
                 
-                // Dátum formázása: YY-MM-DD_HH:MM
                 const now = new Date();
                 const dateStr = now.toISOString().slice(2,10); // YY-MM-DD
                 const timeStr = now.toTimeString().slice(0,5); // HH:MM
@@ -409,7 +490,7 @@ print("Hello WRLD")
                 const filename = `autosave-${currentUser}_${dateStr}_${timeStr}.py`;
                 const content = editor.getValue();
 
-                // Ha ugyanaz a perc, frissítjük a fájlt (PATCH)
+                // Ha ugyanaz a perc, frissít (PATCH)
                 if(filename === currentAutoSaveName && currentAutoSaveId) {
                     try {
                         await fetch(`https://www.googleapis.com/upload/drive/v3/files/${currentAutoSaveId}?uploadType=media`, {
@@ -420,10 +501,9 @@ print("Hello WRLD")
                             }),
                             body: content
                         });
-                        // logSystem("Autosave frissítve"); // Silent save
-                    } catch(e) { console.log("Autosave update err"); }
+                    } catch(e) {}
                 } 
-                // Ha új perc, új fájlt hozunk létre (POST)
+                // Ha új perc, új fájl (POST)
                 else {
                     try {
                         const file = new Blob([content], {type: 'text/plain'});
@@ -440,20 +520,9 @@ print("Hello WRLD")
                         const data = await res.json();
                         currentAutoSaveId = data.id;
                         currentAutoSaveName = filename;
-                        // logSystem("Új Autosave: " + filename);
-                    } catch(e) { console.log("Autosave create err"); }
+                    } catch(e) {}
                 }
             }, 10000); // 10 másodperc
-        }
-
-        async function findOrCreateFolder(folderName) {
-            if(!gapi.client.getToken()) return null;
-            const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
-            const response = await gapi.client.drive.files.list({q: q, fields: 'files(id)'});
-            if (response.result.files.length > 0) return response.result.files[0].id;
-            const meta = { 'name': folderName, 'mimeType': 'application/vnd.google-apps.folder' };
-            const res = await gapi.client.drive.files.create({ resource: meta, fields: 'id' });
-            return res.result.id;
         }
 
         // --- TERMINAL INTELLIGENCE (SHELL) ---
@@ -493,6 +562,8 @@ print("Hello WRLD")
                     e.preventDefault();
                     navIndex = (navIndex > 0) ? navIndex - 1 : navList.length - 1;
                     inputField.value = navList[navIndex].name;
+                    // Visual highlight
+                    // (opcionális: újrarenderelni a listát highlight-tal, de most csak beírjuk)
                 } else if (e.key === "ArrowDown") {
                     e.preventDefault();
                     navIndex = (navIndex < navList.length - 1) ? navIndex + 1 : 0;
@@ -638,21 +709,6 @@ print("Hello WRLD")
             }
         }
 
-        // --- STANDARD LOAD FUNCTION ---
-        async function handleDriveSave() {
-            // A manuális mentés is ugyanabba a mappába megy, vagy külön?
-            // A kérés szerint az autosave a fő, de megtartottam a gombot manuális mentésre
-            // ami az eredeti logikát követi.
-            // Ha azt akarod, hogy a gomb is autosave-et csináljon, szólj.
-            alert("Az automatikus mentés aktív (10mp).");
-        }
-
-        async function handleDriveLoad() {
-            // Ez a felugró ablakos betöltés, megtartottam alternatívának
-            document.getElementById('loadModal').style.display = 'flex';
-            // ... (eredeti logika)
-        }
-
         async function loadFileContent(fileId) {
             showLoading(true);
             try {
@@ -711,6 +767,7 @@ print("Hello WRLD")
         // --- PYTHON ENGINE (PYODIDE) ---
         let pyodide = null;
         let pyodideReady = false;
+        let pythonInputResolver = null;
 
         function showLoading(show) {
             document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
@@ -771,12 +828,7 @@ print("Hello WRLD")
 
         async function runPython() {
             if(!pyodideReady) return;
-            // Csak akkor töröljük a kimenetet ha Python fut, de a prompt marad
-            // A jelenlegi logikában a prompt külön div-ben van, így az 'output' div tartalma törölhető
-            // De a felhasználó kérte a folytonos inputot, így talán jobb nem törölni mindent?
-            // Hagyományosan a futtatáskor töröljük a kimenetet:
             outputElement.innerHTML = ""; 
-            
             let code = editor.getValue();
             code = code.replace(/\binput\s*\(/g, "await custom_input(");
             try {
