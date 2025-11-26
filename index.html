@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aero PRO</title>
+    <title>AeroCode PRO v11</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
@@ -29,7 +29,8 @@
 
     <style>
         :root {
-            --bg-color: #0F1115;
+            /* SZÍN MÓDOSÍTVA: Sötétebb, szürkésebb alapértelmezett */
+            --bg-color: #121214; 
             --text-color: #e0e0e0;
             --panel-bg: #1e1e1e;
             --border-color: #2b2b2b;
@@ -149,7 +150,6 @@
         /* --- LAYOUT --- */
         .main-container { display: flex; height: 100vh; width: 100%; }
         
-        /* FIX: min-width: 0 engedélyezi a vízszintes görgetést flex elemen belül, hogy ne nyomja el a terminalt */
         .editor-container { 
             flex: 6; display: flex; flex-direction: column; 
             border-right: 1px solid var(--border-color); background: transparent;
@@ -158,13 +158,17 @@
         
         .CodeMirror-scroll { padding-top: 100px; padding-bottom: 50px; }
         
+        /* A SIDE-PANEL KEZELI A HÁTTÉRMINTÁZATOT */
         .side-panel { 
             flex: 4; display: flex; flex-direction: column; 
             background-color: var(--bg-color); min-width: 300px; padding-top: 100px;
-            flex-shrink: 0; /* A terminal ne zsugorodjon össze */
+            flex-shrink: 0;
+            /* Minta beállítások */
+            background-repeat: repeat;
+            background-size: 150px 100px;
+            background-blend-mode: overlay; /* Hogy a háttérszínnel keveredjen */
         }
         
-        /* Layout Variations Classes */
         .layout-left { flex-direction: row-reverse; }
         .layout-left .editor-container { border-right: none; border-left: 1px solid var(--border-color); }
         
@@ -172,7 +176,7 @@
         .layout-bottom .editor-container { border-right: none; flex: 1; border-bottom: 1px solid var(--border-color); }
         .layout-bottom .side-panel { 
             flex: none; height: 35vh; min-height: 200px; min-width: 100%; 
-            padding-top: 10px; /* Kevesebb padding ha lent van */
+            padding-top: 10px;
         }
 
         .panel-header { padding: 8px 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; opacity: 0.6; margin-bottom: 5px; }
@@ -180,7 +184,6 @@
         
         #output { flex: 1; padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; white-space: pre-wrap; overflow-y: auto; color: var(--text-color); }
         
-        /* UI Elements */
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-color); z-index: 9998; display: none; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s ease; }
         .gear { width: 60px; height: 60px; fill: var(--accent-color); animation: spin 2s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
@@ -189,13 +192,17 @@
         #terminal-input-bar.visible { display: flex; }
         #term-input { flex: 1; background: transparent; border: none; color: var(--text-color); outline: none; font-family: 'JetBrains Mono'; font-size: 13px;}
         
-        /* Modals */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10001; backdrop-filter: blur(8px); justify-content: center; align-items: center; }
         .modal { background: var(--modal-bg); width: 350px; padding: 25px; border-radius: 24px; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
         .modal button { background: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; float: right; margin-top: 15px; font-weight: 600; }
         .modal input, .modal select { width: 100%; padding: 12px; background: var(--input-field-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 8px; margin-bottom: 10px; outline: none;}
 
-        /* Output text styles */
+        /* Színválasztó bemenet stílusa */
+        input[type="color"] { padding: 0; height: 40px; cursor: pointer; }
+        /* Checkbox stílus */
+        .checkbox-container { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 12px; opacity: 0.8; }
+        .checkbox-container input { width: auto; margin: 0; }
+
         .user-input { color: var(--run-color); font-weight: bold; }
         .error { color: #ff5555; }
         .success { color: #50fa7b; }
@@ -211,7 +218,7 @@
 
     <div class="header-wrapper">
         <div class="glass-bubble left-bubble">
-            <div class="app-title"><span style="font-size: 18px;">🐍</span>Pro Python IDE</div>
+            <div class="app-title"><span style="font-size: 18px;">🐍</span>AeroCode PRO</div>
             <div class="vertical-divider"></div>
             <button class="run-btn" onclick="runPython()" title="Futtatás (Ctrl+Enter)"><span class="material-icons">play_arrow</span></button>
         </div>
@@ -239,7 +246,7 @@
     <div class="main-container">
         <div class="editor-container">
             <textarea id="code-editor">
-#AeroIDE
+#AeroCode PRO
 #V11.0 Stable
 print("Hello WRLD")
             </textarea>
@@ -278,7 +285,14 @@ print("Hello WRLD")
                 <option value="left">Bal oldalt</option>
                 <option value="bottom">Lent (Vízszintes)</option>
             </select>
+            
+            <label style="font-size:12px; opacity:0.7">Háttérszín (Téma)</label>
+            <input type="color" id="bgColorInput" value="#121214">
 
+            <div class="checkbox-container">
+                <input type="checkbox" id="bgPatternInput" checked>
+                <label for="bgPatternInput">Háttérmintázat (Aero LOGO) megjelenítése</label>
+            </div>
             <label style="font-size:12px; opacity:0.7">Betűméret (px)</label>
             <input type="number" id="fontSizeInput" value="14" min="10" max="30">
             
@@ -509,6 +523,18 @@ print("Hello WRLD")
         let exportExt = localStorage.getItem('ide_export_ext') || 'txt';
         document.getElementById('exportFormatInput').value = exportExt;
 
+        // Szín és minta betöltése
+        let savedBgColor = localStorage.getItem('ide_custom_bg') || '#121214'; // Új alapértelmezett sötétszürke
+        document.getElementById('bgColorInput').value = savedBgColor;
+        
+        let savedPattern = localStorage.getItem('ide_pattern_on');
+        // Ha nincs mentve, alapból legyen bekapcsolva (true)
+        if(savedPattern === null) savedPattern = 'true'; 
+        document.getElementById('bgPatternInput').checked = (savedPattern === 'true');
+
+        // Alkalmazás induláskor
+        applyThemeSettings(savedBgColor, savedPattern === 'true');
+
         // Layout betöltése
         let savedLayout = localStorage.getItem('ide_layout') || 'right';
         document.getElementById('layoutInput').value = savedLayout;
@@ -673,10 +699,21 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             } else if (layout === 'bottom') {
                 container.classList.add('layout-bottom');
             }
-            // 'right' is default (no class)
-            
-            // Ha változik az orientáció, frissíteni kell a CodeMirror méretét
             setTimeout(() => editor.refresh(), 100);
+        }
+
+        // Segédfüggvény a téma alkalmazásához
+        function applyThemeSettings(color, patternOn) {
+            // Szín beállítás
+            document.documentElement.style.setProperty('--bg-color', color);
+            
+            // Minta beállítás a side-panelre
+            const sidePanel = document.querySelector('.side-panel');
+            if(patternOn) {
+                sidePanel.style.backgroundImage = "url('aeroLOGO.png')";
+            } else {
+                sidePanel.style.backgroundImage = "none";
+            }
         }
 
         function saveSettings() {
@@ -685,13 +722,22 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             const ext = document.getElementById("exportFormatInput").value;
             const layout = document.getElementById("layoutInput").value;
             
+            // Új beállítások mentése
+            const customBg = document.getElementById("bgColorInput").value;
+            const patternOn = document.getElementById("bgPatternInput").checked;
+
             localStorage.setItem("gemini_api_key", apiKey);
             localStorage.setItem("ide_fontsize", fSize);
             localStorage.setItem("ide_export_ext", ext);
             localStorage.setItem("ide_layout", layout);
             
+            // Szín és minta mentése
+            localStorage.setItem("ide_custom_bg", customBg);
+            localStorage.setItem("ide_pattern_on", patternOn);
+            
             document.querySelector('.CodeMirror').style.fontSize = fSize + 'px';
             applyLayout(layout);
+            applyThemeSettings(customBg, patternOn);
             
             document.getElementById("settingsModal").style.display = "none";
             logSystem("Beállítások mentve.");
