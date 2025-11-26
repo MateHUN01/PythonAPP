@@ -161,11 +161,6 @@
             font-size: 12px; text-align: center; width: 100%;
         }
         .tw-input::placeholder { color: rgba(255,255,255,0.5); }
-        
-        /* Aktív kód kijelzése a menüben */
-        #active-session-display {
-            display: none; font-size: 11px; text-align: center; color: var(--run-color); border-top: 1px solid var(--border-color); padding-top: 8px;
-        }
 
         /* --- LAYOUT --- */
         .main-container { display: flex; height: 100vh; width: 100%; }
@@ -223,7 +218,6 @@
         .error { color: #ff5555; }
         .success { color: #50fa7b; }
         .system-msg { color: var(--system-msg-color); font-style: italic; }
-        .teamwork-msg { color: #ff79c6; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -263,7 +257,6 @@
                 <div class="dropdown-content teamwork-dropdown">
                     <button class="tw-create-btn" onclick="createTeamworkSession()">Létrehoz</button>
                     <input type="text" class="tw-input" id="teamwork-code-input" placeholder="Code ..." onkeydown="if(event.key==='Enter') joinTeamworkSession(this.value)">
-                    <div id="active-session-display"></div>
                 </div>
             </div>
 
@@ -412,13 +405,11 @@ print("Hello WRLD")
             }
         }
 
-        // --- TEAMWORK LOGIC (OPTIMIZED FOR NO LAG) ---
+        // --- TEAMWORK LOGIC ---
         let teamworkActive = false;
         let teamworkCode = null;
         let teamworkFileId = null;
         let syncInterval = null;
-        let isUserTyping = false;
-        let typingTimeout = null;
 
         // Kód generálás: 4 karakter (A-Z, 0-9)
         function generateRandomCode() {
@@ -448,15 +439,6 @@ print("Hello WRLD")
             const response = await gapi.client.drive.files.list({q: q, fields: 'files(id)'});
             if (response.result.files.length > 0) return response.result.files[0].id;
             return null;
-        }
-
-        function updateTeamworkUI(code) {
-            // Kijelzés a menüben
-            const display = document.getElementById('active-session-display');
-            display.style.display = 'block';
-            display.innerText = `SESSION: ${code}`;
-            // Kijelzés a terminálban
-            addToOutput(`TEAMWORK CODE: ${code}`, "teamwork-msg");
         }
 
         async function createTeamworkSession() {
@@ -490,8 +472,9 @@ print("Hello WRLD")
                 teamworkCode = code;
                 teamworkActive = true;
                 
-                updateTeamworkUI(code);
-                logSystem(`Teamwork LÉTREHOZVA!`);
+                logSystem(`Teamwork LÉTREHOZVA! Kód: ${code}`);
+                alert(`Teamwork KÓD: ${code}\nOszd meg a társaiddal!`);
+                
                 startSyncLoop();
                 
             } catch(e) {
@@ -510,6 +493,7 @@ print("Hello WRLD")
             const folderName = `teamwork-${code}`;
             
             try {
+                // Keressük a mappát
                 const qFolder = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
                 const resFolder = await gapi.client.drive.files.list({q: qFolder, fields: 'files(id)'});
                 
@@ -536,8 +520,7 @@ print("Hello WRLD")
                 const resContent = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
                 editor.setValue(resContent.body);
                 
-                updateTeamworkUI(code);
-                logSystem(`Csatlakoztál a munkamenethez.`);
+                logSystem(`Csatlakoztál: ${code}`);
                 startSyncLoop();
                 
             } catch(e) {
@@ -549,50 +532,41 @@ print("Hello WRLD")
         function startSyncLoop() {
             if(syncInterval) clearInterval(syncInterval);
             
-            // Debounced Upload: Csak akkor töltünk fel, ha a felhasználó megállt az írással
-            editor.on('change', (cm, change) => {
-                if(!teamworkActive || change.origin === 'setValue') return;
+            // Változás esetén feltöltés (Debounce-al lehetne szebb, de most direktben hívjuk)
+            editor.on('change', async (cm, change) => {
+                if(!teamworkActive || change.origin === 'setValue') return; // Ne töltsön fel, ha a sync írta át
                 
-                isUserTyping = true;
-                clearTimeout(typingTimeout);
-                
-                // 1 másodperc múlva, ha nem ír, akkor feltöltés
-                typingTimeout = setTimeout(async () => {
-                    isUserTyping = false;
-                    const content = cm.getValue();
-                    try {
-                        await fetch(`https://www.googleapis.com/upload/drive/v3/files/${teamworkFileId}?uploadType=media`, {
-                            method: 'PATCH',
-                            headers: new Headers({
-                                'Authorization': 'Bearer ' + gapi.client.getToken().access_token,
-                                'Content-Type': 'text/plain'
-                            }),
-                            body: content
-                        });
-                        // logSystem("Mentve (Teamwork)"); // Opcionális feedback
-                    } catch(e) { console.log("Sync upload err"); }
-                }, 1000); // 1000ms késleltetés a feltöltésnél
+                const content = cm.getValue();
+                try {
+                    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${teamworkFileId}?uploadType=media`, {
+                        method: 'PATCH',
+                        headers: new Headers({
+                            'Authorization': 'Bearer ' + gapi.client.getToken().access_token,
+                            'Content-Type': 'text/plain'
+                        }),
+                        body: content
+                    });
+                } catch(e) { console.log("Sync upload err"); }
             });
 
-            // Letöltés (Polling): 3 másodpercenként
+            // 3 másodpercenként letöltés
             syncInterval = setInterval(async () => {
-                // HA ÉPPEN ÍRSZ, AKKOR NE TÖLTSÖN LE SEMMIT! (Ez okozta a laggot)
-                if(!teamworkActive || !teamworkFileId || isUserTyping) return;
+                if(!teamworkActive || !teamworkFileId) return;
                 
                 try {
                     const res = await gapi.client.drive.files.get({ fileId: teamworkFileId, alt: 'media' });
                     const remoteContent = res.body;
                     const localContent = editor.getValue();
                     
-                    if(remoteContent && remoteContent !== localContent) {
+                    // Csak akkor frissítünk, ha más, és nem mi írunk éppen (egyszerűsített)
+                    // Itt a "setValue" triggerelni fogja a change eventet, ezért ott szűrjük az origint
+                    if(remoteContent !== localContent) {
                         const cursor = editor.getCursor();
-                        const scrollInfo = editor.getScrollInfo();
                         editor.setValue(remoteContent);
                         editor.setCursor(cursor);
-                        editor.scrollTo(scrollInfo.left, scrollInfo.top);
                     }
                 } catch(e) { console.log("Sync check err"); }
-            }, 2000); // 2 másodpercenként ellenőriz
+            }, 3000);
         }
 
 
