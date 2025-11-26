@@ -29,7 +29,6 @@
 
     <style>
         :root {
-            /* SZÍN MÓDOSÍTVA: Sötétebb, szürkésebb alapértelmezett */
             --bg-color: #121214; 
             --text-color: #e0e0e0;
             --panel-bg: #1e1e1e;
@@ -158,15 +157,13 @@
         
         .CodeMirror-scroll { padding-top: 100px; padding-bottom: 50px; }
         
-        /* A SIDE-PANEL KEZELI A HÁTTÉRMINTÁZATOT */
         .side-panel { 
             flex: 4; display: flex; flex-direction: column; 
             background-color: var(--bg-color); min-width: 300px; padding-top: 100px;
             flex-shrink: 0;
-            /* Minta beállítások */
             background-repeat: repeat;
             background-size: 150px 100px;
-            background-blend-mode: overlay; /* Hogy a háttérszínnel keveredjen */
+            background-blend-mode: overlay;
         }
         
         .layout-left { flex-direction: row-reverse; }
@@ -197,9 +194,7 @@
         .modal button { background: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; float: right; margin-top: 15px; font-weight: 600; }
         .modal input, .modal select { width: 100%; padding: 12px; background: var(--input-field-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 8px; margin-bottom: 10px; outline: none;}
 
-        /* Színválasztó bemenet stílusa */
         input[type="color"] { padding: 0; height: 40px; cursor: pointer; }
-        /* Checkbox stílus */
         .checkbox-container { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 12px; opacity: 0.8; }
         .checkbox-container input { width: auto; margin: 0; }
 
@@ -218,7 +213,10 @@
 
     <div class="header-wrapper">
         <div class="glass-bubble left-bubble">
-            <div class="app-title"><span style="font-size: 18px;">🐍</span>AeroCode PRO</div>
+            <div class="app-title">
+                <img src="aeroICON.png" style="height: 24px; margin-right: 5px;">
+                AeroCode PRO
+            </div>
             <div class="vertical-divider"></div>
             <button class="run-btn" onclick="runPython()" title="Futtatás (Ctrl+Enter)"><span class="material-icons">play_arrow</span></button>
         </div>
@@ -270,7 +268,8 @@ print("Hello WRLD")
                 </div>
             </div>
 
-        </div> </div>
+        </div>
+    </div>
 
     <div id="settingsModal" class="modal-overlay">
         <div class="modal">
@@ -286,13 +285,17 @@ print("Hello WRLD")
                 <option value="bottom">Lent (Vízszintes)</option>
             </select>
             
-            <label style="font-size:12px; opacity:0.7">Háttérszín (Téma)</label>
+            <label style="font-size:12px; opacity:0.7">Alkalmazás Háttérszín</label>
             <input type="color" id="bgColorInput" value="#121214">
 
             <div class="checkbox-container">
                 <input type="checkbox" id="bgPatternInput" checked>
                 <label for="bgPatternInput">Háttérmintázat (Aero LOGO) megjelenítése</label>
             </div>
+
+            <label style="font-size:12px; opacity:0.7">Szerkesztő Háttérszín</label>
+            <input type="color" id="editorBgColorInput" value="#282a36">
+
             <label style="font-size:12px; opacity:0.7">Betűméret (px)</label>
             <input type="number" id="fontSizeInput" value="14" min="10" max="30">
             
@@ -524,16 +527,19 @@ print("Hello WRLD")
         document.getElementById('exportFormatInput').value = exportExt;
 
         // Szín és minta betöltése
-        let savedBgColor = localStorage.getItem('ide_custom_bg') || '#121214'; // Új alapértelmezett sötétszürke
+        let savedBgColor = localStorage.getItem('ide_custom_bg') || '#121214';
         document.getElementById('bgColorInput').value = savedBgColor;
         
         let savedPattern = localStorage.getItem('ide_pattern_on');
-        // Ha nincs mentve, alapból legyen bekapcsolva (true)
         if(savedPattern === null) savedPattern = 'true'; 
         document.getElementById('bgPatternInput').checked = (savedPattern === 'true');
 
+        // Szerkesztő háttér betöltése
+        let savedEditorBg = localStorage.getItem('ide_editor_bg') || '#282a36';
+        document.getElementById('editorBgColorInput').value = savedEditorBg;
+
         // Alkalmazás induláskor
-        applyThemeSettings(savedBgColor, savedPattern === 'true');
+        applyThemeSettings(savedBgColor, savedPattern === 'true', savedEditorBg);
 
         // Layout betöltése
         let savedLayout = localStorage.getItem('ide_layout') || 'right';
@@ -703,8 +709,8 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         }
 
         // Segédfüggvény a téma alkalmazásához
-        function applyThemeSettings(color, patternOn) {
-            // Szín beállítás
+        function applyThemeSettings(color, patternOn, editorColor) {
+            // Alkalmazás háttérszín
             document.documentElement.style.setProperty('--bg-color', color);
             
             // Minta beállítás a side-panelre
@@ -713,6 +719,14 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                 sidePanel.style.backgroundImage = "url('aeroLOGO.png')";
             } else {
                 sidePanel.style.backgroundImage = "none";
+            }
+
+            // Szerkesztő háttérszín
+            if(editorColor) {
+                const cm = document.querySelector('.CodeMirror');
+                const gutters = document.querySelector('.CodeMirror-gutters');
+                if(cm) cm.style.backgroundColor = editorColor;
+                if(gutters) gutters.style.backgroundColor = editorColor;
             }
         }
 
@@ -725,6 +739,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             // Új beállítások mentése
             const customBg = document.getElementById("bgColorInput").value;
             const patternOn = document.getElementById("bgPatternInput").checked;
+            const editorBg = document.getElementById("editorBgColorInput").value;
 
             localStorage.setItem("gemini_api_key", apiKey);
             localStorage.setItem("ide_fontsize", fSize);
@@ -734,10 +749,11 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             // Szín és minta mentése
             localStorage.setItem("ide_custom_bg", customBg);
             localStorage.setItem("ide_pattern_on", patternOn);
+            localStorage.setItem("ide_editor_bg", editorBg);
             
             document.querySelector('.CodeMirror').style.fontSize = fSize + 'px';
             applyLayout(layout);
-            applyThemeSettings(customBg, patternOn);
+            applyThemeSettings(customBg, patternOn, editorBg);
             
             document.getElementById("settingsModal").style.display = "none";
             logSystem("Beállítások mentve.");
