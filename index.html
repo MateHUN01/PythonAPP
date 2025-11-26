@@ -146,22 +146,6 @@
         }
         .dropdown-content a:hover { background-color: var(--accent-color); color: white; }
 
-        /* --- TEAMWORK DROPDOWN STYLE --- */
-        .teamwork-dropdown { padding: 15px; display: flex; flex-direction: column; gap: 10px; min-width: 180px; }
-        .tw-create-btn {
-            background-color: white; color: black; border: none; 
-            padding: 8px; border-radius: 20px; font-weight: 600; cursor: pointer;
-            font-size: 12px; transition: transform 0.2s; width: 100%;
-        }
-        .tw-create-btn:hover { transform: scale(1.05); }
-        
-        .tw-input {
-            background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border);
-            color: var(--text-color); padding: 8px; border-radius: 20px; outline: none;
-            font-size: 12px; text-align: center; width: 100%;
-        }
-        .tw-input::placeholder { color: rgba(255,255,255,0.5); }
-
         /* --- LAYOUT --- */
         .main-container { display: flex; height: 100vh; width: 100%; }
         
@@ -250,16 +234,6 @@
                 </div>
             </div>
 
-            <div class="dropdown">
-                <button class="icon-btn" title="Teamwork">
-                    <span class="material-icons">group</span>
-                </button>
-                <div class="dropdown-content teamwork-dropdown">
-                    <button class="tw-create-btn" onclick="createTeamworkSession()">Létrehoz</button>
-                    <input type="text" class="tw-input" id="teamwork-code-input" placeholder="Code ..." onkeydown="if(event.key==='Enter') joinTeamworkSession(this.value)">
-                </div>
-            </div>
-
             <button class="icon-btn" onclick="askGemini()" title="Gemini AI"><span class="material-icons">auto_awesome</span></button>
             <button class="icon-btn" onclick="toggleTheme()" title="Téma"><span class="material-icons">dark_mode</span></button>
             <button class="icon-btn" onclick="downloadCode()" title="Letöltés"><span class="material-icons">download</span></button>
@@ -277,6 +251,7 @@ print("Hello WRLD")
         </div>
 
         <div class="side-panel">
+            
             <div class="panel-header">TERMINAL</div>
             <div class="terminal-wrapper">
                 <div id="output"></div>
@@ -292,6 +267,7 @@ print("Hello WRLD")
                     <iframe data-aa='2418649' src='//acceptable.a-ads.com/2418649/?size=Adaptive' style='border:0; padding:0; width:100%; height:100px; overflow:hidden; display: block; margin: auto'></iframe>
                 </div>
             </div>
+
         </div>
     </div>
 
@@ -370,7 +346,7 @@ print("Hello WRLD")
             if(currentUser) {
                 if(confirm("Kijelentkezel?")) {
                     currentUser = null;
-                    localStorage.removeItem('saved_username'); 
+                    localStorage.removeItem('saved_username'); // Törlés kijelentkezéskor
                     document.getElementById('user-btn').innerText = "Log in";
                     addToOutput("Kijelentkezve.", "system-msg");
                 }
@@ -384,6 +360,7 @@ print("Hello WRLD")
             const name = document.getElementById('loginNameInput').value.trim();
             if(!name) return;
             
+            // Mentés localStorage-ba az automatikus belépéshez
             localStorage.setItem('saved_username', name);
 
             const userKey = 'user_data_' + name;
@@ -400,177 +377,13 @@ print("Hello WRLD")
             document.getElementById('loginModal').style.display = 'none';
             logSystem(msg);
             
+            // Google Auth indítása a háttérben
             if(gapiInited && gisInited && !gapi.client.getToken()) {
                 tokenClient.requestAccessToken({prompt: ''}); 
             }
         }
 
-        // --- TEAMWORK LOGIC ---
-        let teamworkActive = false;
-        let teamworkCode = null;
-        let teamworkFileId = null;
-        let syncInterval = null;
-
-        // Kód generálás: 4 karakter (A-Z, 0-9)
-        function generateRandomCode() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let result = '';
-            for (let i = 0; i < 4; i++) {
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return result;
-        }
-
-        // Mappa létrehozása vagy keresése
-        async function findOrCreateFolder(folderName) {
-            if(!gapi.client.getToken()) { alert("Teamworkhöz jelentkezz be a Drive-on!"); return null; }
-            const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
-            const response = await gapi.client.drive.files.list({q: q, fields: 'files(id)'});
-            if (response.result.files.length > 0) return response.result.files[0].id;
-            
-            const meta = { 'name': folderName, 'mimeType': 'application/vnd.google-apps.folder' };
-            const res = await gapi.client.drive.files.create({ resource: meta, fields: 'id' });
-            return res.result.id;
-        }
-
-        // Fájl keresése mappában
-        async function findFileInFolder(folderId, fileName) {
-            const q = `'${folderId}' in parents and name='${fileName}' and trashed=false`;
-            const response = await gapi.client.drive.files.list({q: q, fields: 'files(id)'});
-            if (response.result.files.length > 0) return response.result.files[0].id;
-            return null;
-        }
-
-        async function createTeamworkSession() {
-            if(!currentUser) { alert("Jelentkezz be először!"); return; }
-            showLoading(true);
-            
-            const code = generateRandomCode();
-            const folderName = `teamwork-${code}`;
-            
-            try {
-                const folderId = await findOrCreateFolder(folderName);
-                if(!folderId) throw new Error("Nem sikerült mappát létrehozni");
-
-                // Fájl létrehozása
-                const content = editor.getValue();
-                const file = new Blob([content], {type: 'text/plain'});
-                const metadata = { 'name': 'main.py', 'mimeType': 'text/plain', 'parents': [folderId] };
-                
-                const form = new FormData();
-                form.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
-                form.append('file', file);
-
-                const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                    method: 'POST',
-                    headers: new Headers({'Authorization': 'Bearer ' + gapi.client.getToken().access_token}),
-                    body: form
-                });
-                const data = await res.json();
-                
-                teamworkFileId = data.id;
-                teamworkCode = code;
-                teamworkActive = true;
-                
-                logSystem(`Teamwork LÉTREHOZVA! Kód: ${code}`);
-                alert(`Teamwork KÓD: ${code}\nOszd meg a társaiddal!`);
-                
-                startSyncLoop();
-                
-            } catch(e) {
-                console.error(e);
-                logSystem("Teamwork hiba: " + e.message);
-            }
-            showLoading(false);
-        }
-
-        async function joinTeamworkSession(code) {
-            if(!code) return;
-            if(!currentUser) { alert("Jelentkezz be először!"); return; }
-            showLoading(true);
-            
-            code = code.toUpperCase().trim();
-            const folderName = `teamwork-${code}`;
-            
-            try {
-                // Keressük a mappát
-                const qFolder = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
-                const resFolder = await gapi.client.drive.files.list({q: qFolder, fields: 'files(id)'});
-                
-                if(resFolder.result.files.length === 0) {
-                    alert("Nincs ilyen Teamwork kód!");
-                    showLoading(false);
-                    return;
-                }
-                
-                const folderId = resFolder.result.files[0].id;
-                const fileId = await findFileInFolder(folderId, 'main.py');
-                
-                if(!fileId) {
-                    alert("A mappa üres!");
-                    showLoading(false);
-                    return;
-                }
-                
-                teamworkFileId = fileId;
-                teamworkCode = code;
-                teamworkActive = true;
-                
-                // Első letöltés
-                const resContent = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
-                editor.setValue(resContent.body);
-                
-                logSystem(`Csatlakoztál: ${code}`);
-                startSyncLoop();
-                
-            } catch(e) {
-                logSystem("Csatlakozási hiba.");
-            }
-            showLoading(false);
-        }
-
-        function startSyncLoop() {
-            if(syncInterval) clearInterval(syncInterval);
-            
-            // Változás esetén feltöltés (Debounce-al lehetne szebb, de most direktben hívjuk)
-            editor.on('change', async (cm, change) => {
-                if(!teamworkActive || change.origin === 'setValue') return; // Ne töltsön fel, ha a sync írta át
-                
-                const content = cm.getValue();
-                try {
-                    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${teamworkFileId}?uploadType=media`, {
-                        method: 'PATCH',
-                        headers: new Headers({
-                            'Authorization': 'Bearer ' + gapi.client.getToken().access_token,
-                            'Content-Type': 'text/plain'
-                        }),
-                        body: content
-                    });
-                } catch(e) { console.log("Sync upload err"); }
-            });
-
-            // 3 másodpercenként letöltés
-            syncInterval = setInterval(async () => {
-                if(!teamworkActive || !teamworkFileId) return;
-                
-                try {
-                    const res = await gapi.client.drive.files.get({ fileId: teamworkFileId, alt: 'media' });
-                    const remoteContent = res.body;
-                    const localContent = editor.getValue();
-                    
-                    // Csak akkor frissítünk, ha más, és nem mi írunk éppen (egyszerűsített)
-                    // Itt a "setValue" triggerelni fogja a change eventet, ezért ott szűrjük az origint
-                    if(remoteContent !== localContent) {
-                        const cursor = editor.getCursor();
-                        editor.setValue(remoteContent);
-                        editor.setCursor(cursor);
-                    }
-                } catch(e) { console.log("Sync check err"); }
-            }, 3000);
-        }
-
-
-        // --- GOOGLE DRIVE API ---
+        // --- GOOGLE DRIVE INTEGRÁCIÓ ---
         function gapiLoaded() {
             gapi.load('client', async () => {
                 await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC], });
@@ -591,13 +404,117 @@ print("Hello WRLD")
             gisInited = true;
         }
 
+        let userFolderId = null;
+        async function getFolderId() {
+            if(!currentUser) { alert("Jelentkezz be először!"); return null; }
+            if(userFolderId) return userFolderId;
+            
+            if(!gapi.client.getToken()) {
+                await new Promise((resolve) => {
+                    tokenClient.callback = (resp) => { resolve(resp); };
+                    tokenClient.requestAccessToken({prompt: 'consent'});
+                });
+            }
+
+            try {
+                const folderName = `ProPythonIDE_${currentUser}`;
+                const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
+                const response = await gapi.client.drive.files.list({q: q, fields: 'files(id, name)'});
+
+                if (response.result.files && response.result.files.length > 0) {
+                    userFolderId = response.result.files[0].id;
+                } else {
+                    const meta = { 'name': folderName, 'mimeType': 'application/vnd.google-apps.folder' };
+                    const createRes = await gapi.client.drive.files.create({ resource: meta, fields: 'id' });
+                    userFolderId = createRes.result.id;
+                }
+                return userFolderId;
+            } catch(e) {
+                logSystem("Drive hiba: " + e.message);
+                return null;
+            }
+        }
+
+        async function handleDriveSave() {
+            showLoading(true);
+            const folderId = await getFolderId();
+            if(!folderId) { showLoading(false); return; }
+
+            const content = editor.getValue();
+            const dateStr = new Date().toISOString().slice(0,10);
+            const filename = `${currentUser}_${dateStr}.py`;
+            
+            const file = new Blob([content], {type: 'text/plain'});
+            const metadata = { 'name': filename, 'mimeType': 'text/plain', 'parents': [folderId] };
+            
+            const form = new FormData();
+            form.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
+            form.append('file', file);
+
+            fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                method: 'POST',
+                headers: new Headers({'Authorization': 'Bearer ' + gapi.client.getToken().access_token}),
+                body: form
+            }).then(res => res.json()).then(val => {
+                logSystem(`Sikeres mentés: ${filename}`);
+                showLoading(false);
+            }).catch(err => {
+                logSystem("Mentési hiba!");
+                showLoading(false);
+            });
+        }
+
+        async function handleDriveLoad() {
+            showLoading(true);
+            const folderId = await getFolderId();
+            if(!folderId) { showLoading(false); return; }
+
+            const response = await gapi.client.drive.files.list({
+                q: `'${folderId}' in parents and trashed=false`,
+                fields: 'files(id, name)',
+            });
+            
+            const files = response.result.files;
+            const listDiv = document.getElementById('file-list');
+            listDiv.innerHTML = "";
+            
+            if (files && files.length > 0) {
+                files.forEach(file => {
+                    const div = document.createElement('div');
+                    div.style.padding = "8px"; div.style.cursor = "pointer"; div.style.borderBottom = "1px solid #444";
+                    div.innerText = file.name;
+                    div.onclick = () => loadFileContent(file.id);
+                    div.onmouseover = () => div.style.background = "#444";
+                    div.onmouseout = () => div.style.background = "transparent";
+                    listDiv.appendChild(div);
+                });
+                document.getElementById('loadModal').style.display = 'flex';
+            } else {
+                alert("Nincs fájl a mappában.");
+            }
+            showLoading(false);
+        }
+
+        async function loadFileContent(fileId) {
+            document.getElementById('loadModal').style.display = 'none';
+            showLoading(true);
+            try {
+                const response = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
+                editor.setValue(response.body);
+                logSystem("Fájl betöltve");
+            } catch(e) {
+                logSystem("Hiba betöltéskor.");
+            }
+            showLoading(false);
+        }
+
         // --- EDITOR & SETUP ---
         let editor = CodeMirror.fromTextArea(document.getElementById("code-editor"), {
             mode: {name: "python", version: 3}, theme: "dracula",
             lineNumbers: true, indentUnit: 4, smartIndent: true, matchBrackets: true, autoCloseBrackets: true,
             extraKeys: { "Ctrl-Space": "autocomplete", "Ctrl-Enter": function() { runPython(); } },
             hintOptions: { completeSingle: false },
-            lineWrapping: false
+            lineWrapping: false // Vízszintes görgetés engedélyezése
         });
 
         // Beállítások betöltése
@@ -609,6 +526,7 @@ print("Hello WRLD")
         let exportExt = localStorage.getItem('ide_export_ext') || 'txt';
         document.getElementById('exportFormatInput').value = exportExt;
 
+        // Szín és minta betöltése
         let savedBgColor = localStorage.getItem('ide_custom_bg') || '#121214';
         document.getElementById('bgColorInput').value = savedBgColor;
         
@@ -616,15 +534,19 @@ print("Hello WRLD")
         if(savedPattern === null) savedPattern = 'true'; 
         document.getElementById('bgPatternInput').checked = (savedPattern === 'true');
 
+        // Szerkesztő háttér betöltése
         let savedEditorBg = localStorage.getItem('ide_editor_bg') || '#282a36';
         document.getElementById('editorBgColorInput').value = savedEditorBg;
 
+        // Alkalmazás induláskor
         applyThemeSettings(savedBgColor, savedPattern === 'true', savedEditorBg);
 
+        // Layout betöltése
         let savedLayout = localStorage.getItem('ide_layout') || 'right';
         document.getElementById('layoutInput').value = savedLayout;
         applyLayout(savedLayout);
 
+        // AutoComplete Trigger
         editor.on("keyup", function (cm, event) {
             const excludedKeys = [8, 9, 13, 27, 37, 38, 39, 40, 46]; 
             if (!excludedKeys.includes(event.keyCode) && !cm.state.completionActive) {
@@ -673,6 +595,7 @@ print("Hello WRLD")
                 pyodideReady = true;
                 logSystem("Rendszer kész.");
                 
+                // Automatikus bejelentkezés ellenőrzése a betöltés végén
                 const savedUser = localStorage.getItem('saved_username');
                 if(savedUser) {
                     currentUser = savedUser;
@@ -785,9 +708,12 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             setTimeout(() => editor.refresh(), 100);
         }
 
+        // Segédfüggvény a téma alkalmazásához
         function applyThemeSettings(color, patternOn, editorColor) {
+            // Alkalmazás háttérszín
             document.documentElement.style.setProperty('--bg-color', color);
             
+            // Minta beállítás a side-panelre
             const sidePanel = document.querySelector('.side-panel');
             if(patternOn) {
                 sidePanel.style.backgroundImage = "url('aeroLOGO.png')";
@@ -795,6 +721,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                 sidePanel.style.backgroundImage = "none";
             }
 
+            // Szerkesztő háttérszín
             if(editorColor) {
                 const cm = document.querySelector('.CodeMirror');
                 const gutters = document.querySelector('.CodeMirror-gutters');
@@ -809,6 +736,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             const ext = document.getElementById("exportFormatInput").value;
             const layout = document.getElementById("layoutInput").value;
             
+            // Új beállítások mentése
             const customBg = document.getElementById("bgColorInput").value;
             const patternOn = document.getElementById("bgPatternInput").checked;
             const editorBg = document.getElementById("editorBgColorInput").value;
@@ -818,6 +746,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             localStorage.setItem("ide_export_ext", ext);
             localStorage.setItem("ide_layout", layout);
             
+            // Szín és minta mentése
             localStorage.setItem("ide_custom_bg", customBg);
             localStorage.setItem("ide_pattern_on", patternOn);
             localStorage.setItem("ide_editor_bg", editorBg);
