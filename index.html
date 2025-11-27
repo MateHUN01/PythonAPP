@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroCode PRO v11.6 - Dark Glass Edition</title>
+    <title>AeroCode PRO v12 - Clean Black Edition</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
@@ -18,13 +18,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/python-hint.min.js"></script>
 
     <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
-    
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2587976013026970" crossorigin="anonymous"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -32,25 +28,17 @@
     <style>
         :root {
             /* --- SÖTÉT TÉMA SZÍNEK (Default) --- */
-            /* Szerkesztő háttér: Koromfekete */
-            --bg-color: #000000; 
-            
-            /* Oldalsáv: Nagyon sötét szürke */
-            --side-panel-bg: #111111;
-
+            --bg-color: #000000; /* Teljes fekete */
+            --side-panel-bg: #111111; /* Majdnem fekete szürke */
             --text-color: #e0e0e0;
-            --border-color: #2b2b2b;
+            --border-color: #333333;
             --accent-color: #2196F3;
-            
-            /* Terminal háttér: Kicsit világosabb a panelnél */
-            --output-bg: #161616;
+            --output-bg: #111111;
             
             /* --- ÜVEG HATÁS (GLASS) --- */
-            /* Sokkal áttetszőbb háttér, hogy látszódjon a homályosítás */
-            --glass-bg: rgba(15, 15, 15, 0.50);
+            --glass-bg: rgba(10, 10, 10, 0.6);
             --glass-border: rgba(255, 255, 255, 0.08);
             --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.7);
-            /* Erősebb blur a menő hatáshoz */
             --glass-blur: 15px;
             
             --modal-bg: #1a1a1a;
@@ -106,19 +94,18 @@
             transition: background 0.3s ease;
         }
 
-        /* --- CODE MIRROR CUSTOMIZATION --- */
-        /* Itt kényszerítjük a fekete hátteret a szerkesztőre */
+        /* --- CODE MIRROR FEKETE HÁTTÉR KÉNYSZERÍTÉSE --- */
         .CodeMirror { 
             flex: 1; 
             font-family: 'JetBrains Mono', monospace; 
             font-size: 14px; 
-            background-color: var(--bg-color) !important; 
+            background-color: #000000 !important; /* KÉNYSZERÍTETT FEKETE */
             height: 100%; 
             position: relative;
             color: #f8f8f2;
         }
         .CodeMirror-gutters { 
-            background: var(--bg-color) !important; 
+            background-color: #000000 !important; /* KÉNYSZERÍTETT FEKETE */
             border-right: 1px solid #222; 
         }
         
@@ -130,11 +117,11 @@
         .CodeMirror-hint { margin: 0; padding: 4px 8px; border-radius: 3px; white-space: pre; color: var(--hint-text); cursor: pointer; }
         li.CodeMirror-hint-active { background: var(--hint-select-bg); color: var(--hint-select-text); }
 
-        /* LIVE jelző a szerkesztőben */
+        /* LIVE jelző */
         #live-indicator {
             position: absolute;
             top: 10px; right: 20px;
-            background: rgba(80, 250, 123, 0.2);
+            background: rgba(80, 250, 123, 0.1);
             color: #50fa7b;
             border: 1px solid #50fa7b;
             padding: 2px 8px;
@@ -165,7 +152,7 @@
             border-radius: 100px; 
             padding: 6px 10px;
             display: flex; align-items: center; gap: 10px; 
-            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .glass-bubble:hover { transform: translateY(-2px); box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.8); }
 
@@ -181,20 +168,35 @@
         #user-btn { cursor: pointer; font-size:12px; opacity:0.8; margin-right:5px; padding: 6px 12px; border-radius: 20px; transition: background 0.2s; font-weight:600; letter-spacing:0.5px; }
         #user-btn:hover { background: var(--btn-hover); opacity: 1; }
 
-        /* --- CLOUD DROPDOWN MENU --- */
+        /* --- JAVÍTOTT FLUID DROPDOWN MENU --- */
         .dropdown { position: relative; display: inline-block; }
+        
         .dropdown-content {
-            opacity: 0; visibility: hidden; position: absolute; right: 0; top: 50px;
-            background-color: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
-            min-width: 280px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.6);
-            border-radius: 12px; border: 1px solid var(--glass-border);
-            z-index: 2000; overflow: hidden;
-            transition: opacity 0.3s ease 2s, visibility 0.3s ease 2s, transform 0.3s ease 2s;
-            transform: translateY(-10px);
+            opacity: 0; 
+            visibility: hidden; 
+            position: absolute; 
+            right: 0; 
+            top: 50px;
+            background-color: var(--glass-bg); 
+            backdrop-filter: blur(var(--glass-blur));
+            min-width: 280px; 
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.6);
+            border-radius: 12px; 
+            border: 1px solid var(--glass-border);
+            z-index: 2000; 
+            overflow: hidden;
+            /* Gyorsabb animáció, nincs delay */
+            transition: all 0.2s ease-in-out;
+            transform: translateY(-10px) scale(0.98);
             padding: 10px;
             cursor: default;
         }
-        .dropdown:hover .dropdown-content { opacity: 1; visibility: visible; transform: translateY(0); transition-delay: 0s; }
+
+        .dropdown:hover .dropdown-content { 
+            opacity: 1; 
+            visibility: visible; 
+            transform: translateY(0) scale(1); 
+        }
         
         /* Dropdown elemek */
         .menu-item {
@@ -232,7 +234,7 @@
         
         .editor-container { 
             flex: 6; display: flex; flex-direction: column; 
-            background: var(--bg-color); /* FEKETE */
+            background: #000000; /* Fekete */
             min-width: 0; 
             position: relative;
         }
@@ -241,7 +243,7 @@
         
         .side-panel { 
             flex: 4; display: flex; flex-direction: column; 
-            background-color: var(--side-panel-bg); /* SÖTÉTSZÜRKE */
+            background-color: var(--side-panel-bg); 
             border-left: 1px solid #1f1f1f;
             min-width: 300px; padding-top: 100px;
             flex-shrink: 0;
@@ -380,13 +382,12 @@
             <div id="live-indicator">● LIVE</div>
             <textarea id="code-editor">
 #AeroCode PRO
-#V11.6 Glass Edition
+#V12 Clean Black
 print("Hello WRLD")
             </textarea>
         </div>
 
         <div class="side-panel">
-            
             <div class="panel-header">TERMINAL</div>
             <div class="terminal-wrapper">
                 <div id="output"></div>
@@ -395,15 +396,7 @@ print("Hello WRLD")
                     <input type="text" id="term-input" autocomplete="off">
                 </div>
             </div>
-            
-            <div class="panel-header">HIRDETÉS</div>
-            <div id="ads-container" style="min-height: 120px; margin: 0 20px 20px 20px; background-color: var(--output-bg); border-radius: 16px; border: 1px solid var(--border-color); padding: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-                <div id="frame" style="width: 100%; margin: auto; position: relative;">
-                    <iframe data-aa='2418649' src='//acceptable.a-ads.com/2418649/?size=Adaptive' style='border:0; padding:0; width:100%; height:100px; overflow:hidden; display: block; margin: auto'></iframe>
-                </div>
             </div>
-
-        </div>
     </div>
 
     <div id="settingsModal" class="modal-overlay">
@@ -484,7 +477,7 @@ print("Hello WRLD")
                     localStorage.removeItem('saved_username'); 
                     document.getElementById('user-btn').innerText = "Log in";
                     addToOutput("Kijelentkezve.", "system-msg");
-                    if(peer) disconnectPeer(); // Kijelentkezéskor bontsuk a P2P-t
+                    if(peer) disconnectPeer(); 
                 }
             } else {
                 document.getElementById('loginModal').style.display = 'flex';
@@ -753,11 +746,11 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
 
         // --- P2P IMPLEMENTÁCIÓ (Bővített) ---
         let peer = null;
-        let conn = null; // Csak kliensnél releváns (vagy host-nál a broadcast-hoz kell loopolni)
+        let conn = null; 
         let isSyncing = false; 
         let isHost = false;
         
-        let connectedUsers = []; // { id, conn, username } objektumok listája
+        let connectedUsers = []; 
         let maxParticipants = 3;
 
         const ROOM_MAPPING = {
@@ -777,20 +770,17 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             const container = document.getElementById('active-users-list');
             container.innerHTML = "";
 
-            // Saját magunk hozzáadása
             const selfChip = document.createElement('div');
             selfChip.className = "user-chip self";
             selfChip.innerHTML = `<span class="username">${currentUser} (Én)</span>`;
             container.appendChild(selfChip);
 
-            // Többiek hozzáadása
             connectedUsers.forEach(u => {
                 const chip = document.createElement('div');
                 chip.className = "user-chip";
                 
                 let html = `<span class="username">${u.username || 'Ismeretlen'}</span>`;
                 
-                // Ha mi vagyunk a Host, kirúghatunk másokat
                 if (isHost) {
                     html += `<button class="kick-btn" onclick="kickUser('${u.id}')" title="Kirúgás"><span class="material-icons" style="font-size:14px;">close</span></button>`;
                 }
@@ -829,8 +819,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             });
 
             peer.on('connection', (connection) => {
-                // Ellenőrizzük a létszámot
-                if (connectedUsers.length + 1 >= maxParticipants) { // +1 mert mi is ott vagyunk
+                if (connectedUsers.length + 1 >= maxParticipants) { 
                     connection.on('open', () => {
                         connection.send({ type: 'error', message: 'A szoba megtelt.' });
                         setTimeout(() => connection.close(), 500);
@@ -838,26 +827,18 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                     return;
                 }
 
-                connection.on('open', () => {
-                    // Csatlakozás elfogadva, várjuk a "handshake"-et a névért
-                });
+                connection.on('open', () => { });
 
                 connection.on('data', (data) => {
                     if (data.type === 'handshake') {
-                        // Új felhasználó regisztrálása
                         const newUser = { id: connection.peer, conn: connection, username: data.username };
                         connectedUsers.push(newUser);
                         logP2P(`${data.username} csatlakozott.`);
-                        
-                        // Kód küldése az újnak
                         connection.send({ type: 'code_update', content: editor.getValue() });
-                        
-                        // Lista frissítése mindenkinek
                         broadcastUserList();
                         updateActiveUsersUI();
                     }
                     else if(data.type === 'code_update') {
-                        // Ha valaki ír, azt továbbítjuk mindenkinek (kivéve a küldőt)
                         broadcastCode(data.content, connection.peer);
                         if (editor.getValue() !== data.content) {
                             isSyncing = true;
@@ -909,16 +890,14 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                 conn = peer.connect(roomId);
                 
                 conn.on('open', () => {
-                    // Azonnal küldjük a nevünket
                     conn.send({ type: 'handshake', username: currentUser });
-                    
                     document.getElementById('connect-ui').style.display = 'none';
                     document.getElementById('disconnect-ui').style.display = 'block';
                     document.getElementById('live-indicator').style.display = 'block';
                     updateP2PLog("ONLINE");
                     document.getElementById('p2p-log').style.color = "#50fa7b";
                     logP2P("Csatlakozva a szobához.");
-                    updateActiveUsersUI(); // Csak magunkat rakjuk ki először
+                    updateActiveUsersUI(); 
                 });
 
                 conn.on('data', (data) => {
@@ -931,8 +910,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                             isSyncing = false;
                         }
                     } else if (data.type === 'user_list') {
-                        // Lista frissítése a szervertől kapott adatokkal
-                        connectedUsers = data.users; // Itt a connectedUsers csak infó, nincs conn objektum
+                        connectedUsers = data.users; 
                         updateActiveUsersUI();
                     } else if (data.type === 'kick') {
                         alert("A szoba gazdája eltávolított.");
@@ -950,7 +928,6 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             peer.on('error', () => { updateP2PLog("Hálózati Hiba."); });
         }
 
-        // Host funkciók
         function broadcastCode(content, senderIdToExclude) {
             if(!isHost) return;
             connectedUsers.forEach(u => {
@@ -962,9 +939,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
 
         function broadcastUserList() {
             if(!isHost) return;
-            // Csak az adatokat küldjük (kapcsolat objektum nélkül) a szerializálás miatt
             const safeList = connectedUsers.map(u => ({ id: u.id, username: u.username }));
-            // Hozzáadjuk a Hostot is a listához, hogy a kliensek lássák
             safeList.unshift({ id: 'HOST', username: currentUser + " (HOST)" });
 
             connectedUsers.forEach(u => {
@@ -981,14 +956,12 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                 if(target.conn.open) target.conn.send({ type: 'kick' });
                 setTimeout(() => {
                     target.conn.close();
-                    // A close event handler majd elvégzi a takarítást
                 }, 100);
             }
         }
 
         function disconnectPeer() {
             if (isHost) {
-                // Ha host lép ki, mindenkit értesítsünk (opcionális, de udvarias)
                 connectedUsers.forEach(u => { if(u.conn.open) u.conn.close(); });
             } else {
                 if(conn) conn.close();
@@ -1016,7 +989,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         editor.on('change', (cm, change) => {
             if (!isSyncing) {
                 if (isHost) {
-                    broadcastCode(editor.getValue(), null); // Mindenkinek küldjük
+                    broadcastCode(editor.getValue(), null); 
                 } else if (conn && conn.open) {
                     conn.send({ type: 'code_update', content: editor.getValue() });
                 }
