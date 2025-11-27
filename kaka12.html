@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroCode PRO v13.2 - Teamwork Fixed & Stable</title>
+    <title>AeroCode PRO v13.3 - Teamwork Stable</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
@@ -27,7 +27,7 @@
 
     <style>
         :root {
-            /* --- SÖTÉT TÉMA SZÍNEK (Default) --- */
+            /* --- ALAP TÉMA (Sötét) --- */
             --bg-color: #000000;
             --side-panel-bg: #111111;
             --text-color: #e0e0e0;
@@ -94,7 +94,7 @@
             transition: background 0.3s ease;
         }
 
-        /* --- CODE MIRROR STYLES --- */
+        /* --- CODE MIRROR --- */
         .CodeMirror { 
             flex: 1; 
             font-family: 'JetBrains Mono', monospace; 
@@ -103,7 +103,7 @@
             height: 100%; 
             position: relative;
             color: #f8f8f2;
-            z-index: 1; /* Alacsony z-index */
+            z-index: 1; /* Fontos: Legyen alacsony, hogy az Avatar (50) felette legyen */
         }
         .CodeMirror-gutters { 
             background-color: #000000 !important;
@@ -118,21 +118,12 @@
         .CodeMirror-hint { margin: 0; padding: 4px 8px; border-radius: 3px; white-space: pre; color: var(--hint-text); cursor: pointer; }
         li.CodeMirror-hint-active { background: var(--hint-select-bg); color: var(--hint-select-text); }
 
-        /* --- UI ELEMENTS --- */
+        /* --- UI ELEMEK --- */
         #live-indicator {
-            position: absolute;
-            top: 10px; right: 20px;
-            background: rgba(80, 250, 123, 0.1);
-            color: #50fa7b;
-            border: 1px solid #50fa7b;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: bold;
-            pointer-events: none;
-            z-index: 100;
-            display: none;
-            animation: pulse 2s infinite;
+            position: absolute; top: 10px; right: 20px;
+            background: rgba(80, 250, 123, 0.1); color: #50fa7b; border: 1px solid #50fa7b;
+            padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: bold;
+            pointer-events: none; z-index: 100; display: none; animation: pulse 2s infinite;
         }
         @keyframes pulse { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
 
@@ -140,8 +131,7 @@
         .header-wrapper {
             position: fixed; top: 25px; left: 0; width: 100%;
             display: flex; justify-content: space-between; padding: 0 40px;
-            z-index: 2000; /* Legfelül */
-            pointer-events: none;
+            z-index: 2000; pointer-events: none; /* Átengedi a kattintást, de a gombok fogadják */
         }
 
         .glass-bubble {
@@ -172,33 +162,16 @@
 
         /* --- DROPDOWN --- */
         .dropdown { position: relative; display: inline-block; }
-        
         .dropdown-content {
-            opacity: 0; 
-            visibility: hidden; 
-            position: absolute; 
-            right: 0; 
-            top: 50px;
-            background-color: var(--glass-bg); 
-            backdrop-filter: blur(var(--glass-blur));
-            min-width: 280px; 
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.6);
-            border-radius: 12px; 
-            border: 1px solid var(--glass-border);
-            z-index: 3000; 
-            overflow: hidden;
-            transition: all 0.2s ease-in-out;
-            transform: translateY(-10px) scale(0.98);
-            padding: 10px;
-            cursor: default;
+            opacity: 0; visibility: hidden; position: absolute; right: 0; top: 50px;
+            background-color: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
+            min-width: 280px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.6);
+            border-radius: 12px; border: 1px solid var(--glass-border);
+            z-index: 3000; overflow: hidden;
+            transition: all 0.2s ease-in-out; transform: translateY(-10px) scale(0.98);
+            padding: 10px; cursor: default;
         }
-
-        .dropdown:hover .dropdown-content { 
-            opacity: 1; 
-            visibility: visible; 
-            transform: translateY(0) scale(1); 
-        }
-        
+        .dropdown:hover .dropdown-content { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
         .menu-item {
             color: var(--text-color); padding: 12px 16px; text-decoration: none;
             display: flex; align-items: center; gap: 10px; font-size: 13px;
@@ -206,25 +179,18 @@
         }
         .menu-item:hover { background-color: var(--accent-color); color: white; }
 
-        .user-chip-container {
-            display: flex; flex-direction: column; gap: 5px; margin-top: 10px; margin-bottom: 10px;
-        }
+        /* P2P User Chips */
+        .user-chip-container { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; margin-bottom: 10px; }
         .user-chip {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 6px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border: 1px solid transparent;
+            background: rgba(255, 255, 255, 0.1); padding: 6px 10px;
+            border-radius: 20px; font-size: 12px; display: flex; align-items: center;
+            justify-content: space-between; border: 1px solid transparent;
         }
         .user-chip.self { border-color: var(--accent-color); }
         .user-chip .username { font-weight: 600; }
         .user-chip .kick-btn {
             background: transparent; border: none; color: #ff5555; 
-            cursor: pointer; display: flex; align-items: center; 
-            padding: 2px; border-radius: 50%;
+            cursor: pointer; display: flex; align-items: center; padding: 2px; border-radius: 50%;
         }
         .user-chip .kick-btn:hover { background: rgba(255, 85, 85, 0.2); }
 
@@ -233,55 +199,38 @@
         
         .editor-container { 
             flex: 6; display: flex; flex-direction: column; 
-            background: #000000; 
-            min-width: 0; 
-            position: relative;
-            z-index: 1;
+            background: #000000; min-width: 0; position: relative; z-index: 1;
         }
         
         .CodeMirror-scroll { padding-top: 100px; padding-bottom: 50px; }
         
         .side-panel { 
             flex: 4; display: flex; flex-direction: column; 
-            background-color: var(--side-panel-bg); 
-            border-left: 1px solid #1f1f1f;
-            min-width: 300px; padding-top: 100px;
-            flex-shrink: 0;
-            background-repeat: repeat;
-            background-size: 150px 100px;
-            background-blend-mode: overlay;
-            z-index: 100; /* Menü alatti, de canvas feletti */
+            background-color: var(--side-panel-bg); border-left: 1px solid #1f1f1f;
+            min-width: 300px; padding-top: 100px; flex-shrink: 0;
+            background-repeat: repeat; background-size: 150px 100px; background-blend-mode: overlay;
+            z-index: 100;
         }
         
         .layout-left { flex-direction: row-reverse; }
         .layout-left .side-panel { border-left: none; border-right: 1px solid #1f1f1f; }
         .layout-bottom { flex-direction: column; }
         .layout-bottom .editor-container { border-right: none; flex: 1; border-bottom: 1px solid var(--border-color); }
-        .layout-bottom .side-panel { 
-            flex: none; height: 35vh; min-height: 200px; min-width: 100%; 
-            padding-top: 10px; border-left: none;
-        }
+        .layout-bottom .side-panel { flex: none; height: 35vh; min-height: 200px; min-width: 100%; padding-top: 10px; border-left: none; }
 
         .panel-header { padding: 8px 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; opacity: 0.6; margin-bottom: 5px; }
         .terminal-wrapper { 
             flex: 2; display: flex; flex-direction: column; 
-            background-color: var(--output-bg); 
-            border-radius: 16px; 
-            margin: 0 20px 20px 20px; 
-            overflow: hidden; 
-            border: 1px solid var(--border-color); 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3); 
+            background-color: var(--output-bg); border-radius: 16px; 
+            margin: 0 20px 20px 20px; overflow: hidden; 
+            border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0,0,0,0.3); 
         }
 
         .notepad-wrapper {
             flex: 1; display: flex; flex-direction: column;
-            background-color: var(--output-bg);
-            border-radius: 16px;
-            margin: 0 20px 20px 20px;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
-            position: relative;
-            min-height: 120px;
+            background-color: var(--output-bg); border-radius: 16px;
+            margin: 0 20px 20px 20px; overflow: hidden;
+            border: 1px solid var(--border-color); position: relative; min-height: 120px;
         }
 
         #shared-notepad {
@@ -302,6 +251,7 @@
         #terminal-input-bar.visible { display: flex; }
         #term-input { flex: 1; background: transparent; border: none; color: var(--text-color); outline: none; font-family: 'JetBrains Mono'; font-size: 13px;}
         
+        /* Modals */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10001; backdrop-filter: blur(8px); justify-content: center; align-items: center; }
         .modal { background: var(--modal-bg); width: 350px; padding: 25px; border-radius: 24px; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.7); }
         .modal button { background: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; float: right; margin-top: 15px; font-weight: 600; }
@@ -317,13 +267,11 @@
         .system-msg { color: var(--system-msg-color); font-style: italic; }
         .p2p-msg { color: var(--p2p-msg-color); font-weight: bold; }
         
-        /* --- AVATAR RÉTEG (JAVÍTOTT Z-INDEX) --- */
+        /* --- AVATAR LAYER --- */
         #avatar-layer {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            pointer-events: none; /* A kattintásokat átengedi a kódra */
-            z-index: 50; /* A Kód (1) felett, de a UI (100+) alatt */
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; /* FONTOS: Átengedi a kattintást a kódra, hacsak nem drag-elünk */
+            z-index: 50; /* Kód (1) és UI (100+) között */
         }
         
     </style>
@@ -354,7 +302,6 @@
                 </button>
                 <div class="dropdown-content">
                     <h4 style="margin:0 0 10px 0; border-bottom:1px solid #444; padding-bottom:5px;">Közös Munka</h4>
-                    
                     <div id="connect-ui">
                         <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Válassz egy csatornát:</div>
                         <select id="channel-select" style="width:100%; padding:8px; background:var(--input-field-bg); border:1px solid var(--border-color); color:var(--text-color); border-radius:4px; margin-bottom:10px; font-family:'Inter'">
@@ -365,33 +312,25 @@
                             <option value="5">5. Csatorna (Omega)</option>
                             <option value="6">6. Csatorna (Zeta)</option>
                         </select>
-                        
                         <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:10px;">
                             <span style="font-size:11px; opacity:0.7;">Max létszám:</span>
                             <input type="number" id="room-size-limit" min="2" max="10" value="3" style="width:60px; padding:4px; font-size:11px; margin-bottom:0;">
                         </div>
-                        
                         <div style="font-size:10px; color:#888; margin-bottom:5px;">EGYIKŐTÖK legyen HOST, a MÁSIK JOIN!</div>
                         <div style="font-size:10px; color:#ff5555; margin-bottom:10px; display:none;" id="login-warning">Jelentkezz be a csatlakozáshoz!</div>
-
                         <div style="display:flex; gap:5px;">
                             <button onclick="startAsHost()" style="flex:1; padding:8px; background:var(--run-color); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">HOST</button>
                             <button onclick="joinAsGuest()" style="flex:1; padding:8px; background:#50fa7b; color:#222; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">JOIN</button>
                         </div>
                     </div>
-
                     <div id="disconnect-ui" style="display:none;">
                         <div style="background:rgba(80, 250, 123, 0.1); color:#50fa7b; padding:8px; border-radius:4px; margin-bottom:10px; text-align:center; font-size:12px;">
                             <span class="material-icons" style="font-size:12px; vertical-align:middle;">link</span> Kapcsolódva
                         </div>
-                        
                         <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Jelenlévők:</div>
-                        <div id="active-users-list" class="user-chip-container">
-                            </div>
-
+                        <div id="active-users-list" class="user-chip-container"></div>
                         <button onclick="disconnectPeer()" style="width:100%; padding:8px; background:#ff5555; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Szétkapcsolás</button>
                     </div>
-                    
                     <div id="p2p-log" style="font-size:10px; color:#888; margin-top:10px; font-style:italic;">Offline</div>
                 </div>
             </div>
@@ -419,14 +358,14 @@
         <div class="editor-container">
             <div id="live-indicator">● LIVE</div>
             <textarea id="code-editor">
-# AeroCode PRO v13.2 - Stable
-# Teamwork Edition - Fixed Avatar System
+# AeroCode PRO v13.3 - Stable Fix
+# Most már biztosan be tudsz lépni!
 #
-# 1. Kattints a "Log in" gombra és írj be egy nevet.
-# 2. Nyisd meg a "Közös Munka" menüt (kis emberke ikon).
-# 3. Egy valaki legyen HOST, a többiek JOIN.
-# 4. A kis gömböcök (avatárok) megjelennek!
-# 5. Húzd őket az egereddel (Drag & Drop)!
+# 1. Kattints a "Log in" gombra.
+# 2. Írj be egy nevet (pl. "Alex").
+# 3. Kattints a Belépés gombra.
+# 4. Megjelenik a kék karaktered a képernyőn!
+# 5. Indíts HOST-ot, a többiek JOIN-oljanak.
 
 print("Hello Team!")
             </textarea>
@@ -452,37 +391,29 @@ print("Hello Team!")
     <div id="settingsModal" class="modal-overlay">
         <div class="modal">
             <h3 style="margin-top:0; color:var(--text-color)">Beállítások</h3>
-            
             <label style="font-size:12px; opacity:0.7">Gemini API Kulcs</label>
             <input type="password" id="apiKeyInput" placeholder="Illeszd be a kulcsot...">
-            
             <label style="font-size:12px; opacity:0.7">Elrendezés (Layout)</label>
             <select id="layoutInput">
                 <option value="right">Jobb oldalt (Alapértelmezett)</option>
                 <option value="left">Bal oldalt</option>
                 <option value="bottom">Lent (Vízszintes)</option>
             </select>
-            
             <label style="font-size:12px; opacity:0.7">Alkalmazás Háttérszín (Global)</label>
             <input type="color" id="bgColorInput" value="#000000">
-
             <div class="checkbox-container">
                 <input type="checkbox" id="bgPatternInput" checked>
                 <label for="bgPatternInput">Háttérmintázat (Aero LOGO) megjelenítése</label>
             </div>
-
             <label style="font-size:12px; opacity:0.7">Szerkesztő Háttérszín</label>
             <input type="color" id="editorBgColorInput" value="#000000">
-
             <label style="font-size:12px; opacity:0.7">Betűméret (px)</label>
             <input type="number" id="fontSizeInput" value="14" min="10" max="30">
-            
             <label style="font-size:12px; opacity:0.7">Mentés formátum</label>
             <select id="exportFormatInput">
                 <option value="txt">.txt (Szöveges)</option>
                 <option value="py">.py (Python fájl)</option>
             </select>
-
             <button onclick="saveSettings()">Mentés</button>
             <button onclick="document.getElementById('settingsModal').style.display='none'" style="background:transparent; margin-right:10px; color:var(--text-color)">Mégse</button>
         </div>
@@ -508,18 +439,30 @@ print("Hello Team!")
     </div>
 
     <script>
-        // --- KONFIGURÁCIÓ ---
-        const CLIENT_ID = '138100233309-v575n23j2b6pdek9t9clvkg3immlkrdi.apps.googleusercontent.com'; 
-        const API_KEY = 'AIzaSyAfC2viqoOsVVjcShnqY2rrRsxdV7WHMEg'; 
-        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
-        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
-
-        // --- AUTH & USER LOGIKA ---
+        // --- 1. GLOBAL VARIABLES & INIT (Előrehozva a hiba elkerülésére) ---
+        const outputElement = document.getElementById("output");
+        const notepad = document.getElementById('shared-notepad');
+        
         let currentUser = null;
         let tokenClient;
         let gapiInited = false;
         let gisInited = false;
 
+        const AVATAR_COLORS = ['#ff0055', '#00f2ff', '#00ff44', '#ffcc00', '#aa00ff', '#ffffff'];
+        let avatars = {}; 
+        let myAvatar = { x: 150, y: 150, vx: 0, vy: 0, color: '#00f2ff', name: 'User' };
+        let isDraggingAvatar = false;
+
+        // --- 2. LOGGING HELPER ---
+        function addToOutput(text, cls="") {
+            const span = document.createElement("span"); span.textContent = text;
+            if(cls) span.className = cls; outputElement.appendChild(span);
+            outputElement.scrollTop = outputElement.scrollHeight;
+        }
+        function logSystem(msg) { addToOutput("> " + msg + "\n", "system-msg"); }
+        function logP2P(msg) { addToOutput("[P2P] " + msg + "\n", "p2p-msg"); }
+
+        // --- 3. LOGIN LOGIC (JAVÍTOTT) ---
         function openLoginModal() {
             if(currentUser) {
                 if(confirm("Kijelentkezel?")) {
@@ -531,31 +474,168 @@ print("Hello Team!")
                 }
             } else {
                 document.getElementById('loginModal').style.display = 'flex';
+                document.getElementById('loginNameInput').value = ""; // Reset input
                 document.getElementById('loginNameInput').focus();
             }
         }
 
         function performLogin() {
-            const name = document.getElementById('loginNameInput').value.trim();
-            if(!name) return;
-            localStorage.setItem('saved_username', name);
-            const userKey = 'user_data_' + name;
-            let msg = localStorage.getItem(userKey) ? `Üdvözöllek újra, ${name}!` : `Sikeres bejelentkezés: ${name}!`;
-            if(!localStorage.getItem(userKey)) localStorage.setItem(userKey, Date.now());
+            const nameInput = document.getElementById('loginNameInput');
+            const name = nameInput.value.trim();
             
-            currentUser = name;
-            // Avatar név frissítése ha már létezik
-            myAvatar.name = currentUser;
+            if(!name) { alert("Kérlek írj be egy nevet!"); return; }
             
-            document.getElementById('user-btn').innerText = name;
+            // 1. UI Frissítés (Azonnal)
             document.getElementById('loginModal').style.display = 'none';
             document.getElementById('login-warning').style.display = 'none';
-            logSystem(msg);
+            document.getElementById('user-btn').innerText = name;
             
-            if(gapiInited && gisInited && !gapi.client.getToken()) tokenClient.requestAccessToken({prompt: ''}); 
+            // 2. State mentés
+            currentUser = name;
+            localStorage.setItem('saved_username', name);
+            
+            // 3. Avatar frissítés
+            myAvatar.name = name;
+            myAvatar.color = AVATAR_COLORS[Math.floor(Math.random()*AVATAR_COLORS.length)];
+            
+            logSystem(`Sikeres bejelentkezés: ${name}!`);
+
+            // 4. Google Auth (Csak ha betöltött, különben ignoráljuk, ne omoljon össze)
+            try {
+                if(gapiInited && gisInited && tokenClient) {
+                    if(!gapi.client.getToken()) tokenClient.requestAccessToken({prompt: ''}); 
+                }
+            } catch(e) { console.log("Google Auth még nem állt készen, de a helyi login sikeres."); }
         }
 
-        // --- GOOGLE DRIVE INTEGRÁCIÓ ---
+        // --- 4. AVATAR & GRAPHICS SYSTEM ---
+        const avCanvas = document.getElementById('avatar-layer');
+        const avCtx = avCanvas.getContext('2d');
+        let particles = []; 
+
+        function resizeCanvas() {
+            avCanvas.width = window.innerWidth;
+            avCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        setTimeout(resizeCanvas, 100); // Init biztosítása
+
+        function spawnParticle(x, y, color) {
+            particles.push({
+                x: x, y: y,
+                vx: (Math.random()-0.5)*2, vy: (Math.random()-0.5)*2,
+                life: 1.0, color: color
+            });
+        }
+
+        function updateAndDrawAvatars() {
+            avCtx.clearRect(0, 0, avCanvas.width, avCanvas.height);
+            
+            // Mindig rajzoljuk a sajátot, ha be vagyunk lépve, hogy lássa a felhasználó
+            if(currentUser) {
+                drawAvatar(myAvatar, true);
+                // Részecskék mozgáskor
+                if(Math.abs(myAvatar.vx) > 0.1 || Math.abs(myAvatar.vy) > 0.1) {
+                    spawnParticle(myAvatar.x, myAvatar.y, myAvatar.color);
+                }
+            }
+
+            // Többiek
+            Object.values(avatars).forEach(av => {
+                drawAvatar(av, false);
+                if(Math.abs(av.vx) > 0.1 || Math.abs(av.vy) > 0.1) {
+                    spawnParticle(av.x, av.y, av.color);
+                }
+            });
+
+            // Részecskék
+            for(let i=particles.length-1; i>=0; i--) {
+                let p = particles[i];
+                p.x += p.vx; p.y += p.vy;
+                p.life -= 0.05;
+                avCtx.fillStyle = p.color;
+                avCtx.globalAlpha = p.life;
+                avCtx.beginPath(); avCtx.arc(p.x, p.y, 2, 0, Math.PI*2); avCtx.fill();
+                avCtx.globalAlpha = 1.0;
+                if(p.life <= 0) particles.splice(i, 1);
+            }
+
+            requestAnimationFrame(updateAndDrawAvatars);
+        }
+
+        function drawAvatar(av, isSelf) {
+            av.vx *= 0.9; av.vy *= 0.9; // Friction
+
+            // Test
+            avCtx.beginPath();
+            avCtx.arc(av.x, av.y, 15, 0, Math.PI * 2);
+            avCtx.fillStyle = av.color;
+            avCtx.shadowBlur = 15; avCtx.shadowColor = av.color; 
+            avCtx.fill();
+            avCtx.shadowBlur = 0;
+
+            // Szemek
+            let lookX = (av.vx || 0) * 1.5;
+            let lookY = (av.vy || 0) * 1.5;
+            const maxLook = 6;
+            if(lookX > maxLook) lookX = maxLook; if(lookX < -maxLook) lookX = -maxLook;
+            if(lookY > maxLook) lookY = maxLook; if(lookY < -maxLook) lookY = -maxLook;
+
+            avCtx.fillStyle = 'white';
+            avCtx.beginPath(); avCtx.arc(av.x - 5 + lookX, av.y - 4 + lookY, 5, 0, Math.PI*2); avCtx.fill();
+            avCtx.beginPath(); avCtx.arc(av.x + 5 + lookX, av.y - 4 + lookY, 5, 0, Math.PI*2); avCtx.fill();
+            
+            avCtx.fillStyle = 'black';
+            avCtx.beginPath(); avCtx.arc(av.x - 5 + lookX*1.2, av.y - 4 + lookY*1.2, 2, 0, Math.PI*2); avCtx.fill();
+            avCtx.beginPath(); avCtx.arc(av.x + 5 + lookX*1.2, av.y - 4 + lookY*1.2, 2, 0, Math.PI*2); avCtx.fill();
+
+            // Név
+            avCtx.fillStyle = '#fff';
+            avCtx.font = "bold 10px Inter";
+            avCtx.textAlign = "center";
+            avCtx.fillText(av.name || '?', av.x, av.y - 20);
+
+            if(isSelf && isDraggingAvatar) {
+                avCtx.strokeStyle = 'white'; avCtx.lineWidth = 2; avCtx.stroke(); 
+            }
+        }
+
+        // Drag & Drop
+        window.addEventListener('mousedown', (e) => {
+            if(!currentUser) return;
+            const dx = e.clientX - myAvatar.x;
+            const dy = e.clientY - myAvatar.y;
+            if(Math.sqrt(dx*dx + dy*dy) < 30) {
+                isDraggingAvatar = true;
+                e.preventDefault(); e.stopPropagation();
+            }
+        });
+        window.addEventListener('mousemove', (e) => {
+            if(isDraggingAvatar) {
+                myAvatar.vx = e.clientX - myAvatar.x;
+                myAvatar.vy = e.clientY - myAvatar.y;
+                myAvatar.x = e.clientX;
+                myAvatar.y = e.clientY;
+                broadcastAvatarMove();
+            }
+        });
+        window.addEventListener('mouseup', () => {
+            if(isDraggingAvatar) {
+                isDraggingAvatar = false;
+                broadcastAvatarMove();
+            }
+        });
+
+        // Loop Indítása
+        requestAnimationFrame(updateAndDrawAvatars);
+
+
+        // --- 5. CONFIG & AUTH SETUP ---
+        const CLIENT_ID = '138100233309-v575n23j2b6pdek9t9clvkg3immlkrdi.apps.googleusercontent.com'; 
+        const API_KEY = 'AIzaSyAfC2viqoOsVVjcShnqY2rrRsxdV7WHMEg'; 
+        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
         function gapiLoaded() { gapi.load('client', async () => { await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC], }); gapiInited = true; }); }
         function gisLoaded() { tokenClient = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPES, callback: (resp) => { if (resp.error) logSystem("Google hiba: " + resp.error); else logSystem("Google Fiók csatlakoztatva."); }, }); gisInited = true; }
 
@@ -575,9 +655,9 @@ print("Hello Team!")
         }
 
         async function handleDriveSave() {
-            showLoading(true);
+            document.getElementById('loading-overlay').style.display='flex';
             const folderId = await getFolderId();
-            if(!folderId) { showLoading(false); return; }
+            if(!folderId) { document.getElementById('loading-overlay').style.display='none'; return; }
             const content = editor.getValue();
             const dateStr = new Date().toISOString().slice(0,10);
             const filename = `${currentUser}_${dateStr}.py`;
@@ -586,13 +666,13 @@ print("Hello Team!")
             const form = new FormData();
             form.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
             form.append('file', file);
-            fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: new Headers({'Authorization': 'Bearer ' + gapi.client.getToken().access_token}), body: form }).then(res => res.json()).then(val => { logSystem(`Sikeres mentés: ${filename}`); showLoading(false); }).catch(err => { logSystem("Mentési hiba!"); showLoading(false); });
+            fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: new Headers({'Authorization': 'Bearer ' + gapi.client.getToken().access_token}), body: form }).then(res => res.json()).then(val => { logSystem(`Sikeres mentés: ${filename}`); document.getElementById('loading-overlay').style.display='none'; }).catch(err => { logSystem("Mentési hiba!"); document.getElementById('loading-overlay').style.display='none'; });
         }
 
         async function handleDriveLoad() {
-            showLoading(true);
+            document.getElementById('loading-overlay').style.display='flex';
             const folderId = await getFolderId();
-            if(!folderId) { showLoading(false); return; }
+            if(!folderId) { document.getElementById('loading-overlay').style.display='none'; return; }
             const response = await gapi.client.drive.files.list({ q: `'${folderId}' in parents and trashed=false`, fields: 'files(id, name)', });
             const files = response.result.files;
             const listDiv = document.getElementById('file-list');
@@ -608,38 +688,29 @@ print("Hello Team!")
                 });
                 document.getElementById('loadModal').style.display = 'flex';
             } else { alert("Nincs fájl a mappában."); }
-            showLoading(false);
+            document.getElementById('loading-overlay').style.display='none';
         }
 
         async function loadFileContent(fileId) {
             document.getElementById('loadModal').style.display = 'none';
-            showLoading(true);
+            document.getElementById('loading-overlay').style.display='flex';
             try { const response = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' }); editor.setValue(response.body); logSystem("Fájl betöltve"); } catch(e) { logSystem("Hiba betöltéskor."); }
-            showLoading(false);
+            document.getElementById('loading-overlay').style.display='none';
         }
 
-        // --- EDITOR & SETUP ---
+        // --- 6. EDITOR & SETTINGS ---
         let editor = CodeMirror.fromTextArea(document.getElementById("code-editor"), {
             mode: {name: "python", version: 3}, theme: "dracula",
             lineNumbers: true, indentUnit: 4, smartIndent: true, matchBrackets: true, autoCloseBrackets: true,
             extraKeys: { "Ctrl-Space": "autocomplete", "Ctrl-Enter": function() { runPython(); } },
-            hintOptions: { completeSingle: false },
-            lineWrapping: false 
+            hintOptions: { completeSingle: false }, lineWrapping: false 
         });
-
-        const notepad = document.getElementById('shared-notepad');
 
         if(localStorage.getItem('ide_fontsize')) { document.querySelector('.CodeMirror').style.fontSize = localStorage.getItem('ide_fontsize') + 'px'; document.getElementById('fontSizeInput').value = localStorage.getItem('ide_fontsize'); }
         let exportExt = localStorage.getItem('ide_export_ext') || 'txt'; document.getElementById('exportFormatInput').value = exportExt;
-        
-        let savedBgColor = localStorage.getItem('ide_custom_bg') || '#000000'; 
-        document.getElementById('bgColorInput').value = savedBgColor;
-        
-        let savedPattern = localStorage.getItem('ide_pattern_on'); if(savedPattern === null) savedPattern = 'true'; 
-        document.getElementById('bgPatternInput').checked = (savedPattern === 'true');
-        
-        let savedEditorBg = localStorage.getItem('ide_editor_bg') || '#000000'; 
-        document.getElementById('editorBgColorInput').value = savedEditorBg;
+        let savedBgColor = localStorage.getItem('ide_custom_bg') || '#000000'; document.getElementById('bgColorInput').value = savedBgColor;
+        let savedPattern = localStorage.getItem('ide_pattern_on'); if(savedPattern === null) savedPattern = 'true'; document.getElementById('bgPatternInput').checked = (savedPattern === 'true');
+        let savedEditorBg = localStorage.getItem('ide_editor_bg') || '#000000'; document.getElementById('editorBgColorInput').value = savedEditorBg;
         
         applyThemeSettings(savedBgColor, savedPattern === 'true', savedEditorBg);
         let savedLayout = localStorage.getItem('ide_layout') || 'right'; document.getElementById('layoutInput').value = savedLayout; applyLayout(savedLayout);
@@ -651,21 +722,16 @@ print("Hello Team!")
             }
         });
 
-        // --- PYTHON ENGINE (PYODIDE) ---
+        // --- 7. PYTHON (PYODIDE) ---
         let pyodide = null;
         let pyodideReady = false;
         let inputResolver = null;
-        const outputElement = document.getElementById("output");
-
-        function showLoading(show) { document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none'; }
 
         async function initPyodide() {
             try {
                 pyodide = await loadPyodide();
                 await pyodide.runPythonAsync(`
-                    import sys
-                    import js
-                    import asyncio
+                    import sys, js, asyncio
                     class JSWriter:
                         def write(self, text): js.printToTerminal(text)
                         def flush(self): pass
@@ -677,10 +743,12 @@ print("Hello Team!")
                 `);
                 pyodideReady = true;
                 logSystem("Rendszer kész.");
+                
+                // Auto-login if saved
                 const savedUser = localStorage.getItem('saved_username');
                 if(savedUser) { 
                     currentUser = savedUser; 
-                    myAvatar.name = savedUser; // Set avatar name on init
+                    myAvatar.name = savedUser; 
                     document.getElementById('user-btn').innerText = savedUser; 
                     logSystem(`Üdvözöllek újra, ${savedUser}!`); 
                 }
@@ -708,14 +776,6 @@ print("Hello Team!")
                 inputResolver(val); inputResolver = null; setTimeout(() => editor.focus(), 50);
             }
         });
-
-        function addToOutput(text, cls="") {
-            const span = document.createElement("span"); span.textContent = text;
-            if(cls) span.className = cls; outputElement.appendChild(span);
-            outputElement.scrollTop = outputElement.scrollHeight;
-        }
-        function logSystem(msg) { addToOutput("> " + msg + "\n", "system-msg"); }
-        function logP2P(msg) { addToOutput("[P2P] " + msg + "\n", "p2p-msg"); }
 
         async function runPython() {
             if(!pyodideReady) return;
@@ -753,8 +813,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         function applyLayout(layout) {
             const container = document.querySelector('.main-container'); container.classList.remove('layout-left', 'layout-bottom');
             if (layout === 'left') container.classList.add('layout-left'); else if (layout === 'bottom') container.classList.add('layout-bottom');
-            setTimeout(() => editor.refresh(), 100);
-            resizeCanvas();
+            setTimeout(() => editor.refresh(), 100); resizeCanvas();
         }
 
         function applyThemeSettings(color, patternOn, editorColor) {
@@ -804,21 +863,14 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             isDark = !isDark; document.body.className = isDark ? "" : "light-mode"; editor.setOption("theme", isDark ? "dracula" : "eclipse");
         }
 
-        // --- P2P IMPLEMENTÁCIÓ + AVATAR RENDSZER ---
+        // --- 8. P2P & SYNC ---
         let peer = null;
         let conn = null; 
         let isSyncing = false; 
         let isNotepadSyncing = false;
         let isHost = false;
-        
         let connectedUsers = []; 
         let maxParticipants = 3;
-
-        // AVATAR SYSTEM STATE
-        const AVATAR_COLORS = ['#ff0055', '#00f2ff', '#00ff44', '#ffcc00', '#aa00ff', '#ffffff'];
-        let avatars = {}; 
-        let myAvatar = { x: 150, y: 150, vx: 0, vy: 0, color: '#00f2ff', name: 'User' };
-        let isDraggingAvatar = false;
 
         const ROOM_MAPPING = {
             "1": "aerocode_pro_v11_secure_channel_alpha_92837465_student_access_key_x99_unique_hash_a1",
@@ -829,158 +881,21 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             "6": "aerocode_pro_v11_secure_channel_zeta_99887766_student_access_key_h44_unique_hash_f6"
         };
         
-        window.addEventListener('beforeunload', () => {
-            if (peer) peer.destroy();
-        });
-
-        // --- AVATAR CANVAS RENDERING ---
-        const avCanvas = document.getElementById('avatar-layer');
-        const avCtx = avCanvas.getContext('2d');
-        let particles = []; 
-
-        function resizeCanvas() {
-            avCanvas.width = window.innerWidth;
-            avCanvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        setTimeout(resizeCanvas, 100);
-
-        function spawnParticle(x, y, color) {
-            particles.push({
-                x: x, y: y,
-                vx: (Math.random()-0.5)*2, vy: (Math.random()-0.5)*2,
-                life: 1.0, color: color
-            });
-        }
-
-        // FŐ RAJZOLÓ LOOP (JAVÍTOTT - Mindig fut)
-        function updateAndDrawAvatars() {
-            avCtx.clearRect(0, 0, avCanvas.width, avCanvas.height);
-            
-            // 1. Saját avatár kirajzolása (ha van user)
-            if(currentUser) {
-                drawAvatar(myAvatar, true);
-                if(Math.abs(myAvatar.vx) > 0.1 || Math.abs(myAvatar.vy) > 0.1) {
-                    spawnParticle(myAvatar.x, myAvatar.y, myAvatar.color);
-                }
-            }
-
-            // 2. Többiek kirajzolása (ha van lista)
-            Object.values(avatars).forEach(av => {
-                drawAvatar(av, false);
-                if(Math.abs(av.vx) > 0.1 || Math.abs(av.vy) > 0.1) {
-                    spawnParticle(av.x, av.y, av.color);
-                }
-            });
-
-            // 3. Részecskék frissítése
-            for(let i=particles.length-1; i>=0; i--) {
-                let p = particles[i];
-                p.x += p.vx; p.y += p.vy;
-                p.life -= 0.05;
-                avCtx.fillStyle = p.color;
-                avCtx.globalAlpha = p.life;
-                avCtx.beginPath(); avCtx.arc(p.x, p.y, 2, 0, Math.PI*2); avCtx.fill();
-                avCtx.globalAlpha = 1.0;
-                if(p.life <= 0) particles.splice(i, 1);
-            }
-
-            // A hurok sosem állhat le, különben eltűnnek a karakterek
-            requestAnimationFrame(updateAndDrawAvatars);
-        }
-
-        function drawAvatar(av, isSelf) {
-            av.vx *= 0.9; av.vy *= 0.9; 
-
-            // Test
-            avCtx.beginPath();
-            avCtx.arc(av.x, av.y, 15, 0, Math.PI * 2);
-            avCtx.fillStyle = av.color;
-            avCtx.shadowBlur = 15; avCtx.shadowColor = av.color; 
-            avCtx.fill();
-            avCtx.shadowBlur = 0;
-
-            // Szemek
-            let lookX = (av.vx || 0) * 1.5;
-            let lookY = (av.vy || 0) * 1.5;
-            const maxLook = 6;
-            if(lookX > maxLook) lookX = maxLook; if(lookX < -maxLook) lookX = -maxLook;
-            if(lookY > maxLook) lookY = maxLook; if(lookY < -maxLook) lookY = -maxLook;
-
-            // Fehér
-            avCtx.fillStyle = 'white';
-            avCtx.beginPath(); avCtx.arc(av.x - 5 + lookX, av.y - 4 + lookY, 5, 0, Math.PI*2); avCtx.fill();
-            avCtx.beginPath(); avCtx.arc(av.x + 5 + lookX, av.y - 4 + lookY, 5, 0, Math.PI*2); avCtx.fill();
-            
-            // Pupilla
-            avCtx.fillStyle = 'black';
-            avCtx.beginPath(); avCtx.arc(av.x - 5 + lookX*1.2, av.y - 4 + lookY*1.2, 2, 0, Math.PI*2); avCtx.fill();
-            avCtx.beginPath(); avCtx.arc(av.x + 5 + lookX*1.2, av.y - 4 + lookY*1.2, 2, 0, Math.PI*2); avCtx.fill();
-
-            // Név
-            avCtx.fillStyle = '#fff';
-            avCtx.font = "bold 10px Inter";
-            avCtx.textAlign = "center";
-            avCtx.fillText(av.name, av.x, av.y - 20);
-
-            if(isSelf && isDraggingAvatar) {
-                avCtx.strokeStyle = 'white'; avCtx.lineWidth = 2;
-                avCtx.stroke(); 
-            }
-        }
-
-        // --- DRAG LOGIKA ---
-        window.addEventListener('mousedown', (e) => {
-            if(!currentUser) return;
-            const dx = e.clientX - myAvatar.x;
-            const dy = e.clientY - myAvatar.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-
-            if(dist < 25) {
-                isDraggingAvatar = true;
-                e.preventDefault(); 
-                e.stopPropagation(); // Ez fontos, hogy ne jelöljön szöveget
-            }
-        });
-
-        window.addEventListener('mousemove', (e) => {
-            if(isDraggingAvatar) {
-                myAvatar.vx = e.clientX - myAvatar.x;
-                myAvatar.vy = e.clientY - myAvatar.y;
-                myAvatar.x = e.clientX;
-                myAvatar.y = e.clientY;
-                broadcastAvatarMove();
-            }
-        });
-
-        window.addEventListener('mouseup', () => {
-            if(isDraggingAvatar) {
-                isDraggingAvatar = false;
-                myAvatar.vx = 0; myAvatar.vy = 0;
-                broadcastAvatarMove(); 
-            }
-        });
-
-        // INDÍTÁS
-        requestAnimationFrame(updateAndDrawAvatars);
-
-        // --- P2P FÜGGVÉNYEK ---
+        window.addEventListener('beforeunload', () => { if (peer) peer.destroy(); });
 
         function updateActiveUsersUI() {
             const container = document.getElementById('active-users-list');
             container.innerHTML = "";
             const selfChip = document.createElement('div');
             selfChip.className = "user-chip self";
-            selfChip.innerHTML = `<span class="username">${currentUser} (Én)</span>`;
+            selfChip.innerHTML = `<span class="username">${currentUser || 'Vendég'} (Én)</span>`;
             container.appendChild(selfChip);
 
             connectedUsers.forEach(u => {
                 const chip = document.createElement('div');
                 chip.className = "user-chip";
                 let html = `<span class="username">${u.username || 'Ismeretlen'}</span>`;
-                if (isHost) {
-                    html += `<button class="kick-btn" onclick="kickUser('${u.id}')" title="Kirúgás"><span class="material-icons" style="font-size:14px;">close</span></button>`;
-                }
+                if (isHost) { html += `<button class="kick-btn" onclick="kickUser('${u.id}')" title="Kirúgás"><span class="material-icons" style="font-size:14px;">close</span></button>`; }
                 chip.innerHTML = html;
                 container.appendChild(chip);
             });
@@ -994,19 +909,13 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             connectedUsers = [];
             avatars = {}; 
             
-            myAvatar.name = currentUser;
-            myAvatar.color = AVATAR_COLORS[Math.floor(Math.random()*AVATAR_COLORS.length)];
-
-            maxParticipants = parseInt(document.getElementById('room-size-limit').value) || 3;
-            const selectedVal = document.getElementById('channel-select').value;
-            const roomId = ROOM_MAPPING[selectedVal];
+            myAvatar.name = currentUser; // Ensure name is set
             
+            maxParticipants = parseInt(document.getElementById('room-size-limit').value) || 3;
+            const roomId = ROOM_MAPPING[document.getElementById('channel-select').value];
             updateP2PLog("Szoba nyitása...");
             
-            peer = new Peer(roomId, {
-                debug: 1,
-                config: { 'iceServers': [ { url: 'stun:stun.l.google.com:19302' } ] }
-            });
+            peer = new Peer(roomId, { debug: 1, config: { 'iceServers': [ { url: 'stun:stun.l.google.com:19302' } ] } });
 
             peer.on('open', (id) => {
                 updateP2PLog("SZOBA NYITVA! (Host)");
@@ -1020,89 +929,43 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
 
             peer.on('connection', (connection) => {
                 if (connectedUsers.length + 1 >= maxParticipants) { 
-                    connection.on('open', () => {
-                        connection.send({ type: 'error', message: 'A szoba megtelt.' });
-                        setTimeout(() => connection.close(), 500);
-                    });
+                    connection.on('open', () => { connection.send({ type: 'error', message: 'A szoba megtelt.' }); setTimeout(() => connection.close(), 500); });
                     return;
                 }
-
                 connection.on('open', () => { });
-
                 connection.on('data', (data) => {
                     if (data.type === 'handshake') {
                         const newUser = { id: connection.peer, conn: connection, username: data.username };
                         connectedUsers.push(newUser);
                         logP2P(`${data.username} csatlakozott.`);
-                        
-                        avatars[connection.peer] = {
-                            x: 200, y: 200, vx:0, vy:0,
-                            name: data.username,
-                            color: data.color || AVATAR_COLORS[Math.floor(Math.random()*AVATAR_COLORS.length)]
-                        };
-
+                        avatars[connection.peer] = { x: 200, y: 200, vx:0, vy:0, name: data.username, color: data.color || '#fff' };
                         connection.send({ type: 'code_update', content: editor.getValue() });
                         connection.send({ type: 'notepad_update', content: notepad.value });
-                        
-                        broadcastUserList();
-                        updateActiveUsersUI();
-                        broadcastAvatarList(); 
+                        broadcastUserList(); updateActiveUsersUI(); broadcastAvatarList(); 
                     }
                     else if(data.type === 'code_update') {
                         broadcastCode(data.content, connection.peer);
-                        if (editor.getValue() !== data.content) {
-                            isSyncing = true;
-                            const cursor = editor.getCursor(); 
-                            editor.setValue(data.content); 
-                            editor.setCursor(cursor); 
-                            isSyncing = false;
-                        }
+                        if (editor.getValue() !== data.content) { isSyncing = true; const cursor = editor.getCursor(); editor.setValue(data.content); editor.setCursor(cursor); isSyncing = false; }
                     }
                     else if(data.type === 'notepad_update') {
                         broadcastNotepad(data.content, connection.peer);
-                        if(notepad.value !== data.content) {
-                            isNotepadSyncing = true;
-                            notepad.value = data.content;
-                            isNotepadSyncing = false;
-                        }
+                        if(notepad.value !== data.content) { isNotepadSyncing = true; notepad.value = data.content; isNotepadSyncing = false; }
                     }
                     else if(data.type === 'avatar_move') {
                         if(avatars[connection.peer]) {
                             const av = avatars[connection.peer];
-                            av.x = data.x; av.y = data.y;
-                            av.vx = data.vx; av.vy = data.vy;
-                            
-                            // Host továbbküldi mindenkinek az új pozíciót
-                            broadcastAvatarMove(connection.peer, {
-                                type: 'avatar_move',
-                                peerId: connection.peer, // Jelezzük ki mozgott
-                                x: data.x, y: data.y,
-                                vx: data.vx, vy: data.vy
-                            });
+                            av.x = data.x; av.y = data.y; av.vx = data.vx; av.vy = data.vy;
+                            broadcastAvatarMove(connection.peer, { type: 'avatar_move', peerId: connection.peer, x: data.x, y: data.y, vx: data.vx, vy: data.vy });
                         }
                     }
                 });
-
                 connection.on('close', () => {
                     const u = connectedUsers.find(user => user.id === connection.peer);
-                    if(u) {
-                        logP2P(`${u.username} kilépett.`);
-                        connectedUsers = connectedUsers.filter(user => user.id !== connection.peer);
-                        delete avatars[connection.peer]; 
-                        broadcastUserList();
-                        updateActiveUsersUI();
-                        broadcastAvatarList();
-                    }
+                    if(u) { logP2P(`${u.username} kilépett.`); connectedUsers = connectedUsers.filter(user => user.id !== connection.peer); delete avatars[connection.peer]; broadcastUserList(); updateActiveUsersUI(); broadcastAvatarList(); }
                 });
             });
-
             peer.on('error', (err) => {
-                if(err.type === 'unavailable-id') {
-                    updateP2PLog("CSATORNA FOGLALT!");
-                    document.getElementById('p2p-log').style.color = "#ff5555";
-                    alert("Ez a csatorna már foglalt. Válassz másikat vagy várj.");
-                    peer.destroy(); peer = null;
-                } else { updateP2PLog("Hiba: " + err.type); }
+                if(err.type === 'unavailable-id') { updateP2PLog("CSATORNA FOGLALT!"); document.getElementById('p2p-log').style.color = "#ff5555"; alert("Ez a csatorna már foglalt."); peer.destroy(); peer = null; } else { updateP2PLog("Hiba: " + err.type); }
             });
         }
 
@@ -1112,211 +975,61 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             
             isHost = false;
             avatars = {}; 
+            myAvatar.name = currentUser; 
             
-            myAvatar.name = currentUser;
-            myAvatar.color = AVATAR_COLORS[Math.floor(Math.random()*AVATAR_COLORS.length)];
-
-            const selectedVal = document.getElementById('channel-select').value;
-            const roomId = ROOM_MAPPING[selectedVal];
-            
+            const roomId = ROOM_MAPPING[document.getElementById('channel-select').value];
             updateP2PLog("Csatlakozás...");
             
-            peer = new Peer(null, {
-                debug: 1,
-                config: { 'iceServers': [ { url: 'stun:stun.l.google.com:19302' } ] }
-            });
+            peer = new Peer(null, { debug: 1, config: { 'iceServers': [ { url: 'stun:stun.l.google.com:19302' } ] } });
 
             peer.on('open', (id) => {
                 conn = peer.connect(roomId);
-                
                 conn.on('open', () => {
                     conn.send({ type: 'handshake', username: currentUser, color: myAvatar.color });
                     document.getElementById('connect-ui').style.display = 'none';
                     document.getElementById('disconnect-ui').style.display = 'block';
                     document.getElementById('live-indicator').style.display = 'block';
-                    updateP2PLog("ONLINE");
-                    document.getElementById('p2p-log').style.color = "#50fa7b";
-                    logP2P("Csatlakozva a szobához.");
-                    updateActiveUsersUI(); 
+                    updateP2PLog("ONLINE"); document.getElementById('p2p-log').style.color = "#50fa7b";
+                    logP2P("Csatlakozva a szobához."); updateActiveUsersUI(); 
                 });
-
                 conn.on('data', (data) => {
-                    if(data.type === 'code_update') {
-                        if (editor.getValue() !== data.content) {
-                            isSyncing = true;
-                            const cursor = editor.getCursor(); 
-                            editor.setValue(data.content); 
-                            editor.setCursor(cursor); 
-                            isSyncing = false;
-                        }
-                    } else if(data.type === 'notepad_update') {
-                        if(notepad.value !== data.content) {
-                            isNotepadSyncing = true;
-                            notepad.value = data.content;
-                            isNotepadSyncing = false;
-                        }
-                    } else if (data.type === 'user_list') {
-                        connectedUsers = data.users; 
-                        updateActiveUsersUI();
-                    } else if (data.type === 'avatar_list') {
-                        const newAvatars = data.avatars;
-                        delete newAvatars[peer.id]; // Ne írjuk felül magunkat a listából
-                        avatars = newAvatars;
-                    } else if (data.type === 'avatar_move') {
-                        // Ha valaki más mozog (és nem én vagyok az)
+                    if(data.type === 'code_update') { if (editor.getValue() !== data.content) { isSyncing = true; const cursor = editor.getCursor(); editor.setValue(data.content); editor.setCursor(cursor); isSyncing = false; } }
+                    else if(data.type === 'notepad_update') { if(notepad.value !== data.content) { isNotepadSyncing = true; notepad.value = data.content; isNotepadSyncing = false; } }
+                    else if (data.type === 'user_list') { connectedUsers = data.users; updateActiveUsersUI(); }
+                    else if (data.type === 'avatar_list') { const newAvatars = data.avatars; delete newAvatars[peer.id]; avatars = newAvatars; }
+                    else if (data.type === 'avatar_move') {
                         if(data.peerId !== peer.id) {
-                            if(!avatars[data.peerId]) {
-                                avatars[data.peerId] = { x: data.x, y: data.y, color: '#fff', name: '?', vx:0, vy:0 };
-                            }
-                            avatars[data.peerId].x = data.x;
-                            avatars[data.peerId].y = data.y;
-                            avatars[data.peerId].vx = data.vx;
-                            avatars[data.peerId].vy = data.vy;
+                            if(!avatars[data.peerId]) avatars[data.peerId] = { x: data.x, y: data.y, color: '#fff', name: '?', vx:0, vy:0 };
+                            avatars[data.peerId].x = data.x; avatars[data.peerId].y = data.y; avatars[data.peerId].vx = data.vx; avatars[data.peerId].vy = data.vy;
                         }
-                    } else if (data.type === 'kick') {
-                        alert("A szoba gazdája eltávolított.");
-                        disconnectPeer();
-                    } else if (data.type === 'error') {
-                        alert(data.message);
-                        disconnectPeer();
-                    }
+                    } else if (data.type === 'kick') { alert("Kirúgtak."); disconnectPeer(); }
+                    else if (data.type === 'error') { alert(data.message); disconnectPeer(); }
                 });
-
                 conn.on('close', () => { resetP2PUI(); alert("Megszakadt a kapcsolat."); });
                 conn.on('error', () => { alert("Hiba történt."); resetP2PUI(); });
             });
-            
             peer.on('error', () => { updateP2PLog("Hálózati Hiba."); });
         }
 
-        function broadcastCode(content, senderIdToExclude) {
-            if(!isHost) return;
-            connectedUsers.forEach(u => {
-                if(u.id !== senderIdToExclude && u.conn.open) {
-                    u.conn.send({ type: 'code_update', content: content });
-                }
-            });
-        }
-
-        function broadcastNotepad(content, senderIdToExclude) {
-            if(!isHost) return;
-            connectedUsers.forEach(u => {
-                if(u.id !== senderIdToExclude && u.conn.open) {
-                    u.conn.send({ type: 'notepad_update', content: content });
-                }
-            });
-        }
+        function broadcastCode(content, senderIdToExclude) { if(!isHost) return; connectedUsers.forEach(u => { if(u.id !== senderIdToExclude && u.conn.open) { u.conn.send({ type: 'code_update', content: content }); } }); }
+        function broadcastNotepad(content, senderIdToExclude) { if(!isHost) return; connectedUsers.forEach(u => { if(u.id !== senderIdToExclude && u.conn.open) { u.conn.send({ type: 'notepad_update', content: content }); } }); }
         
         function broadcastAvatarMove(senderIdToExclude = null, moveData = null) {
             if (isHost) {
-                // Host küldi mindenkinek
-                const dataToSend = moveData || { 
-                    type: 'avatar_move', 
-                    peerId: 'HOST', 
-                    x: myAvatar.x, y: myAvatar.y, 
-                    vx: myAvatar.vx, vy: myAvatar.vy 
-                };
-
-                connectedUsers.forEach(u => {
-                    if(u.id !== senderIdToExclude && u.conn.open) {
-                        u.conn.send(dataToSend);
-                    }
-                });
-            } else {
-                // Guest küldi a Hostnak
-                if(conn && conn.open) {
-                    conn.send({ 
-                        type: 'avatar_move', 
-                        x: myAvatar.x, y: myAvatar.y,
-                        vx: myAvatar.vx, vy: myAvatar.vy
-                    });
-                }
-            }
+                const dataToSend = moveData || { type: 'avatar_move', peerId: 'HOST', x: myAvatar.x, y: myAvatar.y, vx: myAvatar.vx, vy: myAvatar.vy };
+                connectedUsers.forEach(u => { if(u.id !== senderIdToExclude && u.conn.open) { u.conn.send(dataToSend); } });
+            } else { if(conn && conn.open) { conn.send({ type: 'avatar_move', x: myAvatar.x, y: myAvatar.y, vx: myAvatar.vx, vy: myAvatar.vy }); } }
         }
         
-        function broadcastAvatarList() {
-            if(!isHost) return;
-            let allAvatars = { ...avatars };
-            allAvatars['HOST'] = myAvatar; 
-            
-            // Másolat, hogy ne legyen körkörös hivatkozás
-            // Bár itt az objektum sima adatokból áll, de a biztonság kedvéért
-            connectedUsers.forEach(u => {
-                if(u.conn.open) {
-                    u.conn.send({ type: 'avatar_list', avatars: allAvatars });
-                }
-            });
-        }
-
-        function broadcastUserList() {
-            if(!isHost) return;
-            const safeList = connectedUsers.map(u => ({ id: u.id, username: u.username }));
-            safeList.unshift({ id: 'HOST', username: currentUser + " (HOST)" });
-
-            connectedUsers.forEach(u => {
-                if(u.conn.open) {
-                    u.conn.send({ type: 'user_list', users: safeList });
-                }
-            });
-        }
-
-        function kickUser(peerId) {
-            if(!isHost) return;
-            const target = connectedUsers.find(u => u.id === peerId);
-            if(target) {
-                if(target.conn.open) target.conn.send({ type: 'kick' });
-                setTimeout(() => {
-                    target.conn.close();
-                }, 100);
-            }
-        }
-
-        function disconnectPeer() {
-            if (isHost) {
-                connectedUsers.forEach(u => { if(u.conn.open) u.conn.close(); });
-            } else {
-                if(conn) conn.close();
-            }
-            if(peer) peer.destroy();
-            resetP2PUI();
-            logSystem("Szétkapcsolva.");
-        }
-
-        function resetP2PUI() {
-            conn = null;
-            peer = null;
-            isHost = false;
-            connectedUsers = [];
-            avatars = {}; 
-            document.getElementById('connect-ui').style.display = 'block';
-            document.getElementById('disconnect-ui').style.display = 'none';
-            document.getElementById('live-indicator').style.display = 'none';
-            document.getElementById('active-users-list').innerHTML = "";
-            updateP2PLog("Offline");
-            document.getElementById('p2p-log').style.color = "#888";
-        }
-
+        function broadcastAvatarList() { if(!isHost) return; let allAvatars = { ...avatars }; allAvatars['HOST'] = myAvatar; connectedUsers.forEach(u => { if(u.conn.open) { u.conn.send({ type: 'avatar_list', avatars: allAvatars }); } }); }
+        function broadcastUserList() { if(!isHost) return; const safeList = connectedUsers.map(u => ({ id: u.id, username: u.username })); safeList.unshift({ id: 'HOST', username: currentUser + " (HOST)" }); connectedUsers.forEach(u => { if(u.conn.open) { u.conn.send({ type: 'user_list', users: safeList }); } }); }
+        function kickUser(peerId) { if(!isHost) return; const target = connectedUsers.find(u => u.id === peerId); if(target) { if(target.conn.open) target.conn.send({ type: 'kick' }); setTimeout(() => { target.conn.close(); }, 100); } }
+        function disconnectPeer() { if (isHost) { connectedUsers.forEach(u => { if(u.conn.open) u.conn.close(); }); } else { if(conn) conn.close(); } if(peer) peer.destroy(); resetP2PUI(); logSystem("Szétkapcsolva."); }
+        function resetP2PUI() { conn = null; peer = null; isHost = false; connectedUsers = []; avatars = {}; document.getElementById('connect-ui').style.display = 'block'; document.getElementById('disconnect-ui').style.display = 'none'; document.getElementById('live-indicator').style.display = 'none'; document.getElementById('active-users-list').innerHTML = ""; updateP2PLog("Offline"); document.getElementById('p2p-log').style.color = "#888"; }
         function updateP2PLog(msg) { document.getElementById('p2p-log').innerText = msg; }
 
-        editor.on('change', (cm, change) => {
-            if (!isSyncing) {
-                if (isHost) {
-                    broadcastCode(editor.getValue(), null); 
-                } else if (conn && conn.open) {
-                    conn.send({ type: 'code_update', content: editor.getValue() });
-                }
-            }
-        });
-
-        notepad.addEventListener('input', () => {
-            if (!isNotepadSyncing) {
-                if (isHost) {
-                    broadcastNotepad(notepad.value, null);
-                } else if (conn && conn.open) {
-                    conn.send({ type: 'notepad_update', content: notepad.value });
-                }
-            }
-        });
+        editor.on('change', (cm, change) => { if (!isSyncing) { if (isHost) { broadcastCode(editor.getValue(), null); } else if (conn && conn.open) { conn.send({ type: 'code_update', content: editor.getValue() }); } } });
+        notepad.addEventListener('input', () => { if (!isNotepadSyncing) { if (isHost) { broadcastNotepad(notepad.value, null); } else if (conn && conn.open) { conn.send({ type: 'notepad_update', content: notepad.value }); } } });
     </script>
 </body>
 </html>
