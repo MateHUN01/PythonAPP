@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroCode PRO v11 - P2P</title>
+    <title>AeroCode PRO v11 - P2P Fixed</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
@@ -228,20 +228,6 @@
         .success { color: #50fa7b; }
         .system-msg { color: var(--system-msg-color); font-style: italic; }
         
-        /* P2P UI Elemek */
-        .p2p-code-display {
-            font-family: 'JetBrains Mono', monospace; 
-            font-size: 18px; letter-spacing: 2px;
-            background: rgba(0,0,0,0.3); 
-            padding: 10px; border-radius: 8px; 
-            text-align: center; margin-bottom: 15px; 
-            color: var(--accent-color); font-weight: bold;
-            border: 1px dashed var(--border-color);
-            cursor: pointer;
-            transition: all 0.2s;
-            min-height: 40px;
-        }
-        .p2p-code-display:hover { background: rgba(0,0,0,0.5); border-color: var(--accent-color); }
     </style>
 </head>
 <body>
@@ -265,27 +251,35 @@
             <div id="user-btn" onclick="openLoginModal()">Log in</div>
             
             <div class="dropdown">
-                <button class="icon-btn" title="Közös Munka (P2P)" onclick="initPeerIfNeeded()">
+                <button class="icon-btn" title="Közös Munka (P2P)" onclick="resetP2PUI()">
                     <span class="material-icons">group</span>
                 </button>
                 <div class="dropdown-content">
                     <h4 style="margin:0 0 10px 0; border-bottom:1px solid #444; padding-bottom:5px;">Közös Munka</h4>
                     
-                    <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Saját 6-jegyű kódod:</div>
-                    <div id="my-peer-id" class="p2p-code-display" onclick="copyToClipboard()" title="Másolás">
-                        ...
-                    </div>
-
                     <div id="connect-ui">
-                        <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Partner kódja:</div>
+                        <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Válassz egy csatornát:</div>
+                        <select id="channel-select" style="width:100%; padding:8px; background:var(--input-field-bg); border:1px solid var(--border-color); color:var(--text-color); border-radius:4px; margin-bottom:10px; font-family:'Inter'">
+                            <option value="1">1. Csatorna (Alpha)</option>
+                            <option value="2">2. Csatorna (Beta)</option>
+                            <option value="3">3. Csatorna (Gamma)</option>
+                            <option value="4">4. Csatorna (Delta)</option>
+                            <option value="5">5. Csatorna (Omega)</option>
+                            <option value="6">6. Csatorna (Zeta)</option>
+                        </select>
+                        
+                        <div style="font-size:10px; color:#888; margin-bottom:5px;">Egyikőtök legyen HOST, a másik JOIN!</div>
+
                         <div style="display:flex; gap:5px;">
-                            <input type="text" id="friend-id-input" placeholder="pl. A7X29B" maxlength="6"
-                                   style="width:100%; padding:8px; background:var(--input-field-bg); border:1px solid var(--border-color); color:var(--text-color); border-radius:4px; outline:none; font-family:'JetBrains Mono'; text-transform:uppercase;">
-                            <button onclick="connectToPeer()" style="padding:0 12px; background:var(--run-color); color:white; border:none; border-radius:4px; cursor:pointer;"><span class="material-icons">login</span></button>
+                            <button onclick="startAsHost()" style="flex:1; padding:8px; background:var(--run-color); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">HOST</button>
+                            <button onclick="joinAsGuest()" style="flex:1; padding:8px; background:#50fa7b; color:#222; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">JOIN</button>
                         </div>
                     </div>
 
                     <div id="disconnect-ui" style="display:none;">
+                        <div style="background:rgba(80, 250, 123, 0.1); color:#50fa7b; padding:8px; border-radius:4px; margin-bottom:10px; text-align:center; font-size:12px;">
+                            <span class="material-icons" style="font-size:12px; vertical-align:middle;">link</span> Kapcsolódva
+                        </div>
                         <button onclick="disconnectPeer()" style="width:100%; padding:8px; background:#ff5555; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Szétkapcsolás</button>
                     </div>
                     
@@ -676,89 +670,77 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             isDark = !isDark; document.body.className = isDark ? "" : "light-mode"; editor.setOption("theme", isDark ? "dracula" : "eclipse");
         }
 
-        // --- P2P IMPLEMENTÁCIÓ (Javított: ID Prefix + 6 karakter) ---
+        // --- P2P IMPLEMENTÁCIÓ (FIX CSATORNÁK) ---
         let peer = null;
         let conn = null;
         let isSyncing = false; 
         
-        // Egyedi előtag + 6 karakter
-        const ID_PREFIX = "AERO_CODE_PRO_v11_";
+        // A te "titkos" kódjaid. Így senkivel nem fogsz ütközni a világban.
+        const ROOM_MAPPING = {
+            "1": "aero_v11_fixed_room_alpha_9921_x3",
+            "2": "aero_v11_fixed_room_beta_4451_k8",
+            "3": "aero_v11_fixed_room_gamma_7728_p1",
+            "4": "aero_v11_fixed_room_delta_3391_q2",
+            "5": "aero_v11_fixed_room_omega_1102_v5",
+            "6": "aero_v11_fixed_room_zeta_8854_b6"
+        };
 
-        function generateShortId() {
-            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-            let result = '';
-            for (let i = 0; i < 6; i++) { // Most 6 karaktert generálunk
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return result;
-        }
-
-        function initPeerIfNeeded() {
-            if (peer && !peer.destroyed) return; 
-
-            document.getElementById('my-peer-id').innerText = "...";
-            updateP2PLog("Kód generálása...");
-
-            const shortId = generateShortId();
-            const fullId = ID_PREFIX + shortId;
+        function startAsHost() {
+            if (peer) { alert("Már kapcsolódtál!"); return; }
             
-            peer = new Peer(fullId, {
+            const selectedVal = document.getElementById('channel-select').value;
+            const roomId = ROOM_MAPPING[selectedVal];
+            
+            updateP2PLog("Szoba nyitása (" + selectedVal + ")...");
+            
+            // Hostként a fix ID-t használjuk
+            peer = new Peer(roomId, {
                 debug: 1,
-                config: {
-                    'iceServers': [
-                        { url: 'stun:stun.l.google.com:19302' },
-                        { url: 'stun:stun1.l.google.com:19302' }
-                    ]
-                }
+                config: { 'iceServers': [ { url: 'stun:stun.l.google.com:19302' } ] }
             });
-            
-            let connectTimeout = setTimeout(() => {
-                if(document.getElementById('my-peer-id').innerText === "...") {
-                    document.getElementById('my-peer-id').innerText = "HIBA";
-                    document.getElementById('my-peer-id').style.color = "#ff5555";
-                    updateP2PLog("Hálózati Hiba (Firewall?)");
-                }
-            }, 8000);
 
             peer.on('open', (id) => {
-                clearTimeout(connectTimeout);
-                const displayId = id.replace(ID_PREFIX, "");
-                
-                document.getElementById('my-peer-id').innerText = displayId;
-                document.getElementById('my-peer-id').style.color = "#50fa7b";
-                updateP2PLog("Kód aktív! Várakozás...");
+                updateP2PLog("SZOBA NYITVA! Várakozás...");
             });
 
             peer.on('connection', (connection) => {
                 handleConnection(connection);
-                updateP2PLog("Valaki csatlakozott!");
+                updateP2PLog("Vendég csatlakozott!");
             });
 
             peer.on('error', (err) => {
-                clearTimeout(connectTimeout);
-                if (err.type === 'unavailable-id') {
-                    // Ha a kód foglalt, újragenerálás
-                    peer.destroy();
-                    peer = null;
-                    setTimeout(initPeerIfNeeded, 500);
+                if(err.type === 'unavailable-id') {
+                    alert("Ez a szoba már foglalt! Valaki más a Host.");
+                    updateP2PLog("Szoba foglalt.");
                 } else {
-                    document.getElementById('my-peer-id').innerText = "ERR";
                     updateP2PLog("Hiba: " + err.type);
                 }
             });
-            
-            peer.on('disconnected', () => { peer.reconnect(); });
         }
 
-        function connectToPeer() {
-            let friendShortId = document.getElementById('friend-id-input').value.trim().toUpperCase();
-            if(friendShortId.length !== 6) return alert("A kódnak 6 karakternek kell lennie!");
+        function joinAsGuest() {
+            if (peer) { alert("Már kapcsolódtál!"); return; }
             
-            updateP2PLog("Csatlakozás: " + friendShortId + "...");
-            const fullFriendId = ID_PREFIX + friendShortId;
+            const selectedVal = document.getElementById('channel-select').value;
+            const roomId = ROOM_MAPPING[selectedVal];
             
-            const connection = peer.connect(fullFriendId);
-            handleConnection(connection);
+            updateP2PLog("Csatlakozás ide: " + selectedVal + "...");
+            
+            // Vendégként nem kell fix ID, elég egy random
+            peer = new Peer(null, {
+                debug: 1,
+                config: { 'iceServers': [ { url: 'stun:stun.l.google.com:19302' } ] }
+            });
+
+            peer.on('open', (id) => {
+                // Ha megvan a saját ID-nk, hívjuk a Host-ot
+                const connection = peer.connect(roomId);
+                handleConnection(connection);
+            });
+            
+            peer.on('error', (err) => {
+                updateP2PLog("Csatlakozási hiba.");
+            });
         }
 
         function handleConnection(connection) {
@@ -780,27 +762,25 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
 
             conn.on('open', () => {
                 sendCode();
-                updateP2PLog("ÖSSZEKAPCSOLVA! 🟢");
-                logSystem("P2P KAPCSOLAT ÉL! Közös munka indul.");
+                updateP2PLog("ONLINE");
+                logSystem("Közös munka aktív.");
                 document.getElementById('live-indicator').style.display = 'block';
             });
 
-            conn.on('close', () => { resetP2PUI(); alert("A kapcsolat megszakadt."); });
-            conn.on('error', (err) => { 
-                console.error(err);
-                alert("Nem sikerült kapcsolódni (Lehet, hogy rossz a kód, vagy a tűzfal blokkol)."); 
-                resetP2PUI();
-            });
+            conn.on('close', () => { resetP2PUI(); alert("Megszakadt a kapcsolat."); });
+            conn.on('error', (err) => { alert("Hiba történt."); resetP2PUI(); });
         }
 
         function disconnectPeer() {
             if(conn) conn.close();
+            if(peer) peer.destroy();
             resetP2PUI();
-            logSystem("P2P kapcsolat bontva.");
+            logSystem("Szétkapcsolva.");
         }
 
         function resetP2PUI() {
             conn = null;
+            peer = null;
             document.getElementById('connect-ui').style.display = 'block';
             document.getElementById('disconnect-ui').style.display = 'none';
             document.getElementById('live-indicator').style.display = 'none';
@@ -817,16 +797,9 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         }
         
         function updateP2PLog(msg) { document.getElementById('p2p-log').innerText = msg; }
-        
-        function copyToClipboard() {
-            const txt = document.getElementById('my-peer-id').innerText;
-            if(txt !== "..." && txt !== "HIBA") navigator.clipboard.writeText(txt).then(() => { updateP2PLog("Kód másolva!"); });
-        }
 
         editor.on('change', (cm, change) => {
-            if (!isSyncing) {
-                sendCode();
-            }
+            if (!isSyncing) sendCode();
         });
     </script>
 </body>
