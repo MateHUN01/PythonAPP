@@ -239,6 +239,7 @@
             border: 1px dashed var(--border-color);
             cursor: pointer;
             transition: all 0.2s;
+            min-height: 40px;
         }
         .p2p-code-display:hover { background: rgba(0,0,0,0.5); border-color: var(--accent-color); }
     </style>
@@ -253,7 +254,7 @@
     <div class="header-wrapper">
         <div class="glass-bubble left-bubble">
             <div class="app-title">
-                <img src="aeroICON.png" style="height: 24px; margin-right: 5px;">
+                <img src="aeroICON.png" style="height: 24px; margin-right: 5px;" onerror="this.style.display='none'">
                 AeroCode PRO
             </div>
             <div class="vertical-divider"></div>
@@ -675,14 +676,16 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             isDark = !isDark; document.body.className = isDark ? "" : "light-mode"; editor.setOption("theme", isDark ? "dracula" : "eclipse");
         }
 
-        // --- P2P IMPLEMENTÁCIÓ (4 KARAKTERES KÓDDAL) ---
+        // --- P2P IMPLEMENTÁCIÓ (Javított: ID Prefix) ---
         let peer = null;
         let conn = null;
         let isSyncing = false; 
+        
+        // Ez a titok: Egyedi előtagot adunk a kódhoz, hogy ne ütközzön másokkal a világban
+        const ID_PREFIX = "AERO_PRO_v11_APP_";
 
-        // 4 karakteres véletlen ID generátor (Angol ABC + Számok)
         function generateShortId() {
-            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // I, O, 0, 1 kihagyva a keverhetőség miatt
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             let result = '';
             for (let i = 0; i < 4; i++) {
                 result += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -693,13 +696,14 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         function initPeerIfNeeded() {
             if (peer && !peer.destroyed) return; 
 
-            // Frissítjük a logot
+            // Vizualizáció: Generálás...
+            document.getElementById('my-peer-id').innerText = "...";
             updateP2PLog("Kód generálása...");
 
-            // Generálunk egy ID-t és megpróbáljuk beregisztrálni
             const shortId = generateShortId();
+            const fullId = ID_PREFIX + shortId; // Ez lesz az igazi ID a szerver felé
             
-            peer = new Peer(shortId, {
+            peer = new Peer(fullId, {
                 debug: 1,
                 config: {
                     'iceServers': [
@@ -708,9 +712,22 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                     ]
                 }
             });
+            
+            // Timeout kezelés: Ha 5 mp alatt nincs kapcsolat, jelezzük a hibát
+            let connectTimeout = setTimeout(() => {
+                if(document.getElementById('my-peer-id').innerText === "...") {
+                    document.getElementById('my-peer-id').innerText = "HIBA";
+                    document.getElementById('my-peer-id').style.color = "#ff5555";
+                    updateP2PLog("Hálózati Hiba (Firewall?)");
+                }
+            }, 8000);
 
             peer.on('open', (id) => {
-                document.getElementById('my-peer-id').innerText = id;
+                clearTimeout(connectTimeout);
+                // A felhasználónak csak a rövid kódot mutatjuk (levágjuk a prefixet)
+                const displayId = id.replace(ID_PREFIX, "");
+                
+                document.getElementById('my-peer-id').innerText = displayId;
                 document.getElementById('my-peer-id').style.color = "#50fa7b";
                 updateP2PLog("Kód aktív! Várakozás...");
             });
@@ -720,27 +737,35 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                 updateP2PLog("Valaki csatlakozott!");
             });
 
-            // Ha foglalt az ID (ritka, de lehetséges), újrapróbáljuk
             peer.on('error', (err) => {
+                clearTimeout(connectTimeout);
                 if (err.type === 'unavailable-id') {
-                    console.log("ID foglalt, újrapróbálkozás...");
+                    // Ha véletlenül pont ugyanez a 4 betű foglalt lenne (az prefixszel együtt), újrapróbáljuk
                     peer.destroy();
                     peer = null;
                     setTimeout(initPeerIfNeeded, 500);
                 } else {
+                    document.getElementById('my-peer-id').innerText = "ERR";
                     updateP2PLog("Hiba: " + err.type);
                 }
             });
-
-            peer.on('disconnected', () => { peer.reconnect(); });
+            
+            peer.on('disconnected', () => { 
+                 // Ha leszakad a szerverről, próbáljon visszalépni
+                 peer.reconnect(); 
+            });
         }
 
         function connectToPeer() {
-            let friendId = document.getElementById('friend-id-input').value.trim().toUpperCase();
-            if(friendId.length !== 4) return alert("A kódnak 4 karakternek kell lennie!");
+            let friendShortId = document.getElementById('friend-id-input').value.trim().toUpperCase();
+            if(friendShortId.length !== 4) return alert("A kódnak 4 karakternek kell lennie!");
             
-            updateP2PLog("Csatlakozás: " + friendId + "...");
-            const connection = peer.connect(friendId);
+            updateP2PLog("Csatlakozás: " + friendShortId + "...");
+            
+            // A csatlakozásnál visszarakjuk a prefixet, hogy megtalálja a másikat
+            const fullFriendId = ID_PREFIX + friendShortId;
+            
+            const connection = peer.connect(fullFriendId);
             handleConnection(connection);
         }
 
@@ -750,13 +775,12 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             document.getElementById('disconnect-ui').style.display = 'block';
 
             conn.on('data', (data) => {
-                // Adat fogadása a másiktól
                 if(data.type === 'code_update') {
                     if (editor.getValue() !== data.content) {
-                        isSyncing = true; // Zárjuk a visszaküldést
-                        const cursor = editor.getCursor(); // Mentsük a kurzorunkat
-                        editor.setValue(data.content); // Frissítjük a kódot
-                        editor.setCursor(cursor); // Visszarakjuk a kurzort
+                        isSyncing = true;
+                        const cursor = editor.getCursor(); 
+                        editor.setValue(data.content); 
+                        editor.setCursor(cursor); 
                         isSyncing = false;
                     }
                 }
@@ -770,7 +794,11 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             });
 
             conn.on('close', () => { resetP2PUI(); alert("A kapcsolat megszakadt."); });
-            conn.on('error', (err) => { alert("Hiba a kapcsolatban."); });
+            conn.on('error', (err) => { 
+                console.error(err);
+                alert("Nem sikerült kapcsolódni (Lehet, hogy rossz a kód, vagy a tűzfal blokkol)."); 
+                resetP2PUI();
+            });
         }
 
         function disconnectPeer() {
@@ -800,10 +828,9 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         
         function copyToClipboard() {
             const txt = document.getElementById('my-peer-id').innerText;
-            if(txt !== "..." ) navigator.clipboard.writeText(txt).then(() => { updateP2PLog("Kód másolva!"); });
+            if(txt !== "..." && txt !== "HIBA") navigator.clipboard.writeText(txt).then(() => { updateP2PLog("Kód másolva!"); });
         }
 
-        // Kétirányú szinkronizáció trigger
         editor.on('change', (cm, change) => {
             if (!isSyncing) {
                 sendCode();
