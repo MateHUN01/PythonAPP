@@ -817,31 +817,48 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             editor.setOption("theme", isDark ? "dracula" : "eclipse");
         }
 
-        // --- P2P KOLLABORÁCIÓ (PeerJS) ---
+        // --- P2P KOLLABORÁCIÓ (PeerJS - JAVÍTOTT) ---
         let peer = null;
         let conn = null;
-        let isSyncing = false; // Hogy ne kerüljünk végtelen ciklusba (én írok -> ő megkapja -> ő visszaküldi -> én megkapom...)
+        let isSyncing = false; 
 
         function initPeerIfNeeded() {
-            if (peer) return; // Már inicializáltuk
+            if (peer && !peer.destroyed) return; 
+
+            updateP2PLog("Csatlakozás a P2P szerverhez...");
             
-            // Véletlenszerű ID kérése a PeerJS felhőből
-            peer = new Peer(); 
+            // Google STUN szerverek használata a tűzfal áttöréséhez
+            peer = new Peer(null, {
+                debug: 1,
+                config: {
+                    'iceServers': [
+                        { url: 'stun:stun.l.google.com:19302' },
+                        { url: 'stun:stun1.l.google.com:19302' }
+                    ]
+                }
+            });
 
             peer.on('open', (id) => {
                 document.getElementById('my-peer-id').innerText = id;
-                updateP2PLog("Készenlétben. Add meg a kódod a társadnak.");
+                document.getElementById('my-peer-id').style.color = "#50fa7b"; // Zöld jelzés ha sikerült
+                updateP2PLog("Készenlétben. Add meg a kódod.");
             });
 
             peer.on('connection', (connection) => {
-                // Ha valaki más csatlakozik hozzánk
                 handleConnection(connection);
                 updateP2PLog("Valaki csatlakozott hozzád!");
             });
 
             peer.on('error', (err) => {
+                document.getElementById('my-peer-id').innerText = "HIBA! (Lásd konzol)";
+                document.getElementById('my-peer-id').style.color = "#ff5555";
                 updateP2PLog("Hiba: " + err.type);
-                console.error(err);
+                console.error("PeerJS Hiba:", err);
+            });
+            
+            peer.on('disconnected', () => {
+                 updateP2PLog("Megszakadt a kapcsolat a szerverrel.");
+                 peer.reconnect();
             });
         }
 
@@ -857,26 +874,22 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         function handleConnection(connection) {
             conn = connection;
 
-            // UI frissítése
             document.getElementById('connect-ui').style.display = 'none';
             document.getElementById('disconnect-ui').style.display = 'block';
 
-            // Adat fogadása
             conn.on('data', (data) => {
                 if(data.type === 'code_update') {
-                    // Ha kódot kapunk, beírjuk a szerkesztőbe
                     if (editor.getValue() !== data.content) {
-                        isSyncing = true; // Jelezzük, hogy ez nem a mi gépelésünk
-                        const cursor = editor.getCursor(); // Megmentjük a kurzor pozíciót
+                        isSyncing = true; 
+                        const cursor = editor.getCursor(); 
                         editor.setValue(data.content);
-                        editor.setCursor(cursor); // Megpróbáljuk visszaállítani a kurzort
+                        editor.setCursor(cursor); 
                         isSyncing = false;
                     }
                 }
             });
 
             conn.on('open', () => {
-                // Amint él a kapcsolat, átküldjük a mostani kódunkat indításnak
                 sendCode(); 
                 updateP2PLog("Sikeres kapcsolat!");
             });
@@ -885,11 +898,16 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                 resetP2PUI();
                 alert("A kapcsolat megszakadt.");
             });
+            
+            conn.on('error', (err) => {
+                console.error("Kapcsolódási hiba:", err);
+                alert("Hiba a kapcsolatban.");
+            });
         }
 
         function disconnectPeer() {
             if(conn) {
-                conn.close(); // Ez bontja a WebRTC kapcsolatot
+                conn.close(); 
             }
             resetP2PUI();
             updateP2PLog("Szétkapcsolva. A tartalom megmaradt.");
@@ -915,15 +933,13 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         }
         
         function copyToClipboard(text) {
+            if(text.includes("...")) return; // Ne másolja le ha még tölt
             navigator.clipboard.writeText(text).then(() => {
                 updateP2PLog("Kód másolva a vágólapra!");
             });
         }
 
-        // --- EDITOR ESEMÉNY FIGYELÉSE ---
-        // Minden billentyűleütéskor elküldjük a kódot a másiknak
         editor.on('change', (cm, change) => {
-            // Csak akkor küldünk, ha MI írtunk, és nem a szinkronizáció miatt változott
             if (!isSyncing) {
                 sendCode();
             }
