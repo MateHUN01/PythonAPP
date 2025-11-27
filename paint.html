@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AeroDraw PRO v1.0 - Multiplayer Canvas</title>
+    
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <style>
+        :root {
+            /* --- SÖTÉT TÉMA SZÍNEK --- */
+            --bg-color: #000000;
+            --side-panel-bg: #111111;
+            --text-color: #e0e0e0;
+            --border-color: #333333;
+            --accent-color: #2196F3;
+            --output-bg: #161616;
+            
+            /* --- ÜVEG HATÁS --- */
+            --glass-bg: rgba(10, 10, 10, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.7);
+            --glass-blur: 15px;
+            
+            --modal-bg: #1a1a1a;
+            --input-field-bg: #252525;
+            
+            --btn-hover: rgba(255, 255, 255, 0.15);
+            --run-color: #2196F3;
+            --run-glow: rgba(33, 150, 243, 0.6);
+
+            --hint-bg: #252526;
+            --system-msg-color: #888;
+            --p2p-msg-color: #d19a66;
+        }
+
+        body.light-mode {
+            --bg-color: #f5f5f7;
+            --side-panel-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #d1d1d1;
+            --output-bg: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(0, 0, 0, 0.05);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+            --modal-bg: #ffffff;
+            --input-field-bg: #e6e6e6;
+            --btn-hover: rgba(0, 0, 0, 0.05);
+            --run-color: #1976D2;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+            transition: background 0.3s ease;
+        }
+
+        /* --- CANVAS STÍLUSOK --- */
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+
+        #drawing-canvas {
+            display: block;
+            background: #000000;
+        }
+
+        /* Lebegő Eszköztár */
+        .toolbar {
+            position: absolute;
+            top: 100px;
+            left: 20px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border);
+            padding: 10px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 100;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        }
+
+        .tool-btn {
+            width: 36px; height: 36px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: rgba(255,255,255,0.05);
+            color: var(--text-color);
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: 0.2s;
+        }
+        .tool-btn:hover, .tool-btn.active { background: var(--accent-color); color: white; border-color: transparent; }
+        
+        input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: #444; outline: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--accent-color); cursor: pointer; }
+
+        /* LIVE jelző */
+        #live-indicator {
+            position: absolute;
+            top: 10px; right: 20px;
+            background: rgba(80, 250, 123, 0.1);
+            color: #50fa7b;
+            border: 1px solid #50fa7b;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 50;
+            display: none;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
+
+        /* --- HEADER --- */
+        .header-wrapper {
+            position: fixed; top: 25px; left: 0; width: 100%;
+            display: flex; justify-content: space-between; padding: 0 40px;
+            z-index: 1000; pointer-events: none;
+        }
+
+        .glass-bubble {
+            pointer-events: auto; 
+            background: var(--glass-bg); 
+            backdrop-filter: blur(var(--glass-blur)); 
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border); 
+            box-shadow: var(--glass-shadow); 
+            border-radius: 100px; 
+            padding: 6px 10px;
+            display: flex; align-items: center; gap: 10px; 
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .glass-bubble:hover { transform: translateY(-2px); box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.8); }
+
+        .app-title { font-weight: 700; font-size: 14px; padding-left: 15px; padding-right: 10px; letter-spacing: 0.5px; color: var(--text-color); display: flex; align-items: center; gap: 8px; }
+        .vertical-divider { width: 1px; height: 24px; background-color: rgba(255,255,255,0.2); margin: 0 5px; }
+
+        button.icon-btn { background: transparent; border: none; color: var(--text-color); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; position: relative;}
+        button.icon-btn:hover { background: var(--btn-hover); transform: scale(1.1); }
+
+        #user-btn { cursor: pointer; font-size:12px; opacity:0.8; margin-right:5px; padding: 6px 12px; border-radius: 20px; transition: background 0.2s; font-weight:600; letter-spacing:0.5px; }
+        #user-btn:hover { background: var(--btn-hover); opacity: 1; }
+
+        /* --- FLUID DROPDOWN MENU --- */
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content {
+            opacity: 0; visibility: hidden; position: absolute; right: 0; top: 50px;
+            background-color: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
+            min-width: 280px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.6);
+            border-radius: 12px; border: 1px solid var(--glass-border);
+            z-index: 2000; overflow: hidden;
+            transition: all 0.2s ease-in-out;
+            transform: translateY(-10px) scale(0.98);
+            padding: 10px; cursor: default;
+        }
+        .dropdown:hover .dropdown-content { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
+        .menu-item { color: var(--text-color); padding: 12px 16px; text-decoration: none; display: flex; align-items: center; gap: 10px; font-size: 13px; transition: background 0.2s; cursor: pointer; border-radius: 6px; }
+        .menu-item:hover { background-color: var(--accent-color); color: white; }
+
+        /* P2P USER LIST */
+        .user-chip-container { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; margin-bottom: 10px; }
+        .user-chip { background: rgba(255, 255, 255, 0.1); padding: 6px 10px; border-radius: 20px; font-size: 12px; display: flex; align-items: center; justify-content: space-between; border: 1px solid transparent; }
+        .user-chip.self { border-color: var(--accent-color); }
+        .user-chip .username { font-weight: 600; }
+        .user-chip .kick-btn { background: transparent; border: none; color: #ff5555; cursor: pointer; display: flex; align-items: center; padding: 2px; border-radius: 50%; }
+        .user-chip .kick-btn:hover { background: rgba(255, 85, 85, 0.2); }
+
+        /* --- LAYOUT --- */
+        .main-container { display: flex; height: 100vh; width: 100%; }
+        .editor-container { flex: 6; display: flex; flex-direction: column; background: #000000; min-width: 0; position: relative; }
+        .side-panel { flex: 4; display: flex; flex-direction: column; background-color: var(--side-panel-bg); border-left: 1px solid #1f1f1f; min-width: 300px; padding-top: 100px; flex-shrink: 0; background-repeat: repeat; background-size: 150px 100px; background-blend-mode: overlay; }
+        
+        .layout-left { flex-direction: row-reverse; }
+        .layout-left .side-panel { border-left: none; border-right: 1px solid #1f1f1f; }
+        .layout-bottom { flex-direction: column; }
+        .layout-bottom .editor-container { border-right: none; flex: 1; border-bottom: 1px solid var(--border-color); }
+        .layout-bottom .side-panel { flex: none; height: 35vh; min-height: 200px; min-width: 100%; padding-top: 10px; border-left: none; }
+
+        .panel-header { padding: 8px 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; opacity: 0.6; margin-bottom: 5px; }
+        .terminal-wrapper { flex: 2; display: flex; flex-direction: column; background-color: var(--output-bg); border-radius: 16px; margin: 0 20px 20px 20px; overflow: hidden; border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .notepad-wrapper { flex: 1; display: flex; flex-direction: column; background-color: var(--output-bg); border-radius: 16px; margin: 0 20px 20px 20px; overflow: hidden; border: 1px solid var(--border-color); position: relative; min-height: 120px; }
+        #shared-notepad { width: 100%; height: 100%; background: transparent; color: var(--text-color); border: none; padding: 15px; resize: none; font-family: 'Inter', sans-serif; font-size: 13px; outline: none; line-height: 1.5; }
+        #shared-notepad::placeholder { opacity: 0.5; font-style: italic; }
+        
+        #output { flex: 1; padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; white-space: pre-wrap; overflow-y: auto; color: var(--text-color); }
+        
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-color); z-index: 9998; display: none; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s ease; }
+        .gear { width: 60px; height: 60px; fill: var(--accent-color); animation: spin 2s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10001; backdrop-filter: blur(8px); justify-content: center; align-items: center; }
+        .modal { background: var(--modal-bg); width: 350px; padding: 25px; border-radius: 24px; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.7); }
+        .modal button { background: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; float: right; margin-top: 15px; font-weight: 600; }
+        .modal input, .modal select { width: 100%; padding: 12px; background: var(--input-field-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 8px; margin-bottom: 10px; outline: none;}
+
+        input[type="color"] { padding: 0; height: 36px; width: 36px; cursor: pointer; border: none; background: transparent; border-radius: 50%; overflow: hidden;}
+        .checkbox-container { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 12px; opacity: 0.8; }
+        
+        .system-msg { color: var(--system-msg-color); font-style: italic; }
+        .p2p-msg { color: var(--p2p-msg-color); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay">
+        <svg class="gear" viewBox="0 0 512 512"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>
+        <div style="margin-top:20px; color:#666">Betöltés...</div>
+    </div>
+
+    <div class="header-wrapper">
+        <div class="glass-bubble left-bubble">
+            <div class="app-title">
+                <img src="aeroICON.png" style="height: 24px; margin-right: 5px;" onerror="this.style.display='none'">
+                AeroDraw PRO
+            </div>
+            <div class="vertical-divider"></div>
+            <button class="icon-btn" onclick="clearCanvas()" title="Törlés"><span class="material-icons">delete</span></button>
+            <button class="icon-btn" onclick="downloadImage()" title="Mentés képként"><span class="material-icons">image</span></button>
+        </div>
+
+        <div class="glass-bubble right-bubble">
+            <div id="user-btn" onclick="openLoginModal()">Log in</div>
+            
+            <div class="dropdown">
+                <button class="icon-btn" title="Közös Rajzolás (P2P)" onclick="resetP2PUI()">
+                    <span class="material-icons">group</span>
+                </button>
+                <div class="dropdown-content">
+                    <h4 style="margin:0 0 10px 0; border-bottom:1px solid #444; padding-bottom:5px;">Közös Rajzolás</h4>
+                    
+                    <div id="connect-ui">
+                        <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Válassz egy csatornát:</div>
+                        <select id="channel-select" style="width:100%; padding:8px; background:var(--input-field-bg); border:1px solid var(--border-color); color:var(--text-color); border-radius:4px; margin-bottom:10px; font-family:'Inter'">
+                            <option value="1">1. Csatorna (Alpha)</option>
+                            <option value="2">2. Csatorna (Beta)</option>
+                            <option value="3">3. Csatorna (Gamma)</option>
+                            <option value="4">4. Csatorna (Delta)</option>
+                            <option value="5">5. Csatorna (Omega)</option>
+                            <option value="6">6. Csatorna (Zeta)</option>
+                        </select>
+                        
+                        <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:10px;">
+                            <span style="font-size:11px; opacity:0.7;">Max létszám:</span>
+                            <input type="number" id="room-size-limit" min="2" max="10" value="3" style="width:60px; padding:4px; font-size:11px; margin-bottom:0;">
+                        </div>
+                        
+                        <div style="font-size:10px; color:#888; margin-bottom:5px;">EGYIKŐTÖK legyen HOST, a MÁSIK JOIN!</div>
+                        <div style="font-size:10px; color:#ff5555; margin-bottom:10px; display:none;" id="login-warning">Jelentkezz be a csatlakozáshoz!</div>
+
+                        <div style="display:flex; gap:5px;">
+                            <button onclick="startAsHost()" style="flex:1; padding:8px; background:var(--run-color); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">HOST</button>
+                            <button onclick="joinAsGuest()" style="flex:1; padding:8px; background:#50fa7b; color:#222; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">JOIN</button>
+                        </div>
+                    </div>
+
+                    <div id="disconnect-ui" style="display:none;">
+                        <div style="background:rgba(80, 250, 123, 0.1); color:#50fa7b; padding:8px; border-radius:4px; margin-bottom:10px; text-align:center; font-size:12px;">
+                            <span class="material-icons" style="font-size:12px; vertical-align:middle;">link</span> Kapcsolódva
+                        </div>
+                        
+                        <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Jelenlévők:</div>
+                        <div id="active-users-list" class="user-chip-container"></div>
+                        <button onclick="disconnectPeer()" style="width:100%; padding:8px; background:#ff5555; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Szétkapcsolás</button>
+                    </div>
+                    
+                    <div id="p2p-log" style="font-size:10px; color:#888; margin-top:10px; font-style:italic;">Offline</div>
+                </div>
+            </div>
+
+            <div class="dropdown">
+                <button class="icon-btn" title="Felhő Mentés/Betöltés">
+                    <span class="material-icons">cloud_queue</span>
+                </button>
+                <div class="dropdown-content">
+                    <a class="menu-item" onclick="handleDriveSave()"><span class="material-icons">save</span> Mentés Drive-ra (Kép)</a>
+                </div>
+            </div>
+
+            <button class="icon-btn" onclick="askGemini()" title="Gemini (Jegyzet elemzése)"><span class="material-icons">auto_awesome</span></button>
+            <button class="icon-btn" onclick="toggleTheme()" title="Téma"><span class="material-icons">dark_mode</span></button>
+            <button class="icon-btn" onclick="openSettings()" title="Beállítások"><span class="material-icons">settings</span></button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="editor-container">
+            <div id="live-indicator">● LIVE</div>
+            
+            <div id="canvas-container">
+                <canvas id="drawing-canvas"></canvas>
+            </div>
+
+            <div class="toolbar">
+                <input type="color" id="pen-color" value="#ffffff" title="Szín">
+                
+                <div style="width:100%; height:1px; background:#444; margin:5px 0;"></div>
+                
+                <button class="tool-btn active" id="btn-brush" onclick="setTool('brush')" title="Ecset">
+                    <span class="material-icons">brush</span>
+                </button>
+                <button class="tool-btn" id="btn-eraser" onclick="setTool('eraser')" title="Radír">
+                    <span class="material-icons">auto_fix_normal</span>
+                </button>
+                
+                <div style="width:100%; height:1px; background:#444; margin:5px 0;"></div>
+                
+                <div style="padding:0 5px;">
+                    <label style="font-size:9px; opacity:0.7;">Méret</label>
+                    <input type="range" id="pen-width" min="1" max="50" value="5" title="Méret">
+                </div>
+            </div>
+        </div>
+
+        <div class="side-panel">
+            <div class="panel-header">TERMINAL / CHAT</div>
+            <div class="terminal-wrapper">
+                <div id="output"></div>
+            </div>
+            
+            <div class="panel-header">KÖZÖS JEGYZET</div>
+            <div class="notepad-wrapper">
+                <textarea id="shared-notepad" placeholder="Ide írhattok közös jegyzeteket... P2P szinkronizálva."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal">
+            <h3 style="margin-top:0; color:var(--text-color)">Beállítások</h3>
+            <label style="font-size:12px; opacity:0.7">Gemini API Kulcs</label>
+            <input type="password" id="apiKeyInput" placeholder="Illeszd be a kulcsot...">
+            <label style="font-size:12px; opacity:0.7">Elrendezés (Layout)</label>
+            <select id="layoutInput">
+                <option value="right">Jobb oldalt</option>
+                <option value="left">Bal oldalt</option>
+            </select>
+            <label style="font-size:12px; opacity:0.7">Háttérszín (Canvas)</label>
+            <input type="color" id="bgColorInput" value="#000000" style="width:100%; border-radius:8px;">
+            <button onclick="saveSettings()">Mentés</button>
+            <button onclick="document.getElementById('settingsModal').style.display='none'" style="background:transparent; margin-right:10px; color:var(--text-color)">Mégse</button>
+        </div>
+    </div>
+
+    <div id="loginModal" class="modal-overlay">
+        <div class="modal">
+            <h3 style="margin-top:0; color:var(--text-color)">Bejelentkezés</h3>
+            <input type="text" id="loginNameInput" placeholder="Felhasználónév...">
+            <button onclick="performLogin()">Belépés</button>
+            <button onclick="document.getElementById('loginModal').style.display='none'" style="background:transparent; margin-right:10px; color:var(--text-color)">Mégse</button>
+        </div>
+    </div>
+
+    <script>
+        // --- KONFIGURÁCIÓ & GLOBÁLIS VÁLTOZÓK ---
+        const CLIENT_ID = '138100233309-v575n23j2b6pdek9t9clvkg3immlkrdi.apps.googleusercontent.com'; 
+        const API_KEY = 'AIzaSyAfC2viqoOsVVjcShnqY2rrRsxdV7WHMEg'; 
+        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
+        // --- RAJZOLÓ MOTOR VÁLTOZÓI ---
+        const canvas = document.getElementById('drawing-canvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let currentTool = 'brush'; // brush | eraser
+        let penColor = '#ffffff';
+        let penWidth = 5;
+
+        // Resize Canvas to fit container
+        function resizeCanvas() {
+            const container = document.getElementById('canvas-container');
+            // Save current content
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            tempCtx.drawImage(canvas, 0, 0);
+
+            // Resize
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight;
+
+            // Fill background
+            ctx.fillStyle = localStorage.getItem('ide_custom_bg') || '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Restore content
+            ctx.drawImage(tempCanvas, 0, 0);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        // Init delay to ensure layout is done
+        setTimeout(resizeCanvas, 100);
+
+        // --- RAJZOLÓ ESEMÉNYEK ---
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDraw);
+        canvas.addEventListener('mouseout', stopDraw);
+
+        // Touch events for tablets
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        });
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        });
+        canvas.addEventListener('touchend', (e) => {
+            const mouseEvent = new MouseEvent('mouseup', {});
+            canvas.dispatchEvent(mouseEvent);
+        });
+
+        // Toolbar Logic
+        document.getElementById('pen-color').addEventListener('input', (e) => penColor = e.target.value);
+        document.getElementById('pen-width').addEventListener('input', (e) => penWidth = e.target.value);
+
+        function setTool(tool) {
+            currentTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${tool}`).classList.add('active');
+        }
+
+        function startDraw(e) {
+            isDrawing = true;
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const newX = e.offsetX;
+            const newY = e.offsetY;
+            
+            const colorToUse = currentTool === 'eraser' ? (localStorage.getItem('ide_custom_bg') || '#000000') : penColor;
+            
+            drawLine(lastX, lastY, newX, newY, colorToUse, penWidth, true);
+            
+            [lastX, lastY] = [newX, newY];
+        }
+
+        function stopDraw() {
+            isDrawing = false;
+        }
+
+        // Core Drawing Function (Handles local and P2P)
+        function drawLine(x0, y0, x1, y1, color, width, emit) {
+            ctx.beginPath();
+            ctx.moveTo(x0, y0);
+            ctx.lineTo(x1, y1);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+            ctx.closePath();
+
+            if (emit && (isHost || (conn && conn.open))) {
+                const data = {
+                    type: 'draw_segment',
+                    x0: x0, y0: y0, x1: x1, y1: y1,
+                    color: color,
+                    width: width
+                };
+                
+                if (isHost) {
+                    broadcastData(data, null);
+                } else {
+                    conn.send(data);
+                }
+            }
+        }
+
+        function clearCanvas() {
+            ctx.fillStyle = localStorage.getItem('ide_custom_bg') || '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const data = { type: 'clear_canvas' };
+            if (isHost) broadcastData(data, null);
+            else if (conn) conn.send(data);
+        }
+
+        function downloadImage() {
+            const link = document.createElement('a');
+            link.download = `AeroDraw_${new Date().getTime()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        // --- AUTH & USER LOGIKA ---
+        let currentUser = null;
+        let tokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+
+        function openLoginModal() {
+            if(currentUser) {
+                if(confirm("Kijelentkezel?")) {
+                    currentUser = null;
+                    localStorage.removeItem('saved_username'); 
+                    document.getElementById('user-btn').innerText = "Log in";
+                    addToOutput("Kijelentkezve.", "system-msg");
+                    if(peer) disconnectPeer(); 
+                }
+            } else {
+                document.getElementById('loginModal').style.display = 'flex';
+                document.getElementById('loginNameInput').focus();
+            }
+        }
+
+        function performLogin() {
+            const name = document.getElementById('loginNameInput').value.trim();
+            if(!name) return;
+            localStorage.setItem('saved_username', name);
+            currentUser = name;
+            document.getElementById('user-btn').innerText = name;
+            document.getElementById('loginModal').style.display = 'none';
+            document.getElementById('login-warning').style.display = 'none';
+            logSystem(`Üdvözöllek, ${name}!`);
+            if(gapiInited && gisInited && !gapi.client.getToken()) tokenClient.requestAccessToken({prompt: ''}); 
+        }
+
+        // --- GOOGLE DRIVE ---
+        function gapiLoaded() { gapi.load('client', async () => { await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC], }); gapiInited = true; }); }
+        function gisLoaded() { tokenClient = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPES, callback: (resp) => {}, }); gisInited = true; }
+
+        async function getFolderId() {
+            if(!currentUser) { alert("Jelentkezz be először!"); return null; }
+            if(!gapi.client.getToken()) await new Promise((resolve) => { tokenClient.callback = (resp) => { resolve(resp); }; tokenClient.requestAccessToken({prompt: 'consent'}); });
+            try {
+                const folderName = `AeroDraw_${currentUser}`;
+                const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
+                const response = await gapi.client.drive.files.list({q: q, fields: 'files(id, name)'});
+                if (response.result.files && response.result.files.length > 0) return response.result.files[0].id;
+                else { const meta = { 'name': folderName, 'mimeType': 'application/vnd.google-apps.folder' }; const createRes = await gapi.client.drive.files.create({ resource: meta, fields: 'id' }); return createRes.result.id; }
+            } catch(e) { logSystem("Drive hiba: " + e.message); return null; }
+        }
+
+        async function handleDriveSave() {
+            document.getElementById('loading-overlay').style.display='flex';
+            const folderId = await getFolderId();
+            if(!folderId) { document.getElementById('loading-overlay').style.display='none'; return; }
+            
+            // Convert Canvas to Blob
+            canvas.toBlob(async (blob) => {
+                const dateStr = new Date().toISOString().slice(0,10);
+                const filename = `${currentUser}_${dateStr}.png`;
+                const metadata = { 'name': filename, 'mimeType': 'image/png', 'parents': [folderId] };
+                const form = new FormData();
+                form.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
+                form.append('file', blob);
+                
+                try {
+                    await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: new Headers({'Authorization': 'Bearer ' + gapi.client.getToken().access_token}), body: form });
+                    logSystem(`Sikeres mentés: ${filename}`);
+                } catch(e) { logSystem("Mentési hiba."); }
+                document.getElementById('loading-overlay').style.display='none';
+            });
+        }
+
+        // --- P2P RAJZTÁBLA LOGIKA ---
+        let peer = null;
+        let conn = null; 
+        let isHost = false;
+        let connectedUsers = []; 
+        let maxParticipants = 3;
+        const notepad = document.getElementById('shared-notepad');
+
+        const ROOM_MAPPING = {
+            "1": "aerodraw_v1_room_alpha_x99", "2": "aerodraw_v1_room_beta_y88",
+            "3": "aerodraw_v1_room_gamma_z77", "4": "aerodraw_v1_room_delta_k66",
+            "5": "aerodraw_v1_room_omega_j55", "6": "aerodraw_v1_room_zeta_h44"
+        };
+        
+        function updateActiveUsersUI() {
+            const container = document.getElementById('active-users-list');
+            container.innerHTML = "";
+            const selfChip = document.createElement('div'); selfChip.className = "user-chip self"; selfChip.innerHTML = `<span class="username">${currentUser} (Én)</span>`; container.appendChild(selfChip);
+            connectedUsers.forEach(u => {
+                const chip = document.createElement('div'); chip.className = "user-chip";
+                let html = `<span class="username">${u.username || 'Ismeretlen'}</span>`;
+                if (isHost) html += `<button class="kick-btn" onclick="kickUser('${u.id}')"><span class="material-icons" style="font-size:14px;">close</span></button>`;
+                chip.innerHTML = html; container.appendChild(chip);
+            });
+        }
+
+        function startAsHost() {
+            if (!currentUser) { openLoginModal(); document.getElementById('login-warning').style.display='block'; return; }
+            if (peer) return;
+            isHost = true; connectedUsers = [];
+            maxParticipants = parseInt(document.getElementById('room-size-limit').value) || 3;
+            
+            peer = new Peer(ROOM_MAPPING[document.getElementById('channel-select').value], { debug: 1, config: {'iceServers':[{url:'stun:stun.l.google.com:19302'}]} });
+            
+            peer.on('open', (id) => {
+                document.getElementById('connect-ui').style.display='none'; document.getElementById('disconnect-ui').style.display='block'; document.getElementById('live-indicator').style.display='block';
+                document.getElementById('p2p-log').innerText = "HOST ONLINE"; document.getElementById('p2p-log').style.color="#50fa7b";
+                updateActiveUsersUI();
+            });
+
+            peer.on('connection', (c) => {
+                if(connectedUsers.length+1 >= maxParticipants) { c.on('open', () => { c.send({type:'error', message:'A szoba megtelt.'}); setTimeout(()=>c.close(),500); }); return; }
+                c.on('data', (d) => handleData(d, c));
+                c.on('close', () => { connectedUsers = connectedUsers.filter(u=>u.id!==c.peer); broadcastUserList(); updateActiveUsersUI(); });
+            });
+            peer.on('error', (err) => { if(err.type==='unavailable-id') alert("A szoba már foglalt."); });
+        }
+
+        function joinAsGuest() {
+            if (!currentUser) { openLoginModal(); document.getElementById('login-warning').style.display='block'; return; }
+            if (peer) return;
+            isHost = false;
+            peer = new Peer(null, { debug: 1, config: {'iceServers':[{url:'stun:stun.l.google.com:19302'}]} });
+            
+            peer.on('open', () => {
+                conn = peer.connect(ROOM_MAPPING[document.getElementById('channel-select').value]);
+                conn.on('open', () => {
+                    conn.send({type:'handshake', username:currentUser});
+                    document.getElementById('connect-ui').style.display='none'; document.getElementById('disconnect-ui').style.display='block'; document.getElementById('live-indicator').style.display='block';
+                    document.getElementById('p2p-log').innerText = "ONLINE"; document.getElementById('p2p-log').style.color="#50fa7b";
+                    updateActiveUsersUI();
+                });
+                conn.on('data', (d) => handleData(d, conn));
+                conn.on('close', () => resetP2PUI());
+            });
+        }
+
+        function handleData(data, connection) {
+            // HANDSHAKE (Host Side)
+            if (data.type === 'handshake' && isHost) {
+                connectedUsers.push({id: connection.peer, conn: connection, username: data.username});
+                logP2P(`${data.username} csatlakozott.`);
+                
+                // Küldjük a teljes képet (snapshot)
+                connection.send({ type: 'canvas_snapshot', image: canvas.toDataURL() });
+                // Küldjük a jegyzetet
+                connection.send({ type: 'notepad_update', content: notepad.value });
+                
+                broadcastUserList(); updateActiveUsersUI();
+            }
+            // SYNC RAJZ
+            else if (data.type === 'draw_segment') {
+                drawLine(data.x0, data.y0, data.x1, data.y1, data.color, data.width, false);
+                if(isHost) broadcastData(data, connection.peer); // Továbbküldés
+            }
+            // SYNC CLEAR
+            else if (data.type === 'clear_canvas') {
+                ctx.fillStyle = localStorage.getItem('ide_custom_bg') || '#000000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                if(isHost) broadcastData(data, connection.peer);
+            }
+            // SYNC SNAPSHOT (Guest Side)
+            else if (data.type === 'canvas_snapshot') {
+                const img = new Image();
+                img.onload = () => ctx.drawImage(img, 0, 0);
+                img.src = data.image;
+            }
+            // SYNC NOTEPAD
+            else if (data.type === 'notepad_update') {
+                if(notepad.value !== data.content) notepad.value = data.content;
+                if(isHost) broadcastData(data, connection.peer);
+            }
+            // USER LIST
+            else if (data.type === 'user_list') {
+                connectedUsers = data.users; updateActiveUsersUI();
+            }
+            else if (data.type === 'kick') { alert("Kirúgtak."); disconnectPeer(); }
+        }
+
+        function broadcastData(data, excludeId) {
+            if(!isHost) return;
+            connectedUsers.forEach(u => { if(u.id !== excludeId && u.conn.open) u.conn.send(data); });
+        }
+
+        function broadcastUserList() {
+            if(!isHost) return;
+            const list = connectedUsers.map(u => ({id:u.id, username:u.username}));
+            list.unshift({id:'HOST', username:currentUser+' (HOST)'});
+            connectedUsers.forEach(u => u.conn.send({type:'user_list', users:list}));
+        }
+
+        function kickUser(id) {
+            const u = connectedUsers.find(x=>x.id===id);
+            if(u) { u.conn.send({type:'kick'}); setTimeout(()=>u.conn.close(), 100); }
+        }
+
+        function disconnectPeer() {
+            if(isHost) connectedUsers.forEach(u=>u.conn.close());
+            if(conn) conn.close();
+            if(peer) peer.destroy();
+            resetP2PUI();
+        }
+
+        function resetP2PUI() {
+            peer=null; conn=null; isHost=false; connectedUsers=[];
+            document.getElementById('connect-ui').style.display='block'; document.getElementById('disconnect-ui').style.display='none'; document.getElementById('live-indicator').style.display='none';
+            document.getElementById('p2p-log').innerText = "Offline"; document.getElementById('p2p-log').style.color="#888";
+        }
+
+        // Notepad Listener
+        notepad.addEventListener('input', () => {
+            const data = { type: 'notepad_update', content: notepad.value };
+            if(isHost) broadcastData(data, null);
+            else if(conn) conn.send(data);
+        });
+
+        // Utils
+        function addToOutput(text, cls) { const d=document.createElement('div'); d.innerText=text; d.className=cls||''; document.getElementById('output').appendChild(d); }
+        function logSystem(msg) { addToOutput("> "+msg, "system-msg"); }
+        function logP2P(msg) { addToOutput("[P2P] "+msg, "p2p-msg"); }
+
+        function saveSettings() {
+            const bg = document.getElementById('bgColorInput').value;
+            localStorage.setItem('ide_custom_bg', bg);
+            localStorage.setItem('gemini_api_key', document.getElementById('apiKeyInput').value);
+            
+            // Layout
+            const layout = document.getElementById('layoutInput').value;
+            const container = document.querySelector('.main-container'); container.classList.remove('layout-left');
+            if(layout === 'left') container.classList.add('layout-left');
+
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, canvas.width, canvas.height); // Reset bg with new color
+            document.getElementById('settingsModal').style.display='none';
+        }
+        
+        function openSettings() { document.getElementById('settingsModal').style.display='flex'; }
+        
+        async function askGemini() {
+            const key = localStorage.getItem("gemini_api_key"); if(!key) { openSettings(); return; }
+            if(!notepad.value.trim()) { alert("Írj valamit a jegyzetbe először!"); return; }
+            logSystem("AI Elemzés...");
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${key}`, {
+                    method:"POST", headers:{"Content-Type":"application/json"},
+                    body:JSON.stringify({contents:[{parts:[{text:"Röviden elemezd/összegezd ezt a jegyzetet:\n"+notepad.value}]}]})
+                });
+                const d = await res.json();
+                logSystem("[AI]: " + d.candidates[0].content.parts[0].text);
+            } catch(e) { logSystem("AI Hiba."); }
+        }
+
+        let isDark=true;
+        function toggleTheme() {
+            isDark = !isDark; document.body.className = isDark ? "" : "light-mode";
+        }
+        
+        // Initial setup
+        const savedLayout = localStorage.getItem('ide_layout') || 'right';
+        if(savedLayout==='left') document.querySelector('.main-container').classList.add('layout-left');
+    </script>
+</body>
+</html>
