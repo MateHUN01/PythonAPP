@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroCode PRO v13.3 - Teamwork Stable</title>
+    <title>AeroCode PRO v13.5 - Chat Bubbles</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
@@ -27,7 +27,7 @@
 
     <style>
         :root {
-            /* --- ALAP TÉMA (Sötét) --- */
+            /* --- SÖTÉT TÉMA SZÍNEK (Default) --- */
             --bg-color: #000000;
             --side-panel-bg: #111111;
             --text-color: #e0e0e0;
@@ -103,7 +103,7 @@
             height: 100%; 
             position: relative;
             color: #f8f8f2;
-            z-index: 1; /* Fontos: Legyen alacsony, hogy az Avatar (50) felette legyen */
+            z-index: 1; 
         }
         .CodeMirror-gutters { 
             background-color: #000000 !important;
@@ -118,7 +118,7 @@
         .CodeMirror-hint { margin: 0; padding: 4px 8px; border-radius: 3px; white-space: pre; color: var(--hint-text); cursor: pointer; }
         li.CodeMirror-hint-active { background: var(--hint-select-bg); color: var(--hint-select-text); }
 
-        /* --- UI ELEMEK --- */
+        /* --- UI ELEMENTS --- */
         #live-indicator {
             position: absolute; top: 10px; right: 20px;
             background: rgba(80, 250, 123, 0.1); color: #50fa7b; border: 1px solid #50fa7b;
@@ -131,7 +131,7 @@
         .header-wrapper {
             position: fixed; top: 25px; left: 0; width: 100%;
             display: flex; justify-content: space-between; padding: 0 40px;
-            z-index: 2000; pointer-events: none; /* Átengedi a kattintást, de a gombok fogadják */
+            z-index: 2000; pointer-events: none; 
         }
 
         .glass-bubble {
@@ -226,20 +226,25 @@
             border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0,0,0,0.3); 
         }
 
-        .notepad-wrapper {
+        /* --- CHAT STYLES (ÚJ) --- */
+        .chat-wrapper {
             flex: 1; display: flex; flex-direction: column;
             background-color: var(--output-bg); border-radius: 16px;
             margin: 0 20px 20px 20px; overflow: hidden;
             border: 1px solid var(--border-color); position: relative; min-height: 120px;
         }
-
-        #shared-notepad {
-            width: 100%; height: 100%; background: transparent;
-            color: var(--text-color); border: none; padding: 15px;
-            resize: none; font-family: 'Inter', sans-serif; font-size: 13px;
-            outline: none; line-height: 1.5;
+        #chat-history {
+            flex: 1; padding: 10px; overflow-y: auto; font-size: 12px; font-family: 'Inter'; color: #ccc;
         }
-        #shared-notepad::placeholder { opacity: 0.5; font-style: italic; }
+        .chat-msg { margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 2px; }
+        .chat-msg strong { color: var(--accent-color); }
+        
+        #chat-input-bar {
+            display: flex; padding: 8px; border-top: 1px solid var(--border-color); background: rgba(0,0,0,0.2);
+        }
+        #chat-input {
+            flex: 1; background: transparent; border: none; color: white; outline: none; font-size: 12px;
+        }
         
         #output { flex: 1; padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; white-space: pre-wrap; overflow-y: auto; color: var(--text-color); }
         
@@ -269,9 +274,10 @@
         
         /* --- AVATAR LAYER --- */
         #avatar-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; /* FONTOS: Átengedi a kattintást a kódra, hacsak nem drag-elünk */
-            z-index: 50; /* Kód (1) és UI (100+) között */
+            position: absolute; top: 0; left: 0;
+            /* width/heightet a JS állítja be dinamikusan */
+            pointer-events: none; /* Átengedi a kattintást a kódra, hacsak nem drag-elünk */
+            z-index: 50; /* A Kód (1) felett */
         }
         
     </style>
@@ -353,21 +359,21 @@
     </div>
 
     <div class="main-container">
-        <canvas id="avatar-layer"></canvas>
-
         <div class="editor-container">
+            <canvas id="avatar-layer"></canvas>
+            
             <div id="live-indicator">● LIVE</div>
             <textarea id="code-editor">
-# AeroCode PRO v13.3 - Stable Fix
-# Most már biztosan be tudsz lépni!
+# AeroCode PRO v13.5
+# Teamwork Edition - Chat Bubbles!
 #
-# 1. Kattints a "Log in" gombra.
-# 2. Írj be egy nevet (pl. "Alex").
-# 3. Kattints a Belépés gombra.
-# 4. Megjelenik a kék karaktered a képernyőn!
-# 5. Indíts HOST-ot, a többiek JOIN-oljanak.
+# 1. Jelentkezz be és csatlakozz (P2P).
+# 2. Írj valamit a jobb oldali CHAT panelbe.
+# 3. Nyomj ENTER-t!
+# 4. A karaktered feje felett megjelenik az üzenet!
+# 5. 15 másodperc múlva eltűnik.
 
-print("Hello Team!")
+print("Hello Chat!")
             </textarea>
         </div>
 
@@ -381,9 +387,15 @@ print("Hello Team!")
                 </div>
             </div>
             
-            <div class="panel-header">KÖZÖS JEGYZET</div>
-            <div class="notepad-wrapper">
-                <textarea id="shared-notepad" placeholder="Ide írhattok közös jegyzeteket... P2P szinkronizálva."></textarea>
+            <div class="panel-header">CHAT</div>
+            <div class="chat-wrapper">
+                <div id="chat-history">
+                    <div style="font-style:italic; opacity:0.5; text-align:center; padding-top:20px;">Írj be valamit és nyomj ENTER-t!</div>
+                </div>
+                <div id="chat-input-bar">
+                    <input type="text" id="chat-input" placeholder="Üzenet..." autocomplete="off">
+                    <button onclick="sendChatMessage()" style="background:transparent; border:none; color:var(--accent-color); cursor:pointer;"><span class="material-icons" style="font-size:16px;">send</span></button>
+                </div>
             </div>
         </div>
     </div>
@@ -439,9 +451,8 @@ print("Hello Team!")
     </div>
 
     <script>
-        // --- 1. GLOBAL VARIABLES & INIT (Előrehozva a hiba elkerülésére) ---
+        // --- 1. GLOBAL VARIABLES & INIT ---
         const outputElement = document.getElementById("output");
-        const notepad = document.getElementById('shared-notepad');
         
         let currentUser = null;
         let tokenClient;
@@ -450,7 +461,7 @@ print("Hello Team!")
 
         const AVATAR_COLORS = ['#ff0055', '#00f2ff', '#00ff44', '#ffcc00', '#aa00ff', '#ffffff'];
         let avatars = {}; 
-        let myAvatar = { x: 150, y: 150, vx: 0, vy: 0, color: '#00f2ff', name: 'User' };
+        let myAvatar = { x: 150, y: 150, vx: 0, vy: 0, color: '#00f2ff', name: 'User', radius: 15, msg: null, msgExpires: 0 };
         let isDraggingAvatar = false;
 
         // --- 2. LOGGING HELPER ---
@@ -462,7 +473,7 @@ print("Hello Team!")
         function logSystem(msg) { addToOutput("> " + msg + "\n", "system-msg"); }
         function logP2P(msg) { addToOutput("[P2P] " + msg + "\n", "p2p-msg"); }
 
-        // --- 3. LOGIN LOGIC (JAVÍTOTT) ---
+        // --- 3. LOGIN LOGIC ---
         function openLoginModal() {
             if(currentUser) {
                 if(confirm("Kijelentkezel?")) {
@@ -474,7 +485,7 @@ print("Hello Team!")
                 }
             } else {
                 document.getElementById('loginModal').style.display = 'flex';
-                document.getElementById('loginNameInput').value = ""; // Reset input
+                document.getElementById('loginNameInput').value = ""; 
                 document.getElementById('loginNameInput').focus();
             }
         }
@@ -482,43 +493,38 @@ print("Hello Team!")
         function performLogin() {
             const nameInput = document.getElementById('loginNameInput');
             const name = nameInput.value.trim();
-            
             if(!name) { alert("Kérlek írj be egy nevet!"); return; }
             
-            // 1. UI Frissítés (Azonnal)
             document.getElementById('loginModal').style.display = 'none';
             document.getElementById('login-warning').style.display = 'none';
             document.getElementById('user-btn').innerText = name;
             
-            // 2. State mentés
             currentUser = name;
             localStorage.setItem('saved_username', name);
-            
-            // 3. Avatar frissítés
             myAvatar.name = name;
             myAvatar.color = AVATAR_COLORS[Math.floor(Math.random()*AVATAR_COLORS.length)];
             
             logSystem(`Sikeres bejelentkezés: ${name}!`);
 
-            // 4. Google Auth (Csak ha betöltött, különben ignoráljuk, ne omoljon össze)
             try {
                 if(gapiInited && gisInited && tokenClient) {
                     if(!gapi.client.getToken()) tokenClient.requestAccessToken({prompt: ''}); 
                 }
-            } catch(e) { console.log("Google Auth még nem állt készen, de a helyi login sikeres."); }
+            } catch(e) {}
         }
 
-        // --- 4. AVATAR & GRAPHICS SYSTEM ---
+        // --- 4. AVATAR & GRAPHICS SYSTEM (With Chat Bubbles) ---
         const avCanvas = document.getElementById('avatar-layer');
         const avCtx = avCanvas.getContext('2d');
+        const editorContainer = document.querySelector('.editor-container');
         let particles = []; 
 
         function resizeCanvas() {
-            avCanvas.width = window.innerWidth;
-            avCanvas.height = window.innerHeight;
+            avCanvas.width = editorContainer.offsetWidth;
+            avCanvas.height = editorContainer.offsetHeight;
         }
         window.addEventListener('resize', resizeCanvas);
-        setTimeout(resizeCanvas, 100); // Init biztosítása
+        setTimeout(resizeCanvas, 100); 
 
         function spawnParticle(x, y, color) {
             particles.push({
@@ -531,16 +537,42 @@ print("Hello Team!")
         function updateAndDrawAvatars() {
             avCtx.clearRect(0, 0, avCanvas.width, avCanvas.height);
             
-            // Mindig rajzoljuk a sajátot, ha be vagyunk lépve, hogy lássa a felhasználó
             if(currentUser) {
+                // BOUNDARY & COLLISION
+                const r = myAvatar.radius;
+                const width = avCanvas.width;
+                const height = avCanvas.height;
+
+                if (myAvatar.x < r) { myAvatar.x = r; myAvatar.vx *= -0.5; }
+                if (myAvatar.x > width - r) { myAvatar.x = width - r; myAvatar.vx *= -0.5; }
+                if (myAvatar.y < r) { myAvatar.y = r; myAvatar.vy *= -0.5; }
+                if (myAvatar.y > height - r) { myAvatar.y = height - r; myAvatar.vy *= -0.5; }
+
+                for (let id in avatars) {
+                    let other = avatars[id];
+                    let dx = myAvatar.x - other.x;
+                    let dy = myAvatar.y - other.y;
+                    let dist = Math.sqrt(dx*dx + dy*dy);
+                    let minDist = 30; 
+
+                    if (dist < minDist) {
+                        let angle = Math.atan2(dy, dx);
+                        let force = 2.0; 
+                        myAvatar.vx += Math.cos(angle) * force;
+                        myAvatar.vy += Math.sin(angle) * force;
+                        let overlap = minDist - dist;
+                        myAvatar.x += Math.cos(angle) * overlap * 0.5;
+                        myAvatar.y += Math.sin(angle) * overlap * 0.5;
+                        spawnParticle(myAvatar.x, myAvatar.y, '#ffffff');
+                    }
+                }
+
                 drawAvatar(myAvatar, true);
-                // Részecskék mozgáskor
                 if(Math.abs(myAvatar.vx) > 0.1 || Math.abs(myAvatar.vy) > 0.1) {
                     spawnParticle(myAvatar.x, myAvatar.y, myAvatar.color);
                 }
             }
 
-            // Többiek
             Object.values(avatars).forEach(av => {
                 drawAvatar(av, false);
                 if(Math.abs(av.vx) > 0.1 || Math.abs(av.vy) > 0.1) {
@@ -548,7 +580,6 @@ print("Hello Team!")
                 }
             });
 
-            // Részecskék
             for(let i=particles.length-1; i>=0; i--) {
                 let p = particles[i];
                 p.x += p.vx; p.y += p.vy;
@@ -564,7 +595,7 @@ print("Hello Team!")
         }
 
         function drawAvatar(av, isSelf) {
-            av.vx *= 0.9; av.vy *= 0.9; // Friction
+            av.vx *= 0.9; av.vy *= 0.9; 
 
             // Test
             avCtx.beginPath();
@@ -598,27 +629,69 @@ print("Hello Team!")
             if(isSelf && isDraggingAvatar) {
                 avCtx.strokeStyle = 'white'; avCtx.lineWidth = 2; avCtx.stroke(); 
             }
+
+            // CHAT BUBORÉK RAJZOLÁSA (ÚJ)
+            if(av.msg && av.msgExpires > Date.now()) {
+                const text = av.msg;
+                avCtx.font = "12px Inter";
+                const textMetrics = avCtx.measureText(text);
+                const textWidth = textMetrics.width;
+                const bubbleW = textWidth + 20;
+                const bubbleH = 26;
+                const bubbleX = av.x - bubbleW / 2;
+                const bubbleY = av.y - 50;
+
+                // Buborék háttér
+                avCtx.fillStyle = "white";
+                avCtx.strokeStyle = "black";
+                avCtx.lineWidth = 1;
+                
+                // Lekerekített téglalap (egyszerűsítve)
+                avCtx.beginPath();
+                avCtx.roundRect(bubbleX, bubbleY, bubbleW, bubbleH, 10);
+                avCtx.fill();
+                avCtx.stroke();
+
+                // Kis "tüske" alul
+                avCtx.beginPath();
+                avCtx.moveTo(av.x, av.y - 24); // Karakter feje
+                avCtx.lineTo(av.x - 5, bubbleY + bubbleH);
+                avCtx.lineTo(av.x + 5, bubbleY + bubbleH);
+                avCtx.fill();
+
+                // Szöveg
+                avCtx.fillStyle = "black";
+                avCtx.fillText(text, av.x, bubbleY + 17);
+            }
         }
 
-        // Drag & Drop
         window.addEventListener('mousedown', (e) => {
             if(!currentUser) return;
-            const dx = e.clientX - myAvatar.x;
-            const dy = e.clientY - myAvatar.y;
+            const rect = avCanvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const dx = mouseX - myAvatar.x;
+            const dy = mouseY - myAvatar.y;
+            
             if(Math.sqrt(dx*dx + dy*dy) < 30) {
                 isDraggingAvatar = true;
                 e.preventDefault(); e.stopPropagation();
             }
         });
+
         window.addEventListener('mousemove', (e) => {
             if(isDraggingAvatar) {
-                myAvatar.vx = e.clientX - myAvatar.x;
-                myAvatar.vy = e.clientY - myAvatar.y;
-                myAvatar.x = e.clientX;
-                myAvatar.y = e.clientY;
+                const rect = avCanvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                myAvatar.vx = mouseX - myAvatar.x;
+                myAvatar.vy = mouseY - myAvatar.y;
+                myAvatar.x = mouseX;
+                myAvatar.y = mouseY;
                 broadcastAvatarMove();
             }
         });
+
         window.addEventListener('mouseup', () => {
             if(isDraggingAvatar) {
                 isDraggingAvatar = false;
@@ -626,11 +699,43 @@ print("Hello Team!")
             }
         });
 
-        // Loop Indítása
         requestAnimationFrame(updateAndDrawAvatars);
 
+        // --- 5. CHAT SYSTEM LOGIC ---
+        const chatInput = document.getElementById('chat-input');
+        const chatHistory = document.getElementById('chat-history');
 
-        // --- 5. CONFIG & AUTH SETUP ---
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendChatMessage();
+        });
+
+        function sendChatMessage() {
+            const text = chatInput.value.trim();
+            if(!text || !currentUser) return;
+
+            // 1. Saját buborék beállítása
+            myAvatar.msg = text;
+            myAvatar.msgExpires = Date.now() + 15000; // 15 másodperc
+
+            // 2. Naplóba írás
+            addChatLog(currentUser, text);
+
+            // 3. P2P Küldés
+            broadcastChatMessage(text);
+
+            // 4. Input törlés
+            chatInput.value = "";
+        }
+
+        function addChatLog(sender, text) {
+            const div = document.createElement('div');
+            div.className = 'chat-msg';
+            div.innerHTML = `<strong>${sender}:</strong> ${text}`;
+            chatHistory.appendChild(div);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        // --- 6. CONFIG & AUTH SETUP ---
         const CLIENT_ID = '138100233309-v575n23j2b6pdek9t9clvkg3immlkrdi.apps.googleusercontent.com'; 
         const API_KEY = 'AIzaSyAfC2viqoOsVVjcShnqY2rrRsxdV7WHMEg'; 
         const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
@@ -698,7 +803,7 @@ print("Hello Team!")
             document.getElementById('loading-overlay').style.display='none';
         }
 
-        // --- 6. EDITOR & SETTINGS ---
+        // --- 7. EDITOR & SETTINGS ---
         let editor = CodeMirror.fromTextArea(document.getElementById("code-editor"), {
             mode: {name: "python", version: 3}, theme: "dracula",
             lineNumbers: true, indentUnit: 4, smartIndent: true, matchBrackets: true, autoCloseBrackets: true,
@@ -722,7 +827,7 @@ print("Hello Team!")
             }
         });
 
-        // --- 7. PYTHON (PYODIDE) ---
+        // --- 8. PYTHON (PYODIDE) ---
         let pyodide = null;
         let pyodideReady = false;
         let inputResolver = null;
@@ -744,7 +849,6 @@ print("Hello Team!")
                 pyodideReady = true;
                 logSystem("Rendszer kész.");
                 
-                // Auto-login if saved
                 const savedUser = localStorage.getItem('saved_username');
                 if(savedUser) { 
                     currentUser = savedUser; 
@@ -863,11 +967,10 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             isDark = !isDark; document.body.className = isDark ? "" : "light-mode"; editor.setOption("theme", isDark ? "dracula" : "eclipse");
         }
 
-        // --- 8. P2P & SYNC ---
+        // --- 9. P2P & SYNC ---
         let peer = null;
         let conn = null; 
         let isSyncing = false; 
-        let isNotepadSyncing = false;
         let isHost = false;
         let connectedUsers = []; 
         let maxParticipants = 3;
@@ -909,7 +1012,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             connectedUsers = [];
             avatars = {}; 
             
-            myAvatar.name = currentUser; // Ensure name is set
+            myAvatar.name = currentUser; 
             
             maxParticipants = parseInt(document.getElementById('room-size-limit').value) || 3;
             const roomId = ROOM_MAPPING[document.getElementById('channel-select').value];
@@ -940,22 +1043,27 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                         logP2P(`${data.username} csatlakozott.`);
                         avatars[connection.peer] = { x: 200, y: 200, vx:0, vy:0, name: data.username, color: data.color || '#fff' };
                         connection.send({ type: 'code_update', content: editor.getValue() });
-                        connection.send({ type: 'notepad_update', content: notepad.value });
                         broadcastUserList(); updateActiveUsersUI(); broadcastAvatarList(); 
                     }
                     else if(data.type === 'code_update') {
                         broadcastCode(data.content, connection.peer);
                         if (editor.getValue() !== data.content) { isSyncing = true; const cursor = editor.getCursor(); editor.setValue(data.content); editor.setCursor(cursor); isSyncing = false; }
                     }
-                    else if(data.type === 'notepad_update') {
-                        broadcastNotepad(data.content, connection.peer);
-                        if(notepad.value !== data.content) { isNotepadSyncing = true; notepad.value = data.content; isNotepadSyncing = false; }
-                    }
                     else if(data.type === 'avatar_move') {
                         if(avatars[connection.peer]) {
                             const av = avatars[connection.peer];
                             av.x = data.x; av.y = data.y; av.vx = data.vx; av.vy = data.vy;
                             broadcastAvatarMove(connection.peer, { type: 'avatar_move', peerId: connection.peer, x: data.x, y: data.y, vx: data.vx, vy: data.vy });
+                        }
+                    }
+                    else if(data.type === 'chat_message') {
+                        // CHAT FOGADÁS
+                        if(avatars[connection.peer]) {
+                            avatars[connection.peer].msg = data.text;
+                            avatars[connection.peer].msgExpires = Date.now() + 15000;
+                            addChatLog(avatars[connection.peer].name, data.text);
+                            // Továbbküldés
+                            broadcastChatMessage(data.text, connection.peer);
                         }
                     }
                 });
@@ -994,13 +1102,21 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                 });
                 conn.on('data', (data) => {
                     if(data.type === 'code_update') { if (editor.getValue() !== data.content) { isSyncing = true; const cursor = editor.getCursor(); editor.setValue(data.content); editor.setCursor(cursor); isSyncing = false; } }
-                    else if(data.type === 'notepad_update') { if(notepad.value !== data.content) { isNotepadSyncing = true; notepad.value = data.content; isNotepadSyncing = false; } }
                     else if (data.type === 'user_list') { connectedUsers = data.users; updateActiveUsersUI(); }
                     else if (data.type === 'avatar_list') { const newAvatars = data.avatars; delete newAvatars[peer.id]; avatars = newAvatars; }
                     else if (data.type === 'avatar_move') {
                         if(data.peerId !== peer.id) {
                             if(!avatars[data.peerId]) avatars[data.peerId] = { x: data.x, y: data.y, color: '#fff', name: '?', vx:0, vy:0 };
                             avatars[data.peerId].x = data.x; avatars[data.peerId].y = data.y; avatars[data.peerId].vx = data.vx; avatars[data.peerId].vy = data.vy;
+                        }
+                    } else if (data.type === 'chat_message') {
+                        if(data.peerId && avatars[data.peerId]) {
+                            avatars[data.peerId].msg = data.text;
+                            avatars[data.peerId].msgExpires = Date.now() + 15000;
+                            addChatLog(avatars[data.peerId].name, data.text);
+                        } else if(data.peerId === 'HOST') { // Ha a hosttól jön
+                             // Hostnak nincs külön ID-je a listában, ezért ezt kezelni kell
+                             // Egyszerűsítés: Host avatárját a lista szinkronizálja
                         }
                     } else if (data.type === 'kick') { alert("Kirúgtak."); disconnectPeer(); }
                     else if (data.type === 'error') { alert(data.message); disconnectPeer(); }
@@ -1012,8 +1128,22 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         }
 
         function broadcastCode(content, senderIdToExclude) { if(!isHost) return; connectedUsers.forEach(u => { if(u.id !== senderIdToExclude && u.conn.open) { u.conn.send({ type: 'code_update', content: content }); } }); }
-        function broadcastNotepad(content, senderIdToExclude) { if(!isHost) return; connectedUsers.forEach(u => { if(u.id !== senderIdToExclude && u.conn.open) { u.conn.send({ type: 'notepad_update', content: content }); } }); }
         
+        function broadcastChatMessage(text, senderIdToExclude) {
+            if(isHost) {
+                const data = { type: 'chat_message', text: text, peerId: 'HOST' }; // Default host
+                connectedUsers.forEach(u => { 
+                    if(u.id !== senderIdToExclude && u.conn.open) { 
+                        // Ha továbbítunk, akkor az eredeti ID kell, ha host ír, akkor HOST
+                        const finalData = senderIdToExclude ? { type: 'chat_message', text: text, peerId: senderIdToExclude } : data;
+                        u.conn.send(finalData); 
+                    } 
+                });
+            } else if(conn && conn.open) {
+                conn.send({ type: 'chat_message', text: text, peerId: peer.id });
+            }
+        }
+
         function broadcastAvatarMove(senderIdToExclude = null, moveData = null) {
             if (isHost) {
                 const dataToSend = moveData || { type: 'avatar_move', peerId: 'HOST', x: myAvatar.x, y: myAvatar.y, vx: myAvatar.vx, vy: myAvatar.vy };
@@ -1029,7 +1159,6 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         function updateP2PLog(msg) { document.getElementById('p2p-log').innerText = msg; }
 
         editor.on('change', (cm, change) => { if (!isSyncing) { if (isHost) { broadcastCode(editor.getValue(), null); } else if (conn && conn.open) { conn.send({ type: 'code_update', content: editor.getValue() }); } } });
-        notepad.addEventListener('input', () => { if (!isNotepadSyncing) { if (isHost) { broadcastNotepad(notepad.value, null); } else if (conn && conn.open) { conn.send({ type: 'notepad_update', content: notepad.value }); } } });
     </script>
 </body>
 </html>
