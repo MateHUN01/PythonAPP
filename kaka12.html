@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroCode PRO v14.0 - Avatar Actions</title>
+    <title>AeroCode PRO v14.1 - Bidirectional Code Steal</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
@@ -279,7 +279,7 @@
             z-index: 50; 
         }
 
-        /* --- AVATAR CONTEXT MENU (ÚJ) --- */
+        /* --- AVATAR CONTEXT MENU --- */
         #avatar-context-menu {
             display: none;
             position: absolute;
@@ -320,7 +320,7 @@
     </div>
 
     <div id="avatar-context-menu">
-        <button id="btn-copy-code" onclick="requestRemoteCode()">📥 Kód elkérése (Másolás)</button>
+        <button id="btn-copy-code" onclick="requestRemoteCode()">📥 Kód elkérése (Felülírás)</button>
     </div>
 
     <div class="header-wrapper">
@@ -398,16 +398,16 @@
             
             <div id="live-indicator">● LIVE</div>
             <textarea id="code-editor">
-# AeroCode PRO v14.0
-# Teamwork Edition - CODE STEAL & INDIVIDUAL WORK
+# AeroCode PRO v14.1
+# Teamwork Edition - Manual Code Copy
 #
-# 1. Mindenki a saját kódján dolgozik (nincs automatikus felülírás).
-# 2. Ha meg akarod nézni vagy átvenni valaki kódját:
-#    - Kattints rá a kis karakterére!
+# 1. Mostantól a gépelésed PRIVÁT. Senki sem látja!
+# 2. Ha át akarod venni valaki kódját:
+#    - Kattints a karakterére.
 #    - Válaszd a "Kód elkérése" opciót.
-#    - A te kódod frissül az övével (egyszeri szinkron).
+#    - A te kódod felülíródik az övével!
 
-print("My Code Space")
+print("Working Alone...")
             </textarea>
         </div>
 
@@ -497,7 +497,7 @@ print("My Code Space")
         let avatars = {}; 
         let myAvatar = { x: 150, y: 150, vx: 0, vy: 0, color: '#00f2ff', name: 'User', radius: 15, msg: null, msgExpires: 0 };
         let isDraggingAvatar = false;
-        
+
         // --- 2. LOGGING HELPER ---
         function addToOutput(text, cls="") {
             const span = document.createElement("span"); span.textContent = text;
@@ -777,7 +777,7 @@ print("My Code Space")
             if(isHost) {
                // Ha Host kér, akkor a connectedUsers-ben keressük
                const target = connectedUsers.find(u => u.id === selectedAvatarId);
-               if(target && target.conn.open) target.conn.send({ type: 'request_code_snapshot' });
+               if(target && target.conn.open) target.conn.send({ type: 'request_code_snapshot', requesterId: 'HOST' });
             } else {
                // Ha Guest kér, a Hostnak küldi, hogy "kérem X kódját"
                if(conn && conn.open) conn.send({ type: 'relay_request_code', targetId: selectedAvatarId });
@@ -1149,13 +1149,13 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                     }
                     else if(data.type === 'request_code_snapshot') {
                         // Kérés érkezett: A másik fél kéri a Host kódját
-                        connection.send({ type: 'code_snapshot_response', code: editor.getValue() });
+                        connection.send({ type: 'code_snapshot_response', code: editor.getValue(), requesterId: data.requesterId });
                     }
                     else if(data.type === 'relay_request_code') {
                         // Guest kér Guest-től (Host közvetít)
                         const targetId = data.targetId;
                         if(targetId === 'HOST') {
-                            connection.send({ type: 'code_snapshot_response', code: editor.getValue() });
+                            connection.send({ type: 'code_snapshot_response', code: editor.getValue(), requesterId: connection.peer });
                         } else {
                             const target = connectedUsers.find(u => u.id === targetId);
                             if(target && target.conn.open) {
@@ -1164,10 +1164,17 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                         }
                     }
                     else if(data.type === 'code_snapshot_response') {
-                        // Válasz érkezett Guest-től, továbbítjuk a kérőnek
-                        const requester = connectedUsers.find(u => u.id === data.requesterId);
-                        if(requester && requester.conn.open) {
-                            requester.conn.send({ type: 'code_snapshot_response', code: data.code });
+                        // Válasz érkezett Guest-től
+                        if(data.requesterId === 'HOST') {
+                            // Én (Host) kértem
+                            editor.setValue(data.code);
+                            logSystem("Kód sikeresen átmásolva!");
+                        } else {
+                            // Valaki más kérte, továbbítjuk
+                            const requester = connectedUsers.find(u => u.id === data.requesterId);
+                            if(requester && requester.conn.open) {
+                                requester.conn.send({ type: 'code_snapshot_response', code: data.code });
+                            }
                         }
                     }
                     else if(data.type === 'avatar_move') {
@@ -1280,6 +1287,8 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             peer.on('error', () => { updateP2PLog("Hálózati Hiba."); });
         }
 
+        function broadcastCode(content, senderIdToExclude) { if(!isHost) return; connectedUsers.forEach(u => { if(u.id !== senderIdToExclude && u.conn.open) { u.conn.send({ type: 'code_update', content: content }); } }); }
+        
         function broadcastChatMessage(text, senderIdToExclude) {
             if(isHost) {
                 const data = { type: 'chat_message', text: text, peerId: 'HOST' }; 
