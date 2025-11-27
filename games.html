@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neon Party Arena v2 - No Lag</title>
+    <title>Neon Arena v3 - Eyes & Smooth</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     
@@ -21,17 +21,18 @@
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; box-sizing: border-box; z-index: 10; }
         .pointer-events-auto { pointer-events: auto; }
 
-        .panel { background: var(--glass); backdrop-filter: blur(10px); border: 1px solid var(--border); padding: 15px; border-radius: 12px; box-shadow: 0 4px 30px rgba(0,0,0,0.5); text-align: center; max-width: 350px; margin: 0 auto; transition: transform 0.2s; }
+        .panel { background: var(--glass); backdrop-filter: blur(10px); border: 1px solid var(--border); padding: 20px; border-radius: 16px; box-shadow: 0 4px 30px rgba(0,0,0,0.5); text-align: center; max-width: 350px; margin: 0 auto; transition: transform 0.2s; }
         
-        h1 { font-family: 'Press Start 2P', cursive; color: var(--accent); font-size: 20px; text-shadow: 0 0 10px var(--accent); margin-bottom: 20px; }
+        h1 { font-family: 'Press Start 2P', cursive; color: var(--accent); font-size: 22px; text-shadow: 0 0 10px var(--accent); margin-bottom: 25px; line-height: 1.5;}
 
-        input, select { background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 12px; border-radius: 5px; width: 100%; margin-bottom: 15px; font-family: inherit; box-sizing: border-box; text-align: center;}
+        input, select { background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 12px; border-radius: 8px; width: 100%; margin-bottom: 20px; font-family: inherit; box-sizing: border-box; text-align: center; font-size: 16px; outline: none;}
+        input:focus { border-color: var(--accent); box-shadow: 0 0 10px rgba(0, 242, 255, 0.2); }
         
-        button { background: var(--accent); color: #000; border: none; padding: 15px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.2s; font-family: 'Press Start 2P', cursive; font-size: 12px; margin-bottom: 10px; box-shadow: 0 4px 0 #00bfcc;}
-        button:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #00bfcc; }
+        button { background: var(--accent); color: #000; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; transition: all 0.2s; font-family: 'Press Start 2P', cursive; font-size: 11px; margin-bottom: 15px; box-shadow: 0 4px 0 #00bfcc; text-transform: uppercase;}
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #00bfcc; filter: brightness(1.1); }
         button:active { transform: translateY(2px); box-shadow: 0 0 0 #00bfcc; }
         
-        button.join-btn { background: #00ff44; box-shadow: 0 4px 0 #00cc36; }
+        button.join-btn { background: #00ff44; box-shadow: 0 4px 0 #00cc36; color: #003300; }
         button.join-btn:hover { box-shadow: 0 6px 0 #00cc36; }
 
         canvas { display: block; width: 100%; height: 100%; background: radial-gradient(circle at center, #1a1a24 0%, #000000 100%); image-rendering: pixelated; }
@@ -39,63 +40,67 @@
         #menu-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 20; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         
         .hud-top { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
-        .score-board { text-align: left; font-family: 'Press Start 2P'; font-size: 12px; line-height: 1.5; min-width: 150px; }
+        .score-board { text-align: left; font-family: 'Press Start 2P'; font-size: 10px; line-height: 1.8; min-width: 150px; }
         .game-info { text-align: center; }
-        .timer { font-size: 30px; font-weight: bold; font-family: 'Press Start 2P'; color: var(--gold); text-shadow: 0 0 10px var(--gold); }
+        .timer { font-size: 30px; font-weight: bold; font-family: 'Press Start 2P'; color: var(--gold); text-shadow: 0 0 10px var(--gold); margin-top: 5px;}
         
         #host-controls { display: none; margin-top: 10px; }
-        .color-picker { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
-        .color-btn { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: 0.2s; }
-        .color-btn.selected { border-color: white; transform: scale(1.3); box-shadow: 0 0 10px white; }
+        .color-picker { display: flex; gap: 10px; justify-content: center; margin-bottom: 25px; flex-wrap: wrap;}
+        .color-btn { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.1); cursor: pointer; transition: 0.2s; position: relative;}
+        .color-btn.selected { border-color: white; transform: scale(1.2); box-shadow: 0 0 15px white; z-index: 2;}
 
-        #loading-msg { color: var(--gold); font-size: 10px; margin-top: 10px; display: none; }
+        #loading-msg { color: var(--gold); font-size: 10px; margin-top: 10px; display: none; animation: blink 1s infinite;}
+        @keyframes blink { 50% { opacity: 0.5; } }
     </style>
 </head>
 <body>
 
     <div id="menu-screen">
         <div class="panel pointer-events-auto">
-            <h1>NEON ARENA v2</h1>
+            <h1>NEON ARENA<br><span style="font-size:12px; opacity:0.7">v3 Smooth & Cute</span></h1>
             
             <div style="margin-bottom: 10px;">
                 <input type="text" id="username" placeholder="Írd be a neved..." maxlength="12">
-                
                 <div class="color-picker" id="color-picker"></div>
             </div>
 
-            <button onclick="attemptHost()" title="Indíts új szervert">👑 SZERVER INDÍTÁSA (HOST)</button>
-            <button class="join-btn" onclick="attemptJoin()" title="Csatlakozás a meglévőhöz">🚀 CSATLAKOZÁS (JOIN)</button>
+            <button onclick="attemptHost()" title="Indíts új szervert">👑 HOST GAME</button>
+            <button class="join-btn" onclick="attemptJoin()" title="Csatlakozás a meglévőhöz">🚀 JOIN GAME</button>
             
-            <div id="loading-msg">Kapcsolódás...</div>
-            <div id="status-msg" style="margin-top:10px; font-size:10px; color:#ff5555; height:20px;"></div>
+            <div id="loading-msg">KAPCSOLÓDÁS A HÁLÓZATHOZ...</div>
+            <div id="status-msg" style="margin-top:15px; font-size:11px; color:#ff5555; min-height:20px; font-weight:bold;"></div>
         </div>
     </div>
 
     <div id="ui-layer">
         <div class="hud-top">
             <div class="panel pointer-events-auto score-board">
-                <div style="color:#888; border-bottom:1px solid #333; margin-bottom:5px;">TOPLISTA</div>
+                <div style="color:#888; border-bottom:1px solid #333; margin-bottom:5px; padding-bottom:5px;">TOPLISTA</div>
                 <div id="score-list">...</div>
             </div>
 
             <div class="game-info">
-                <div style="color:#aaa; font-size:10px; margin-bottom:5px;" id="current-game-name">LOBBY</div>
+                <div style="color:#aaa; font-size:10px; margin-bottom:5px; text-transform: uppercase; letter-spacing: 2px;" id="current-game-name">LOBBY</div>
                 <div class="timer" id="game-timer">00:00</div>
                 
-                <div id="host-controls" class="panel pointer-events-auto" style="margin-top:10px; padding:10px;">
-                    <select id="game-selector">
-                        <option value="1">Tag (Lövöldözős)</option>
-                        <option value="2">Coin Rush (Érme)</option>
-                        <option value="3">Sumo (Lökdöső)</option>
+                <div id="host-controls" class="panel pointer-events-auto" style="margin-top:10px; padding:10px; background: rgba(0,0,0,0.6);">
+                    <select id="game-selector" style="margin-bottom:10px; font-size:12px; padding:8px;">
+                        <option value="1">🔫 Tag (Lövöldözős)</option>
+                        <option value="2">🪙 Coin Rush (Érme)</option>
+                        <option value="3">🥊 Sumo (Lökdöső)</option>
                     </select>
-                    <button onclick="hostStartGame()" style="font-size:10px; padding:8px; margin:0;">START</button>
+                    <button onclick="hostStartGame()" style="font-size:10px; padding:10px; margin:0;">START ROUND</button>
                 </div>
             </div>
 
-            <div class="panel pointer-events-auto" style="min-width:100px;">
-                <div style="font-size:10px; color:#888;">PING</div>
-                <div id="ping-display" style="font-weight:bold; color:#0f0;">LOCAL</div>
+            <div class="panel pointer-events-auto" style="min-width:100px; padding: 10px;">
+                <div style="font-size:9px; color:#888; margin-bottom:5px;">STATUS</div>
+                <div id="ping-display" style="font-weight:bold; color:#0f0; font-size:12px;">LOCAL</div>
             </div>
+        </div>
+        
+        <div style="text-align:center; opacity:0.5; font-size:10px; margin-bottom: 10px;">
+            MOZGÁS: <b>WASD / NYILAK</b> &nbsp;|&nbsp; AKCIÓ: <b>SPACE</b>
         </div>
     </div>
 
@@ -103,8 +108,7 @@
 
     <script>
         // --- BIZTONSÁGOS FIX SZOBA KÓD (80 karakter) ---
-        // Ez biztosítja, hogy mindenki ugyanabba a "szobába" kerüljön gépelés nélkül.
-        const FIXED_ROOM_ID = "neon-party-arena-secure-lobby-v2-x8z9-fixed-room-key-dont-change-this-string-8812";
+        const FIXED_ROOM_ID = "neon-party-arena-final-v3-secure-lobby-key-do-not-change-this-string-fixed-9921";
 
         // --- KONFIGURÁCIÓ ---
         const canvas = document.getElementById('gameCanvas');
@@ -140,7 +144,6 @@
         function resize() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            // Ha még nincs sugár, beállítjuk
             if(!gameState.mapRadius) gameState.mapRadius = Math.min(canvas.width, canvas.height) * 0.4;
         }
         window.addEventListener('resize', resize);
@@ -160,10 +163,7 @@
             const sel = Array.from(document.querySelectorAll('.color-btn')).find(b => b.style.backgroundColor === hexToRgb(myColor) || b.style.backgroundColor === myColor);
             if(sel) sel.classList.add('selected');
         }
-        function hexToRgb(hex) { // Helper a CSS összehasonlításhoz
-            // Egyszerűsítve hagyjuk, általában a browser rgb()-re konvertálja a style-t
-            return hex; 
-        }
+        function hexToRgb(hex) { return hex; }
 
         // --- HÁLÓZAT KEZELÉS ---
 
@@ -176,29 +176,23 @@
             myName = document.getElementById('username').value || myName;
             showLoading();
             
-            // Megpróbáljuk lefoglalni a fix ID-t
             peer = new Peer(FIXED_ROOM_ID, { debug: 1 });
 
             peer.on('open', (id) => {
-                // Sikerült! Mi vagyunk a Host.
                 isHost = true;
                 myId = id;
                 hideMenu();
                 document.getElementById('host-controls').style.display = 'block';
-                document.getElementById('ping-display').innerText = "HOST";
+                document.getElementById('ping-display').innerText = "HOST (SERVER)";
                 
-                // Saját játékos létrehozása
                 spawnPlayer(id, myName, myColor);
                 gameState.mapRadius = Math.min(canvas.width, canvas.height) * 0.4;
-                
-                // Játék hurok indítása
                 gameLoop();
             });
 
             peer.on('error', (err) => {
-                // Ha az ID foglalt ("unavailable-id"), akkor már van Host.
                 if(err.type === 'unavailable-id') {
-                    setStatus("Már van Host! Csatlakozz inkább.");
+                    setStatus("MÁR VAN HOST! Kérlek használd a JOIN gombot.");
                 } else {
                     setStatus("Hiba: " + err.type);
                 }
@@ -223,48 +217,32 @@
             myName = document.getElementById('username').value || myName;
             showLoading();
 
-            // Véletlen ID-t generálunk magunknak, nem a fixet
             peer = new Peer(null, { debug: 1 });
 
             peer.on('open', (id) => {
                 myId = id;
-                // Csatlakozás a fix HOST ID-hez
                 conn = peer.connect(FIXED_ROOM_ID);
 
                 conn.on('open', () => {
                     hideMenu();
-                    document.getElementById('ping-display').innerText = "JOINED";
-                    // Beköszönés
+                    document.getElementById('ping-display').innerText = "CONNECTED";
                     conn.send({ type: 'join', name: myName, color: myColor });
-                    // Kliens oldali loop (csak renderelés és input küldés)
                     clientLoop();
                 });
 
                 conn.on('data', (data) => {
                     if (data.type === 'update') {
-                        // Kliens oldali szinkronizáció
-                        // NEM írjuk felül a saját pozíciónkat a szerver adataival (kivéve ha nagyon nagy az eltérés),
-                        // hogy megmaradjon a simaság.
                         const serverMe = data.state.players[myId];
-                        
-                        // Átveszünk mindent a state-ből
-                        const oldPlayers = gameState.players;
                         gameState = data.state; 
-
-                        // DE! A saját karakterünk pozícióját megtartjuk a helyiről,
-                        // hogy ne ugráljon (kivéve ha halott vagy respawnolt).
+                        
+                        // Anti-Lag Logic: Megtartjuk a saját pozíciót, ha nincs nagy eltérés
                         if (serverMe && gameState.players[myId] && !serverMe.isDead) {
-                            // Korrekció: Ha a szerver szerint nagyon máshol vagyunk (pl falnak mentünk),
-                            // akkor elfogadjuk a szerver pozícióját. Egyébként a sajátunkat használjuk.
                             const dx = localPlayer.x - serverMe.x;
                             const dy = localPlayer.y - serverMe.y;
-                            
-                            // Ha az eltérés kisebb mint 50 pixel (lag), akkor a saját kliens oldali mozgást használjuk (smooth)
-                            if (Math.sqrt(dx*dx + dy*dy) < 50) {
+                            if (Math.sqrt(dx*dx + dy*dy) < 60) {
                                 gameState.players[myId].x = localPlayer.x;
                                 gameState.players[myId].y = localPlayer.y;
                             } else {
-                                // Ha nagy az eltérés (pl teleport, respawn), frissítjük a helyit
                                 localPlayer.x = serverMe.x;
                                 localPlayer.y = serverMe.y;
                             }
@@ -272,10 +250,9 @@
                     }
                 });
 
-                // Ha nem találja a hostot (pl. nincs online senki)
                 setTimeout(() => {
                     if(!conn.open) {
-                        setStatus("Nem található a szerver. Indíts egyet (Host)!");
+                        setStatus("NEM TALÁLHATÓ SZOBA! Kérlek legyél te a HOST.");
                         document.getElementById('menu-screen').style.display='flex';
                         document.getElementById('loading-msg').style.display='none';
                     }
@@ -293,12 +270,14 @@
                 }
             }
             if (data.type === 'move') {
-                // A Kliens közvetlenül a pozícióját küldi (Smooth movement)
                 const p = gameState.players[c.peer];
                 if (p && !p.isDead) {
                     p.x = data.x;
                     p.y = data.y;
-                    // Lövés input még mindig külön jön
+                    // Vízszintes/Függőleges sebességet is frissítjük a szem animációhoz
+                    p.vx = data.vx || 0;
+                    p.vy = data.vy || 0;
+                    
                     if(data.shoot) tryShoot(p);
                 }
             }
@@ -307,7 +286,7 @@
         function spawnPlayer(id, name, color) {
             gameState.players[id] = {
                 id: id, x: 0, y: 0, vx: 0, vy: 0,
-                color: color, name: name, score: 0, cooldown: 0, isDead: false, radius: 15
+                color: color, name: name, score: 0, cooldown: 0, isDead: false, radius: 16
             };
         }
 
@@ -319,7 +298,6 @@
             gameState.bullets = [];
             gameState.coins = [];
             
-            // Respawn mindenki
             const pIds = Object.keys(gameState.players);
             pIds.forEach((id, i) => {
                 const p = gameState.players[id];
@@ -329,21 +307,19 @@
                 p.x = Math.cos(angle) * dist;
                 p.y = Math.sin(angle) * dist;
                 
-                // Host esetén a localPlayert is frissíteni kell
                 if(id === myId) { localPlayer.x = p.x; localPlayer.y = p.y; }
             });
 
-            if (mode === 2) for(let i=0; i<20; i++) spawnCoin();
+            if (mode === 2) for(let i=0; i<25; i++) spawnCoin();
         }
 
-        // --- FIZIKA ÉS JÁTÉK LOOP ---
+        // --- FIZIKA ---
 
-        // Ez a függvény fut mindenkinek a gépén a SAJÁT karakterére
         function updateLocalPhysics() {
             const p = gameState.players[myId];
             if (!p || p.isDead) return;
 
-            const speed = 0.8; // Sebesség
+            const speed = 0.8; 
             const friction = 0.90;
 
             if (keys.w) localPlayer.vy -= speed;
@@ -356,29 +332,28 @@
             localPlayer.vx *= friction;
             localPlayer.vy *= friction;
 
-            // Fal ütközés (Kliens oldalon is számoljuk, hogy ne menjen ki a falon a képernyőn)
             const dist = Math.sqrt(localPlayer.x*localPlayer.x + localPlayer.y*localPlayer.y);
-            const limit = gameState.mapRadius - 15; // 15 = radius
+            const limit = gameState.mapRadius - 15; 
             if (dist > limit) {
                 const angle = Math.atan2(localPlayer.y, localPlayer.x);
                 localPlayer.x = Math.cos(angle) * limit;
                 localPlayer.y = Math.sin(angle) * limit;
-                localPlayer.vx = 0; localPlayer.vy = 0; // Megállás falnál
+                localPlayer.vx = 0; localPlayer.vy = 0; 
             }
 
-            // Frissítjük a globális state-ben is a megjelenítéshez
             p.x = localPlayer.x;
             p.y = localPlayer.y;
+            p.vx = localPlayer.vx; // Fontos a szemeknek
+            p.vy = localPlayer.vy;
 
-            // Küldés a szervernek (vagy ha host vagyok, akkor nem kell küldeni)
             if (!isHost && conn && conn.open) {
                 conn.send({ 
                     type: 'move', 
-                    x: localPlayer.x, 
-                    y: localPlayer.y,
-                    shoot: keys.space // Lövést itt jelezzük
+                    x: localPlayer.x, y: localPlayer.y,
+                    vx: localPlayer.vx, vy: localPlayer.vy, // Küldjük a sebességet is a szemek miatt
+                    shoot: keys.space 
                 });
-                keys.space = false; // Reset key after send
+                keys.space = false; 
             } else if (isHost) {
                  if(keys.space) { tryShoot(p); keys.space = false; }
             }
@@ -386,12 +361,8 @@
 
         function tryShoot(p) {
             if(gameState.gameMode === 1 && p.cooldown <= 0 && gameState.isPlaying) {
-                // Lövedék iránya: amerre megy, vagy amerre néz
-                let bx = localPlayer.vx || (Math.random()-0.5); 
-                let by = localPlayer.vy || (Math.random()-0.5);
-                if(isHost && p.id !== myId) { bx = (Math.random()-0.5); by = (Math.random()-0.5); } // Guest irány (egyszerűsítve)
-                
-                // Normalizálás
+                let bx = p.vx || (Math.random()-0.5); 
+                let by = p.vy || (Math.random()-0.5);
                 const len = Math.sqrt(bx*bx + by*by) || 1;
                 bx /= len; by /= len;
 
@@ -408,28 +379,20 @@
             gameState.coins.push({ x: Math.cos(a)*d, y: Math.sin(a)*d });
         }
 
-        // Fő Host Loop
         function gameLoop() {
             if (!isHost) return;
-
-            // 1. Saját mozgás
             updateLocalPhysics();
 
-            // 2. Szerver fizika (Lövedékek, Érmék, Ütközések)
-            // Idő
             if(gameState.isPlaying) {
                 gameState.timeLeft -= 1/60;
                 if(gameState.timeLeft<=0) { gameState.isPlaying=false; gameState.gameMode=0; }
             }
-            // Cooldowns
             Object.values(gameState.players).forEach(p => { if(p.cooldown>0) p.cooldown--; });
 
-            // Lövedékek
             for (let i = gameState.bullets.length - 1; i >= 0; i--) {
                 const b = gameState.bullets[i];
                 b.x += b.vx; b.y += b.vy;
                 if (Math.sqrt(b.x*b.x + b.y*b.y) > gameState.mapRadius) { gameState.bullets.splice(i,1); continue; }
-                // Találat
                 for(let pid in gameState.players) {
                     const p = gameState.players[pid];
                     if(p.id !== b.ownerId && !p.isDead) {
@@ -437,7 +400,7 @@
                         if(Math.sqrt(dx*dx+dy*dy) < p.radius+5) {
                             p.score = Math.max(0, p.score-1);
                             if(gameState.players[b.ownerId]) gameState.players[b.ownerId].score++;
-                            p.x = (Math.random()-0.5)*100; p.y = (Math.random()-0.5)*100; // Respawn
+                            p.x = (Math.random()-0.5)*100; p.y = (Math.random()-0.5)*100; 
                             gameState.bullets.splice(i,1);
                             break;
                         }
@@ -445,7 +408,6 @@
                 }
             }
             
-            // Coin gyűjtés
             if(gameState.gameMode===2) {
                 Object.values(gameState.players).forEach(p => {
                     for(let i=gameState.coins.length-1; i>=0; i--) {
@@ -457,24 +419,15 @@
                 });
             }
 
-            // Sumo lökdösődés (Egyszerűsített)
-            if(gameState.gameMode===3) {
-               // ... (Host oldalon számolva a bonyolult ütközéseket)
-               // A simaság érdekében a Sumo módnál picit lehet eltérés a kliens és szerver között,
-               // de a Host a főnök.
-            }
-
             broadcastState();
             render();
             updateHUD();
             requestAnimationFrame(gameLoop);
         }
 
-        // Kliens Loop
         function clientLoop() {
             if(isHost) return;
-            
-            updateLocalPhysics(); // Sima mozgásért
+            updateLocalPhysics(); 
             render();
             updateHUD();
             requestAnimationFrame(clientLoop);
@@ -485,7 +438,6 @@
             connections.forEach(c => c.send(data));
         }
 
-        // --- INPUT ---
         window.addEventListener('keydown', e => {
             const k = e.key.toLowerCase();
             if(keys.hasOwnProperty(k) || k===' ') { if(k===' ') keys.space=true; else keys[k]=true; }
@@ -495,9 +447,8 @@
             if(keys.hasOwnProperty(k) || k===' ') { if(k===' ') keys.space=false; else keys[k]=false; }
         });
 
-        // --- RENDER ---
+        // --- RENDER (SZEMEK VISSZATÉRTEK) ---
         function render() {
-            // Törlés & Setup
             ctx.fillStyle = '#0f0f13'; ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.save(); ctx.translate(canvas.width/2, canvas.height/2);
 
@@ -508,7 +459,7 @@
             ctx.strokeStyle = gameState.gameMode===1?'#ff0055':gameState.gameMode===2?'#ffcc00':gameState.gameMode===3?'#00f2ff':'#333';
             ctx.stroke();
 
-            // Grid
+            // Rács
             ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.lineWidth=1;
             for(let i=-gameState.mapRadius; i<gameState.mapRadius; i+=50) {
                 ctx.beginPath(); ctx.moveTo(i,-gameState.mapRadius); ctx.lineTo(i,gameState.mapRadius); ctx.stroke();
@@ -518,17 +469,42 @@
             // Objektumok
             gameState.coins.forEach(c => {
                 ctx.beginPath(); ctx.arc(c.x, c.y, 8, 0, 6.28); ctx.fillStyle='#ffcc00'; ctx.fill();
+                ctx.shadowBlur=10; ctx.shadowColor='#ffcc00'; ctx.fill(); ctx.shadowBlur=0;
             });
             gameState.bullets.forEach(b => {
                 ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, 6.28); ctx.fillStyle='#ff0055'; ctx.fill();
             });
 
-            // Játékosok
+            // JÁTÉKOSOK (SZEMES VERZIÓ)
             Object.values(gameState.players).forEach(p => {
                 if(p.isDead) return;
+
+                // 1. Test
                 ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, 6.28);
                 ctx.fillStyle = p.color; ctx.fill();
+                // Glow effekt
                 ctx.shadowBlur=15; ctx.shadowColor=p.color; ctx.fill(); ctx.shadowBlur=0;
+
+                // 2. Szemek (Irány a sebességből)
+                // Ha nagyon kicsi a sebesség, akkor előre nézzenek (vagy az utolsó irányba)
+                // Itt egy trükk: megszorozzuk a sebességet, hogy a szemek elmozduljanak
+                let lookX = (p.vx || 0) * 3;
+                let lookY = (p.vy || 0) * 3;
+                
+                // Limitáljuk, hogy ne essenek le az arcról
+                const maxLook = 6;
+                if(lookX > maxLook) lookX = maxLook; if(lookX < -maxLook) lookX = -maxLook;
+                if(lookY > maxLook) lookY = maxLook; if(lookY < -maxLook) lookY = -maxLook;
+
+                // Fehér rész
+                ctx.fillStyle = 'white';
+                ctx.beginPath(); ctx.arc(p.x - 5 + lookX, p.y - 4 + lookY, 5, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(p.x + 5 + lookX, p.y - 4 + lookY, 5, 0, Math.PI*2); ctx.fill();
+                
+                // Fekete pupilla
+                ctx.fillStyle = 'black';
+                ctx.beginPath(); ctx.arc(p.x - 5 + lookX*1.2, p.y - 4 + lookY*1.2, 2, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(p.x + 5 + lookX*1.2, p.y - 4 + lookY*1.2, 2, 0, Math.PI*2); ctx.fill();
                 
                 // Név
                 ctx.fillStyle='#fff'; ctx.font="bold 10px Roboto"; ctx.textAlign="center";
@@ -546,7 +522,7 @@
             document.getElementById('current-game-name').innerText = modes[gameState.gameMode];
 
             const list = Object.values(gameState.players).sort((a,b)=>b.score-a.score);
-            document.getElementById('score-list').innerHTML = list.map(p=>`<div style="display:flex; justify-content:space-between; color:${p.color};"><span>${p.name}</span><span>${p.score}</span></div>`).join('');
+            document.getElementById('score-list').innerHTML = list.map(p=>`<div style="display:flex; justify-content:space-between; color:${p.color}; font-weight:bold;"><span>${p.name}</span><span>${p.score}</span></div>`).join('');
         }
 
     </script>
