@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroCode PRO v13.1 - Teamwork Fixed</title>
+    <title>AeroCode PRO v13.2 - Teamwork Fixed & Stable</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
@@ -322,7 +322,7 @@
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            pointer-events: none; /* A kattintásokat átengedi */
+            pointer-events: none; /* A kattintásokat átengedi a kódra */
             z-index: 50; /* A Kód (1) felett, de a UI (100+) alatt */
         }
         
@@ -419,10 +419,14 @@
         <div class="editor-container">
             <div id="live-indicator">● LIVE</div>
             <textarea id="code-editor">
-# AeroCode PRO v13.1
-# Teamwork Edition - Fixed
-# Most már látnod kell a kis karakteredet!
-# Mozgasd az egereddel (Drag & Drop)
+# AeroCode PRO v13.2 - Stable
+# Teamwork Edition - Fixed Avatar System
+#
+# 1. Kattints a "Log in" gombra és írj be egy nevet.
+# 2. Nyisd meg a "Közös Munka" menüt (kis emberke ikon).
+# 3. Egy valaki legyen HOST, a többiek JOIN.
+# 4. A kis gömböcök (avatárok) megjelennek!
+# 5. Húzd őket az egereddel (Drag & Drop)!
 
 print("Hello Team!")
             </textarea>
@@ -540,6 +544,9 @@ print("Hello Team!")
             if(!localStorage.getItem(userKey)) localStorage.setItem(userKey, Date.now());
             
             currentUser = name;
+            // Avatar név frissítése ha már létezik
+            myAvatar.name = currentUser;
+            
             document.getElementById('user-btn').innerText = name;
             document.getElementById('loginModal').style.display = 'none';
             document.getElementById('login-warning').style.display = 'none';
@@ -671,7 +678,12 @@ print("Hello Team!")
                 pyodideReady = true;
                 logSystem("Rendszer kész.");
                 const savedUser = localStorage.getItem('saved_username');
-                if(savedUser) { currentUser = savedUser; document.getElementById('user-btn').innerText = savedUser; logSystem(`Üdvözöllek újra, ${savedUser}!`); }
+                if(savedUser) { 
+                    currentUser = savedUser; 
+                    myAvatar.name = savedUser; // Set avatar name on init
+                    document.getElementById('user-btn').innerText = savedUser; 
+                    logSystem(`Üdvözöllek újra, ${savedUser}!`); 
+                }
             } catch (e) { console.error(e); logSystem("Rendszer hiba: " + e); }
         }
         initPyodide();
@@ -805,7 +817,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         // AVATAR SYSTEM STATE
         const AVATAR_COLORS = ['#ff0055', '#00f2ff', '#00ff44', '#ffcc00', '#aa00ff', '#ffffff'];
         let avatars = {}; 
-        let myAvatar = { x: 150, y: 150, vx: 0, vy: 0, color: '#00f2ff', name: 'Me' };
+        let myAvatar = { x: 150, y: 150, vx: 0, vy: 0, color: '#00f2ff', name: 'User' };
         let isDraggingAvatar = false;
 
         const ROOM_MAPPING = {
@@ -831,7 +843,6 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             avCanvas.height = window.innerHeight;
         }
         window.addEventListener('resize', resizeCanvas);
-        // Initkor is futtatjuk, hogy biztos legyen méret
         setTimeout(resizeCanvas, 100);
 
         function spawnParticle(x, y, color) {
@@ -842,10 +853,11 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             });
         }
 
+        // FŐ RAJZOLÓ LOOP (JAVÍTOTT - Mindig fut)
         function updateAndDrawAvatars() {
             avCtx.clearRect(0, 0, avCanvas.width, avCanvas.height);
             
-            // Ha nincs belépve senki, akkor is rajzoljunk magunknak, ha be vagyunk jelentkezve
+            // 1. Saját avatár kirajzolása (ha van user)
             if(currentUser) {
                 drawAvatar(myAvatar, true);
                 if(Math.abs(myAvatar.vx) > 0.1 || Math.abs(myAvatar.vy) > 0.1) {
@@ -853,7 +865,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                 }
             }
 
-            // Többiek
+            // 2. Többiek kirajzolása (ha van lista)
             Object.values(avatars).forEach(av => {
                 drawAvatar(av, false);
                 if(Math.abs(av.vx) > 0.1 || Math.abs(av.vy) > 0.1) {
@@ -861,7 +873,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                 }
             });
 
-            // Részecskék
+            // 3. Részecskék frissítése
             for(let i=particles.length-1; i>=0; i--) {
                 let p = particles[i];
                 p.x += p.vx; p.y += p.vy;
@@ -873,6 +885,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                 if(p.life <= 0) particles.splice(i, 1);
             }
 
+            // A hurok sosem állhat le, különben eltűnnek a karakterek
             requestAnimationFrame(updateAndDrawAvatars);
         }
 
@@ -926,7 +939,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             if(dist < 25) {
                 isDraggingAvatar = true;
                 e.preventDefault(); 
-                e.stopPropagation(); 
+                e.stopPropagation(); // Ez fontos, hogy ne jelöljön szöveget
             }
         });
 
@@ -948,6 +961,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             }
         });
 
+        // INDÍTÁS
         requestAnimationFrame(updateAndDrawAvatars);
 
         // --- P2P FÜGGVÉNYEK ---
