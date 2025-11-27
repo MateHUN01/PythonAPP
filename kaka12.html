@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroCode PRO v13.7 - Private Mode & Teamwork</title>
+    <title>AeroCode PRO v14.0 - Avatar Actions</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
@@ -278,6 +278,37 @@
             pointer-events: none; 
             z-index: 50; 
         }
+
+        /* --- AVATAR CONTEXT MENU (ÚJ) --- */
+        #avatar-context-menu {
+            display: none;
+            position: absolute;
+            background-color: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--accent-color);
+            border-radius: 8px;
+            padding: 5px;
+            z-index: 10000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        #avatar-context-menu button {
+            display: block;
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            padding: 8px 12px;
+            text-align: left;
+            cursor: pointer;
+            font-size: 12px;
+            border-radius: 4px;
+            box-shadow: none;
+            margin: 0;
+        }
+        #avatar-context-menu button:hover {
+            background: var(--accent-color);
+            color: white;
+        }
         
     </style>
 </head>
@@ -286,6 +317,10 @@
     <div id="loading-overlay">
         <svg class="gear" viewBox="0 0 512 512"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>
         <div style="margin-top:20px; color:#666">Művelet folyamatban...</div>
+    </div>
+
+    <div id="avatar-context-menu">
+        <button id="btn-copy-code" onclick="requestRemoteCode()">📥 Kód elkérése (Másolás)</button>
     </div>
 
     <div class="header-wrapper">
@@ -327,14 +362,6 @@
                             <button onclick="startAsHost()" style="flex:1; padding:8px; background:var(--run-color); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">HOST</button>
                             <button onclick="joinAsGuest()" style="flex:1; padding:8px; background:#50fa7b; color:#222; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">JOIN</button>
                         </div>
-                        
-                        <div style="margin-top:10px; border-top:1px solid #333; padding-top:10px;">
-                            <div class="checkbox-container" style="margin:0;">
-                                <input type="checkbox" id="private-mode-toggle" onchange="togglePrivateMode()">
-                                <label for="private-mode-toggle" style="font-size:11px; cursor:pointer;">Privát Mód (Kód elrejtése)</label>
-                            </div>
-                        </div>
-
                     </div>
                     <div id="disconnect-ui" style="display:none;">
                         <div style="background:rgba(80, 250, 123, 0.1); color:#50fa7b; padding:8px; border-radius:4px; margin-bottom:10px; text-align:center; font-size:12px;">
@@ -371,17 +398,16 @@
             
             <div id="live-indicator">● LIVE</div>
             <textarea id="code-editor">
-# AeroCode PRO v13.7
-# Teamwork Edition - PRIVATE MODE
+# AeroCode PRO v14.0
+# Teamwork Edition - CODE STEAL & INDIVIDUAL WORK
 #
-# 1. Ha bekapcsolod a "Privát Mód"-ot a menüben:
-#    - A te kódodat NEM látják mások.
-#    - Te SEM látod, ha ők írnak (saját verziód marad).
-#    - DE a chat és a lökdösődés (fizika) megmarad!
-#
-# Próbáld ki!
+# 1. Mindenki a saját kódján dolgozik (nincs automatikus felülírás).
+# 2. Ha meg akarod nézni vagy átvenni valaki kódját:
+#    - Kattints rá a kis karakterére!
+#    - Válaszd a "Kód elkérése" opciót.
+#    - A te kódod frissül az övével (egyszeri szinkron).
 
-print("Coding in secret...")
+print("My Code Space")
             </textarea>
         </div>
 
@@ -472,9 +498,6 @@ print("Coding in secret...")
         let myAvatar = { x: 150, y: 150, vx: 0, vy: 0, color: '#00f2ff', name: 'User', radius: 15, msg: null, msgExpires: 0 };
         let isDraggingAvatar = false;
         
-        // --- ÚJ: PRIVÁT MÓD VÁLTOZÓ ---
-        let isPrivateMode = false;
-
         // --- 2. LOGGING HELPER ---
         function addToOutput(text, cls="") {
             const span = document.createElement("span"); span.textContent = text;
@@ -525,24 +548,13 @@ print("Coding in secret...")
             } catch(e) {}
         }
         
-        // --- ÚJ: PRIVÁT MÓD TOGGLE ---
-        function togglePrivateMode() {
-            isPrivateMode = document.getElementById('private-mode-toggle').checked;
-            if(isPrivateMode) {
-                logSystem("PRIVÁT MÓD: Be. A kódod nem látható mások számára, és te sem látod a többiekét.");
-            } else {
-                logSystem("PRIVÁT MÓD: Ki. Szinkronizáció aktív.");
-                // Ha visszakapcsoljuk, küldjük el a mostani állapotot, hogy szinkronba kerüljünk
-                if(isHost) broadcastCode(editor.getValue(), null);
-                else if(conn && conn.open) conn.send({ type: 'code_update', content: editor.getValue() });
-            }
-        }
-
-        // --- 4. AVATAR & GRAPHICS SYSTEM ---
+        // --- 4. AVATAR & GRAPHICS SYSTEM (With Menu) ---
         const avCanvas = document.getElementById('avatar-layer');
         const avCtx = avCanvas.getContext('2d');
         const editorContainer = document.querySelector('.editor-container');
+        const contextMenu = document.getElementById('avatar-context-menu');
         let particles = []; 
+        let selectedAvatarId = null; // A menü célpontja
 
         function resizeCanvas() {
             avCanvas.width = editorContainer.offsetWidth;
@@ -573,7 +585,7 @@ print("Coding in secret...")
                 if (myAvatar.y < r) { myAvatar.y = r; myAvatar.vy *= -0.5; }
                 if (myAvatar.y > height - r) { myAvatar.y = height - r; myAvatar.vy *= -0.5; }
 
-                // ÜTKÖZÉS & SZINKRONIZÁCIÓ
+                // ÜTKÖZÉS
                 for (let id in avatars) {
                     let other = avatars[id];
                     let dx = myAvatar.x - other.x;
@@ -689,17 +701,46 @@ print("Coding in secret...")
             }
         }
 
+        // --- MOUSE EVENTS: DRAG & MENU ---
         window.addEventListener('mousedown', (e) => {
             if(!currentUser) return;
+            
+            // Ha a menü nyitva van és nem a menüre kattintunk, bezárjuk
+            if(contextMenu.style.display === 'block') {
+                if(!contextMenu.contains(e.target)) {
+                    contextMenu.style.display = 'none';
+                    selectedAvatarId = null;
+                }
+            }
+
             const rect = avCanvas.getBoundingClientRect();
+            // Csak akkor foglalkozzunk vele, ha a canvas területén vagyunk
+            if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return;
+
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
-            const dx = mouseX - myAvatar.x;
-            const dy = mouseY - myAvatar.y;
-            
-            if(Math.sqrt(dx*dx + dy*dy) < 30) {
+
+            // 1. Saját karakter húzása
+            const distSelf = Math.sqrt((mouseX - myAvatar.x)**2 + (mouseY - myAvatar.y)**2);
+            if(distSelf < 25) {
                 isDraggingAvatar = true;
                 e.preventDefault(); e.stopPropagation();
+                return;
+            }
+
+            // 2. Másik karakter menüje
+            for(let id in avatars) {
+                const av = avatars[id];
+                const distOther = Math.sqrt((mouseX - av.x)**2 + (mouseY - av.y)**2);
+                if(distOther < 25) {
+                    // Találat! Menü nyitása
+                    selectedAvatarId = id;
+                    contextMenu.style.left = e.clientX + 'px';
+                    contextMenu.style.top = e.clientY + 'px';
+                    contextMenu.style.display = 'block';
+                    e.preventDefault(); e.stopPropagation();
+                    return;
+                }
             }
         });
 
@@ -724,6 +765,24 @@ print("Coding in secret...")
         });
 
         requestAnimationFrame(updateAndDrawAvatars);
+
+        // --- AVATAR MENU ACTIONS ---
+        function requestRemoteCode() {
+            contextMenu.style.display = 'none';
+            if(!selectedAvatarId) return;
+            
+            logSystem("Kód lekérése folyamatban...");
+            
+            // Kérés küldése
+            if(isHost) {
+               // Ha Host kér, akkor a connectedUsers-ben keressük
+               const target = connectedUsers.find(u => u.id === selectedAvatarId);
+               if(target && target.conn.open) target.conn.send({ type: 'request_code_snapshot' });
+            } else {
+               // Ha Guest kér, a Hostnak küldi, hogy "kérem X kódját"
+               if(conn && conn.open) conn.send({ type: 'relay_request_code', targetId: selectedAvatarId });
+            }
+        }
 
         // --- 5. CHAT SYSTEM LOGIC ---
         const chatInput = document.getElementById('chat-input');
@@ -992,7 +1051,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         let maxParticipants = 3;
         
         // UNIQUE COLOR MANAGEMENT
-        const usedColors = new Set(); // Csak host használja
+        const usedColors = new Set(); 
 
         const ROOM_MAPPING = {
             "1": "aerocode_pro_v11_secure_channel_alpha_92837465_student_access_key_x99_unique_hash_a1",
@@ -1023,7 +1082,6 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             });
         }
 
-        // LÖKÉS KÜLDÉSE (Impulse Sync)
         function broadcastImpulse(targetId, vx, vy) {
             if(isHost) {
                 const target = connectedUsers.find(u => u.id === targetId);
@@ -1084,15 +1142,32 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
 
                         avatars[connection.peer] = { x: 200, y: 200, vx:0, vy:0, name: data.username, color: assignedColor };
                         
-                        connection.send({ type: 'init_data', color: assignedColor, code: editor.getValue() });
+                        // NEM küldjük a kódot automatikusan, csak a színt
+                        connection.send({ type: 'init_data', color: assignedColor });
                         
                         broadcastUserList(); updateActiveUsersUI(); broadcastAvatarList(); 
                     }
-                    else if(data.type === 'code_update') {
-                        // CSAK HA NEM VAGYUNK PRIVÁTBAN
-                        if(!isPrivateMode) {
-                            broadcastCode(data.content, connection.peer);
-                            if (editor.getValue() !== data.content) { isSyncing = true; const cursor = editor.getCursor(); editor.setValue(data.content); editor.setCursor(cursor); isSyncing = false; }
+                    else if(data.type === 'request_code_snapshot') {
+                        // Kérés érkezett: A másik fél kéri a Host kódját
+                        connection.send({ type: 'code_snapshot_response', code: editor.getValue() });
+                    }
+                    else if(data.type === 'relay_request_code') {
+                        // Guest kér Guest-től (Host közvetít)
+                        const targetId = data.targetId;
+                        if(targetId === 'HOST') {
+                            connection.send({ type: 'code_snapshot_response', code: editor.getValue() });
+                        } else {
+                            const target = connectedUsers.find(u => u.id === targetId);
+                            if(target && target.conn.open) {
+                                target.conn.send({ type: 'request_code_snapshot', requesterId: connection.peer });
+                            }
+                        }
+                    }
+                    else if(data.type === 'code_snapshot_response') {
+                        // Válasz érkezett Guest-től, továbbítjuk a kérőnek
+                        const requester = connectedUsers.find(u => u.id === data.requesterId);
+                        if(requester && requester.conn.open) {
+                            requester.conn.send({ type: 'code_snapshot_response', code: data.code });
                         }
                     }
                     else if(data.type === 'avatar_move') {
@@ -1160,12 +1235,19 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                 conn.on('data', (data) => {
                     if(data.type === 'init_data') {
                         myAvatar.color = data.color;
-                        if (editor.getValue() !== data.code) { isSyncing = true; editor.setValue(data.code); isSyncing = false; }
+                        // NINCS AUTO KÓD FELÜLÍRÁS
                     }
-                    else if(data.type === 'code_update') { 
-                        // CSAK HA NEM VAGYUNK PRIVÁTBAN
-                        if(!isPrivateMode) {
-                            if (editor.getValue() !== data.content) { isSyncing = true; const cursor = editor.getCursor(); editor.setValue(data.content); editor.setCursor(cursor); isSyncing = false; } 
+                    else if(data.type === 'request_code_snapshot') {
+                        // Valaki kéri a kódomat, elküldöm a Hostnak
+                        conn.send({ type: 'code_snapshot_response', code: editor.getValue(), requesterId: data.requesterId });
+                    }
+                    else if(data.type === 'code_snapshot_response') {
+                        // Megjött a kért kód! Beillesztjük.
+                        if (editor.getValue() !== data.code) { 
+                            isSyncing = true; 
+                            editor.setValue(data.code); 
+                            isSyncing = false; 
+                            logSystem("Kód sikeresen átmásolva!");
                         }
                     }
                     else if (data.type === 'user_list') { connectedUsers = data.users; updateActiveUsersUI(); }
@@ -1198,8 +1280,6 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             peer.on('error', () => { updateP2PLog("Hálózati Hiba."); });
         }
 
-        function broadcastCode(content, senderIdToExclude) { if(!isHost) return; connectedUsers.forEach(u => { if(u.id !== senderIdToExclude && u.conn.open) { u.conn.send({ type: 'code_update', content: content }); } }); }
-        
         function broadcastChatMessage(text, senderIdToExclude) {
             if(isHost) {
                 const data = { type: 'chat_message', text: text, peerId: 'HOST' }; 
@@ -1228,13 +1308,8 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         function resetP2PUI() { conn = null; peer = null; isHost = false; connectedUsers = []; avatars = {}; usedColors.clear(); document.getElementById('connect-ui').style.display = 'block'; document.getElementById('disconnect-ui').style.display = 'none'; document.getElementById('live-indicator').style.display = 'none'; document.getElementById('active-users-list').innerHTML = ""; updateP2PLog("Offline"); document.getElementById('p2p-log').style.color = "#888"; }
         function updateP2PLog(msg) { document.getElementById('p2p-log').innerText = msg; }
 
-        editor.on('change', (cm, change) => { 
-            // CSAK HA NEM VAGYUNK PRIVÁTBAN KÜLDJÜK EL
-            if (!isSyncing && !isPrivateMode) { 
-                if (isHost) { broadcastCode(editor.getValue(), null); } 
-                else if (conn && conn.open) { conn.send({ type: 'code_update', content: editor.getValue() }); } 
-            } 
-        });
+        // NINCS TÖBBÉ AUTOMATA SZINKRON
+        // editor.on('change', ...) - KIVÉVE
     </script>
 </body>
 </html>
