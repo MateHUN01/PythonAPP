@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC P2P Diagnosztika</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { font-family: monospace; background: #121214; color: #e0e0e0; padding: 20px; max-width: 800px; margin: auto; }
+        .box { border: 1px solid #333; padding: 15px; margin-bottom: 20px; border-radius: 8px; background: #1e1e1e; }
+        h2 { margin-top: 0; color: #2196F3; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        
+        input, button { padding: 10px; border-radius: 4px; border: 1px solid #444; background: #2c2c2c; color: white; width: 100%; margin-bottom: 10px; box-sizing: border-box; }
+        button { cursor: pointer; font-weight: bold; background: #2196F3; border: none; }
+        button:hover { background: #1976D2; }
+        button.disconnect { background: #ff5555; }
+
+        .log-window { height: 200px; overflow-y: scroll; background: #000; border: 1px solid #333; padding: 10px; font-size: 12px; }
+        .log-entry { margin-bottom: 5px; border-bottom: 1px solid #222; padding-bottom: 2px; }
+        .log-error { color: #ff5555; }
+        .log-success { color: #50fa7b; }
+        .log-info { color: #8be9fd; }
+
+        #my-id-display { font-size: 24px; font-weight: bold; color: #50fa7b; text-align: center; word-break: break-all; margin: 10px 0; user-select: all; cursor: pointer; border: 2px dashed #444; padding: 10px; }
+        
+        .status-dot { height: 10px; width: 10px; background-color: #ff5555; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .connected { background-color: #50fa7b; }
+    </style>
+</head>
+<body>
+
+    <h1>📡 P2P Kapcsolat Teszter</h1>
+    <p style="color:#888;">Ez az oldal csak a PeerJS kapcsolatot teszteli, minden más nélkül.</p>
+
+    <div class="box">
+        <h2>1. Én (Azonosító)</h2>
+        <div id="connection-status"><span class="status-dot" id="status-dot"></span> <span id="status-text">Csatlakozás a PeerServerhez...</span></div>
+        
+        <div style="font-size:12px; color:#888; text-align:center; margin-top:10px;">A Te Kódod (Kattints a másoláshoz):</div>
+        <div id="my-id-display" onclick="copyId()" title="Kattints a másoláshoz">GENERÁLÁS...</div>
+        <div style="text-align:center; font-size:11px; color:orange;">Ha ez "GENERÁLÁS..." marad, akkor a hálózatod blokkolja a kapcsolatot.</div>
+    </div>
+
+    <div class="box">
+        <h2>2. Csatlakozás MÁSHOZ</h2>
+        <input type="text" id="remote-id" placeholder="Illeszd be a partner kódját ide...">
+        <button onclick="connectToPartner()">Kapcsolódás</button>
+        <button onclick="disconnect()" class="disconnect" style="display:none;" id="btn-disconnect">Szétkapcsolás</button>
+    </div>
+
+    <div class="box">
+        <h2>3. Adatküldés Teszt</h2>
+        <input type="text" id="msg-input" placeholder="Írj üzenetet..." disabled>
+        <button onclick="sendMessage()" id="btn-send" disabled>Küldés</button>
+    </div>
+
+    <div class="box">
+        <h2>Rendszer Napló</h2>
+        <div class="log-window" id="logs"></div>
+    </div>
+
+    <script>
+        let peer = null;
+        let conn = null;
+
+        // Naplózó segédfüggvény
+        function log(msg, type="info") {
+            const logs = document.getElementById('logs');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            const time = new Date().toLocaleTimeString();
+            entry.innerText = `[${time}] ${msg}`;
+            logs.appendChild(entry);
+            logs.scrollTop = logs.scrollHeight;
+            console.log(msg);
+        }
+
+        // 1. Peer inicializálása (Induláskor azonnal)
+        function init() {
+            log("PeerJS indítása...", "info");
+            
+            // Konfiguráció: Google STUN szervereit használjuk a tűzfalak áttöréséhez
+            peer = new Peer(null, {
+                debug: 2,
+                config: {
+                    'iceServers': [
+                        { url: 'stun:stun.l.google.com:19302' },
+                        { url: 'stun:stun1.l.google.com:19302' }
+                    ]
+                }
+            });
+
+            // SIKERES NYITÁS (Ha kapunk ID-t a felhőből)
+            peer.on('open', (id) => {
+                document.getElementById('my-id-display').innerText = id;
+                document.getElementById('status-dot').classList.add('connected');
+                document.getElementById('status-text').innerText = "Online - Készen állsz!";
+                log(`Sikeres szerver kapcsolat! A kódod: ${id}`, "success");
+            });
+
+            // HA MÁS CSATLAKOZIK HOZZÁNK
+            peer.on('connection', (connection) => {
+                log("Valaki csatlakozni próbál hozzád...", "info");
+                setupConnection(connection);
+            });
+
+            // HIBAKEZELÉS (Ez a legfontosabb rész neked most)
+            peer.on('error', (err) => {
+                document.getElementById('status-text').innerText = "HIBA TÖRTÉNT";
+                document.getElementById('my-id-display').innerText = "HIBA";
+                document.getElementById('my-id-display').style.color = "red";
+                
+                let errorMsg = err.type;
+                if(err.type === 'browser-incompatible') errorMsg = "A böngésződ nem támogatja a WebRTC-t.";
+                if(err.type === 'network') errorMsg = "Hálózati hiba / Tűzfal blokkolás.";
+                if(err.type === 'peer-unavailable') errorMsg = "A megadott ID nem létezik vagy nem elérhető.";
+                
+                log(`HIBA: ${errorMsg} (${err})`, "error");
+            });
+
+            peer.on('disconnected', () => {
+                log("Megszakadt a kapcsolat a szerverrel. Újracsatlakozás...", "error");
+                peer.reconnect();
+            });
+        }
+
+        // 2. Csatlakozás kezdeményezése
+        function connectToPartner() {
+            const remoteId = document.getElementById('remote-id').value.trim();
+            if(!remoteId) {
+                log("Kérlek add meg a partner ID-ját!", "error");
+                return;
+            }
+            if(remoteId === peer.id) {
+                log("Magadhoz nem csatlakozhatsz!", "error");
+                return;
+            }
+
+            log(`Csatlakozás ehhez: ${remoteId}...`, "info");
+            const connection = peer.connect(remoteId);
+            setupConnection(connection);
+        }
+
+        // 3. Kapcsolat beállítása (Közös függvény a hívónak és hívottnak)
+        function setupConnection(connection) {
+            conn = connection;
+
+            conn.on('open', () => {
+                log("P2P KAPCSOLAT LÉTREJÖTT! 🟢", "success");
+                
+                // UI frissítése
+                document.getElementById('msg-input').disabled = false;
+                document.getElementById('btn-send').disabled = false;
+                document.getElementById('btn-disconnect').style.display = 'inline-block';
+                
+                // Üdvözlő adat küldése
+                conn.send("Szia! Sikeresen kapcsolódtam.");
+            });
+
+            conn.on('data', (data) => {
+                log(`Bejövő üzenet: ${data}`, "info");
+            });
+
+            conn.on('close', () => {
+                log("A partner lecsatlakozott.", "error");
+                resetUI();
+            });
+
+            conn.on('error', (err) => {
+                log(`Kapcsolati hiba: ${err}`, "error");
+            });
+        }
+
+        // Üzenet küldése
+        function sendMessage() {
+            const input = document.getElementById('msg-input');
+            const msg = input.value;
+            if(conn && conn.open && msg) {
+                conn.send(msg);
+                log(`Elküldve: ${msg}`, "info");
+                input.value = "";
+            } else {
+                log("Nincs aktív kapcsolat!", "error");
+            }
+        }
+
+        // Szétkapcsolás
+        function disconnect() {
+            if(conn) conn.close();
+            resetUI();
+            log("Szétkapcsolva.", "info");
+        }
+
+        function resetUI() {
+            conn = null;
+            document.getElementById('msg-input').disabled = true;
+            document.getElementById('btn-send').disabled = true;
+            document.getElementById('btn-disconnect').style.display = 'none';
+        }
+
+        function copyId() {
+            const text = document.getElementById('my-id-display').innerText;
+            if(text !== "GENERÁLÁS..." && text !== "HIBA") {
+                navigator.clipboard.writeText(text);
+                log("ID másolva a vágólapra.", "success");
+            }
+        }
+
+        // Indítás
+        init();
+
+    </script>
+</body>
+</html>
