@@ -54,7 +54,6 @@
             background: #ffffff;
             box-shadow: 0 0 50px rgba(0,0,0,0.5);
             position: relative;
-            /* overflow: hidden;  <-- Ezt kivettem, hogy a képek lóghassanak, ha kell, de alapvetően a vásznon belül maradnak */
             transition: width 0.3s, height 0.3s, background 0.3s;
         }
 
@@ -65,9 +64,7 @@
             user-select: none;
             border: 2px solid transparent;
             transition: border 0.1s;
-            /* Flex center a képhez */
             display: flex; justify-content: center; align-items: center;
-            /* overflow: hidden;  <-- EZ VOLT A HIBA! Ez rejtette el a menüt. Kivettem. */
         }
         
         .collage-item.selected {
@@ -75,12 +72,23 @@
             z-index: 1000 !important; 
         }
 
-        .collage-item img {
+        /* A belső kép konténer a vágáshoz */
+        .collage-item-inner {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* Ez végzi a "Chrop" funkciót (levágja a felesleget torzítás nélkül) */
-            pointer-events: none; 
-            display: block;
+            overflow: hidden;
+            position: relative;
+            pointer-events: none;
+        }
+
+        .collage-item img {
+            position: absolute; /* Fontos a vágáshoz */
+            /* A vágást mostantól JS transzformációval vagy negatív margóval is kezelhetjük, 
+               de a canvas drawImage-nél a vágási paraméterek döntenek. 
+               A megjelenítéshez object-fit helyett mostantól pozicionálást használunk a crop esetén. */
+            object-fit: fill; 
+            width: 100%;
+            height: 100%;
         }
 
         /* Resize Handle (Jobb alsó sarok) */
@@ -97,10 +105,10 @@
         }
         .collage-item.selected .resize-handle { display: block; }
 
-        /* --- MINI HUD (Ez a lebegő menü) --- */
+        /* --- MINI HUD --- */
         .mini-hud {
             position: absolute;
-            top: -45px; /* A kép fölött jelenik meg */
+            top: -45px;
             left: 50%;
             transform: translateX(-50%);
             background: var(--glass-bg);
@@ -108,9 +116,9 @@
             padding: 5px;
             border-radius: 8px;
             border: 1px solid var(--glass-border);
-            display: none; /* Csak ha selected */
+            display: none; 
             gap: 5px;
-            z-index: 99999; /* Legyen nagyon felül */
+            z-index: 99999;
             white-space: nowrap;
             box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
@@ -170,6 +178,36 @@
         .modal input, .modal select { width: 100%; padding: 10px; background: #333; border: 1px solid #444; color: white; margin-bottom: 10px; border-radius: 4px; }
         .modal button { padding: 8px 16px; background: var(--accent-color); color: white; border: none; border-radius: 4px; cursor: pointer; float: right; margin-left: 10px; }
         .modal button.secondary { background: transparent; border: 1px solid #555; }
+
+        /* --- CROP MODAL STYLES --- */
+        #cropModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 20000; flex-direction: column; align-items: center; justify-content: center; }
+        .crop-container { position: relative; max-width: 80vw; max-height: 80vh; border: 1px solid #444; overflow: hidden; background: #000; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
+        .crop-container img { display: block; max-width: 100%; max-height: 80vh; pointer-events: none; opacity: 0.5; } /* Halvány háttérkép a vágáshoz */
+        
+        .crop-box {
+            position: absolute;
+            top: 10px; left: 10px; width: 100px; height: 100px;
+            border: 2px solid var(--accent-color);
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); /* Sötétítés a kereten kívül */
+            cursor: move;
+        }
+        
+        /* Crop handles */
+        .ch-handle { position: absolute; width: 10px; height: 10px; background: white; border: 1px solid var(--accent-color); border-radius: 50%; }
+        .ch-tl { top: -5px; left: -5px; cursor: nw-resize; }
+        .ch-tr { top: -5px; right: -5px; cursor: ne-resize; }
+        .ch-bl { bottom: -5px; left: -5px; cursor: sw-resize; }
+        .ch-br { bottom: -5px; right: -5px; cursor: se-resize; }
+        .ch-t  { top: -5px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+        .ch-b  { bottom: -5px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+        .ch-l  { left: -5px; top: 50%; transform: translateY(-50%); cursor: w-resize; }
+        .ch-r  { right: -5px; top: 50%; transform: translateY(-50%); cursor: e-resize; }
+
+        .crop-controls { margin-top: 20px; display: flex; gap: 10px; }
+        .crop-btn { padding: 10px 20px; border-radius: 5px; border: none; cursor: pointer; font-weight: bold; }
+        .crop-save { background: var(--accent-color); color: white; }
+        .crop-cancel { background: transparent; border: 1px solid #555; color: white; }
+
 
         /* Export Options Styling */
         .export-option { display:block; margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 6px; cursor: pointer; border:1px solid transparent; }
@@ -283,6 +321,27 @@
         </div>
     </div>
 
+    <div id="cropModal">
+        <div class="crop-container" id="crop-container">
+            <img id="crop-target-img" src="" alt="Vágandó kép">
+            <div class="crop-box" id="crop-box" onmousedown="startCropDrag(event)">
+                <div class="ch-handle ch-tl" onmousedown="startCropResize(event, 'tl')"></div>
+                <div class="ch-handle ch-tr" onmousedown="startCropResize(event, 'tr')"></div>
+                <div class="ch-handle ch-bl" onmousedown="startCropResize(event, 'bl')"></div>
+                <div class="ch-handle ch-br" onmousedown="startCropResize(event, 'br')"></div>
+                
+                <div class="ch-handle ch-t" onmousedown="startCropResize(event, 't')"></div>
+                <div class="ch-handle ch-b" onmousedown="startCropResize(event, 'b')"></div>
+                <div class="ch-handle ch-l" onmousedown="startCropResize(event, 'l')"></div>
+                <div class="ch-handle ch-r" onmousedown="startCropResize(event, 'r')"></div>
+            </div>
+        </div>
+        <div class="crop-controls">
+            <button class="crop-btn crop-cancel" onclick="closeCropModal()">Mégse</button>
+            <button class="crop-btn crop-save" onclick="applyCrop()">Mentés</button>
+        </div>
+    </div>
+
     <div id="loginModal" class="modal-overlay">
         <div class="modal">
             <h3>Bejelentkezés</h3>
@@ -317,15 +376,22 @@
     <script>
         // --- CORE VARIABLES ---
         const canvas = document.getElementById('collage-canvas');
-        let items = []; // { id, x, y, w, h, z, src, element, ratioLocked }
+        let items = []; // { id, x, y, w, h, z, src, element, crop: {sx, sy, sw, sh} }
         let selectedItem = null;
         let zCounter = 1;
         let isDragging = false;
         let isResizing = false;
         let dragOffset = { x: 0, y: 0 };
-        let startSize = { w: 0, h: 0, x: 0, y: 0 }; // Resizehez
+        let startSize = { w: 0, h: 0, x: 0, y: 0 }; 
         
-        let exportScale = 1; // 1 = normal, 3 = HD
+        let exportScale = 1; 
+
+        // --- CROP VARIABLES ---
+        let cropTargetId = null;
+        let isCropDragging = false;
+        let isCropResizing = false;
+        let cropResizeDir = '';
+        let cropStartPos = {x:0, y:0, boxL:0, boxT:0, boxW:0, boxH:0};
 
         // --- IMAGE HANDLING ---
         function handleFiles(files) {
@@ -336,7 +402,6 @@
                 };
                 reader.readAsDataURL(file);
             });
-            // Reset input
             document.getElementById('img-input').value = '';
         }
 
@@ -344,19 +409,27 @@
             const id = remoteParams ? remoteParams.id : 'item_' + Date.now() + Math.random().toString(36).substr(2, 5);
             const zIndex = remoteParams ? remoteParams.z : zCounter++;
 
-            // Create DOM structure
+            // Crop adatok inicializálása
+            let cropData = remoteParams && remoteParams.crop ? remoteParams.crop : null; // Ha nincs, null (teljes kép)
+
             const div = document.createElement('div');
             div.className = 'collage-item';
             div.id = id;
             div.style.zIndex = zIndex;
             
-            // Image
+            // Inner container for crop visualization via object-position/size trick or simple image drawing
+            const innerDiv = document.createElement('div');
+            innerDiv.className = 'collage-item-inner';
+            
             const img = document.createElement('img');
             img.src = src;
             img.onload = () => {
-                // Set initial size/pos if not remote
+                // Initialize crop to full image if new
+                if (!cropData) {
+                    cropData = { sx: 0, sy: 0, sw: img.naturalWidth, sh: img.naturalHeight };
+                }
+
                 if (!remoteParams) {
-                    // Fit to reasonable size
                     let w = img.naturalWidth;
                     let h = img.naturalHeight;
                     if (w > 300) { h = (300/w)*h; w = 300; }
@@ -366,47 +439,288 @@
                     div.style.left = (Math.random() * (canvas.clientWidth - w)) + 'px';
                     div.style.top = (Math.random() * (canvas.clientHeight - h)) + 'px';
 
-                    syncCreate(id, src, parseFloat(div.style.left), parseFloat(div.style.top), w, h, zIndex);
+                    syncCreate(id, src, parseFloat(div.style.left), parseFloat(div.style.top), w, h, zIndex, cropData);
                 } else {
                     div.style.width = remoteParams.w + 'px';
                     div.style.height = remoteParams.h + 'px';
                     div.style.left = remoteParams.x + 'px';
                     div.style.top = remoteParams.y + 'px';
                 }
+                updateVisualCrop(img, cropData);
             };
 
             // Resize Handle
             const handle = document.createElement('div');
             handle.className = 'resize-handle';
             
-            // Mini HUD (Bővítve Crop/Ratio gombokkal)
+            // Mini HUD
             const hud = document.createElement('div');
             hud.className = 'mini-hud';
             hud.innerHTML = `
                 <button class="hud-btn" onclick="changeLayer('${id}', 1)" title="Előre"><span class="material-icons" style="font-size:16px">arrow_upward</span></button>
                 <button class="hud-btn" onclick="changeLayer('${id}', -1)" title="Hátra"><span class="material-icons" style="font-size:16px">arrow_downward</span></button>
                 <div class="hud-divider"></div>
-                <button class="hud-btn" onclick="setAspectRatio('${id}', '1:1')" title="1:1 Kocka (Crop)"><span class="material-icons" style="font-size:16px">crop_square</span></button>
-                <button class="hud-btn" onclick="setAspectRatio('${id}', 'free')" title="Szabad Méretezés"><span class="material-icons" style="font-size:16px">crop_free</span></button>
+                <button class="hud-btn" onclick="openCropEditor('${id}')" title="Szerkesztés / Vágás"><span class="material-icons" style="font-size:16px">crop</span></button>
                 <div class="hud-divider"></div>
                 <button class="hud-btn" style="color:#ff5555" onclick="deleteItem('${id}')" title="Törlés"><span class="material-icons" style="font-size:16px">delete</span></button>
             `;
 
-            div.appendChild(img);
+            innerDiv.appendChild(img);
+            div.appendChild(innerDiv); // Wrapperbe tesszük
             div.appendChild(handle);
             div.appendChild(hud);
             canvas.appendChild(div);
 
-            // Store Logic
-            const itemObj = { id, element: div, src, ratioLocked: false };
+            const itemObj = { id, element: div, src, crop: cropData };
             items.push(itemObj);
 
-            // Events
             div.onmousedown = (e) => startDrag(e, itemObj);
             handle.onmousedown = (e) => startResize(e, itemObj);
         }
 
-        // --- INTERACTION ENGINE ---
+        // --- CROP VISUALIZATION HELPER ---
+        // Ez a függvény frissíti a kép megjelenését a DOM-ban, hogy tükrözze a vágást
+        function updateVisualCrop(imgElement, crop) {
+            if(!crop) return;
+            // Mivel a DOM-ban egy <img> elem van, nem tudjuk 'valóban' levágni.
+            // Trükk: object-fit helyett (vagy mellett) object-position-t és méretezést használunk?
+            // VAGY: Egyszerűbb, ha a canvas drawImage-t használjuk az exportnál, itt pedig csak szimuláljuk.
+            // A legpontosabb: A HTML-ben a kép src-jét lecseréljük egy ideiglenes canvasra rajzolt vágott verzióra?
+            // Igen, ez a legtisztább a felhasználónak.
+            
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = crop.sw;
+            tempCanvas.height = crop.sh;
+            const ctx = tempCanvas.getContext('2d');
+            
+            // Létrehozunk egy új Image objektumot az eredeti forrásból (mert az imgElement.src lehet már blob)
+            const originalImg = new Image();
+            // Keressük meg az eredeti src-t az items-ben
+            const item = items.find(i => i.element.contains(imgElement));
+            if(item) {
+                 originalImg.src = item.src;
+                 originalImg.onload = () => {
+                     ctx.drawImage(originalImg, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, crop.sw, crop.sh);
+                     imgElement.src = tempCanvas.toDataURL(); // Frissítjük a DOM képet a vágottra
+                 };
+            }
+        }
+
+        // --- CROP EDITOR FUNCTIONS ---
+        function openCropEditor(id) {
+            const item = items.find(i => i.id === id);
+            if(!item) return;
+            
+            cropTargetId = id;
+            const modal = document.getElementById('cropModal');
+            const targetImg = document.getElementById('crop-target-img');
+            const cropBox = document.getElementById('crop-box');
+            
+            // Betöltjük az eredeti képet (nem a vágottat)
+            targetImg.src = item.src;
+            
+            targetImg.onload = () => {
+                modal.style.display = 'flex';
+                
+                // Várjunk picit, hogy a kép renderelődjön és legyen mérete
+                const containerRect = document.getElementById('crop-container').getBoundingClientRect();
+                const imgRect = targetImg.getBoundingClientRect();
+
+                // Kiszámoljuk az arányt a megjelenített kép és a valós méret között
+                const scaleX = imgRect.width / targetImg.naturalWidth;
+                const scaleY = imgRect.height / targetImg.naturalHeight;
+
+                // Kezdeti Crop Box pozíció
+                // Ha már volt crop, azt állítsuk be, ha nincs, akkor teljes kép
+                let cx, cy, cw, ch;
+                
+                if (item.crop && item.crop.sw < targetImg.naturalWidth) {
+                    cx = item.crop.sx * scaleX;
+                    cy = item.crop.sy * scaleY;
+                    cw = item.crop.sw * scaleX;
+                    ch = item.crop.sh * scaleY;
+                } else {
+                    cx = 0; cy = 0; cw = imgRect.width; ch = imgRect.height;
+                }
+
+                // Pozícionálás a konténerhez képest (ami relatív)
+                // A containerben a kép középen van, vagy kitölti. 
+                // A crop box absolute a containerhez.
+                // Korrekció: A targetImg pozíciója a containerben:
+                const offsetLeft = imgRect.left - containerRect.left;
+                const offsetTop = imgRect.top - containerRect.top;
+
+                cropBox.style.left = (offsetLeft + cx) + 'px';
+                cropBox.style.top = (offsetTop + cy) + 'px';
+                cropBox.style.width = cw + 'px';
+                cropBox.style.height = ch + 'px';
+            };
+        }
+
+        function closeCropModal() {
+            document.getElementById('cropModal').style.display = 'none';
+            cropTargetId = null;
+        }
+
+        function applyCrop() {
+            if(!cropTargetId) return;
+            
+            const item = items.find(i => i.id === cropTargetId);
+            const targetImg = document.getElementById('crop-target-img');
+            const cropBox = document.getElementById('crop-box');
+            
+            const imgRect = targetImg.getBoundingClientRect();
+            const containerRect = document.getElementById('crop-container').getBoundingClientRect();
+            
+            // Kép offset a containerben
+            const imgOffsetLeft = imgRect.left - containerRect.left;
+            const imgOffsetTop = imgRect.top - containerRect.top;
+
+            // CropBox pozíciója a képhez képest
+            const boxLeft = parseFloat(cropBox.style.left) - imgOffsetLeft;
+            const boxTop = parseFloat(cropBox.style.top) - imgOffsetTop;
+            const boxWidth = parseFloat(cropBox.style.width);
+            const boxHeight = parseFloat(cropBox.style.height);
+
+            // Skála (Megjelenített / Eredeti)
+            const scaleX = targetImg.naturalWidth / imgRect.width;
+            const scaleY = targetImg.naturalHeight / imgRect.height;
+
+            // Valós koordináták kiszámítása
+            let finalSx = boxLeft * scaleX;
+            let finalSy = boxTop * scaleY;
+            let finalSw = boxWidth * scaleX;
+            let finalSh = boxHeight * scaleY;
+
+            // Határok ellenőrzése (ne lehessen negatív)
+            if(finalSx < 0) finalSx = 0;
+            if(finalSy < 0) finalSy = 0;
+            if(finalSw > targetImg.naturalWidth - finalSx) finalSw = targetImg.naturalWidth - finalSx;
+            if(finalSh > targetImg.naturalHeight - finalSy) finalSh = targetImg.naturalHeight - finalSy;
+
+            // Adatok mentése
+            item.crop = {
+                sx: finalSx,
+                sy: finalSy,
+                sw: finalSw,
+                sh: finalSh
+            };
+
+            // Vizuális frissítés
+            updateVisualCrop(item.element.querySelector('img'), item.crop);
+            
+            // Szinkronizálás
+            syncUpdate(item);
+            
+            closeCropModal();
+        }
+
+        // --- CROP INTERACTION (Drag & Resize) ---
+        function startCropDrag(e) {
+            if(e.target.classList.contains('ch-handle')) return; // Ha resize handle, ne drag
+            e.stopPropagation();
+            e.preventDefault();
+            isCropDragging = true;
+            
+            const box = document.getElementById('crop-box');
+            cropStartPos = {
+                x: e.clientX,
+                y: e.clientY,
+                boxL: parseFloat(box.style.left) || 0,
+                boxT: parseFloat(box.style.top) || 0
+            };
+        }
+
+        function startCropResize(e, dir) {
+            e.stopPropagation();
+            e.preventDefault();
+            isCropResizing = true;
+            cropResizeDir = dir;
+            
+            const box = document.getElementById('crop-box');
+            cropStartPos = {
+                x: e.clientX,
+                y: e.clientY,
+                boxL: parseFloat(box.style.left) || 0,
+                boxT: parseFloat(box.style.top) || 0,
+                boxW: parseFloat(box.style.width) || 0,
+                boxH: parseFloat(box.style.height) || 0
+            };
+        }
+
+        // Globális egérkövetés a modálhoz
+        document.getElementById('cropModal').addEventListener('mousemove', (e) => {
+            const box = document.getElementById('crop-box');
+            const img = document.getElementById('crop-target-img');
+            const container = document.getElementById('crop-container');
+            
+            // Határok (container relatív)
+            const cRect = container.getBoundingClientRect();
+            const iRect = img.getBoundingClientRect();
+            
+            // Kép határai a containeren belül
+            const minX = iRect.left - cRect.left;
+            const minY = iRect.top - cRect.top;
+            const maxX = minX + iRect.width;
+            const maxY = minY + iRect.height;
+
+            if (isCropDragging) {
+                let dx = e.clientX - cropStartPos.x;
+                let dy = e.clientY - cropStartPos.y;
+                
+                let newL = cropStartPos.boxL + dx;
+                let newT = cropStartPos.boxT + dy;
+                let newW = parseFloat(box.style.width);
+                let newH = parseFloat(box.style.height);
+
+                // Határolás (Ne menjen ki a képről)
+                if (newL < minX) newL = minX;
+                if (newT < minY) newT = minY;
+                if (newL + newW > maxX) newL = maxX - newW;
+                if (newT + newH > maxY) newT = maxY - newH;
+
+                box.style.left = newL + 'px';
+                box.style.top = newT + 'px';
+            }
+
+            if (isCropResizing) {
+                let dx = e.clientX - cropStartPos.x;
+                let dy = e.clientY - cropStartPos.y;
+                
+                let newL = cropStartPos.boxL;
+                let newT = cropStartPos.boxT;
+                let newW = cropStartPos.boxW;
+                let newH = cropStartPos.boxH;
+
+                if (cropResizeDir.includes('r')) newW += dx;
+                if (cropResizeDir.includes('l')) { newL += dx; newW -= dx; }
+                if (cropResizeDir.includes('b')) newH += dy;
+                if (cropResizeDir.includes('t')) { newT += dy; newH -= dy; }
+
+                // Min size
+                if (newW < 20) newW = 20;
+                if (newH < 20) newH = 20;
+
+                // Határolás (Resize közben se menjen ki)
+                if (newL < minX) { newW += (newL - minX); newL = minX; }
+                if (newT < minY) { newH += (newT - minY); newT = minY; }
+                if (newL + newW > maxX) newW = maxX - newL;
+                if (newT + newH > maxY) newH = maxY - newT;
+
+                box.style.left = newL + 'px';
+                box.style.top = newT + 'px';
+                box.style.width = newW + 'px';
+                box.style.height = newH + 'px';
+            }
+        });
+
+        document.getElementById('cropModal').addEventListener('mouseup', () => {
+            isCropDragging = false;
+            isCropResizing = false;
+        });
+
+
+        // --- INTERACTION ENGINE (Canvas) ---
 
         function startDrag(e, item) {
             if (e.target.closest('.hud-btn') || e.target.classList.contains('resize-handle')) return;
@@ -452,6 +766,8 @@
         // Global Mouse Move / Up
         window.addEventListener('mousemove', (e) => {
             if (!selectedItem) return;
+            // Ne csináljon semmit, ha a Crop Modal nyitva van
+            if(document.getElementById('cropModal').style.display === 'flex') return;
 
             if (isDragging) {
                 const canvasRect = canvas.getBoundingClientRect();
@@ -470,12 +786,6 @@
 
                 if (newW < 20) newW = 20;
                 if (newH < 20) newH = 20;
-
-                // Ha be van kapcsolva a képarány zár (pl 1:1)
-                if (selectedItem.ratioLocked) {
-                    // Kényszerítsük a négyzet alakot
-                    newH = newW;
-                }
 
                 selectedItem.element.style.width = newW + 'px';
                 selectedItem.element.style.height = newH + 'px';
@@ -518,25 +828,6 @@
         function updateCanvasBg(color) {
             canvas.style.backgroundColor = color;
             if (p2pHost) broadcast({ type: 'bg_change', color });
-        }
-
-        // --- ASPECT RATIO / CROP LOGIC ---
-        function setAspectRatio(id, type) {
-            const item = items.find(i => i.id === id);
-            if(!item) return;
-
-            if (type === '1:1') {
-                item.ratioLocked = true;
-                // Azonnali átméretezés négyzetre (a rövidebb oldalhoz igazítva)
-                const s = Math.min(item.element.offsetWidth, item.element.offsetHeight);
-                item.element.style.width = s + 'px';
-                item.element.style.height = s + 'px';
-                showToast("1:1 Képarány beállítva (Kocka)");
-            } else {
-                item.ratioLocked = false;
-                showToast("Szabad méretezés bekapcsolva");
-            }
-            syncUpdate(item);
         }
 
         // --- LAYOUTS (TEMPLATES) ---
@@ -591,7 +882,7 @@
             }
         }
 
-        // --- EXPORT LOGIC (New HD & Non-Squash) ---
+        // --- EXPORT LOGIC ---
         function openExportModal() {
             document.getElementById('exportModal').style.display = 'flex';
         }
@@ -606,7 +897,6 @@
             document.getElementById('exportModal').style.display = 'none';
             document.getElementById('loading-overlay').style.display = 'flex';
             
-            // Hagyunk időt a UI frissítésre
             setTimeout(() => {
                 saveCollageHighQuality(exportScale);
                 document.getElementById('loading-overlay').style.display = 'none';
@@ -615,64 +905,48 @@
 
         function saveCollageHighQuality(scale = 1) {
             const exportCanvas = document.createElement('canvas');
-            // A vászon mérete felszorozva a skálával (HD esetén 3x)
             exportCanvas.width = canvas.offsetWidth * scale;
             exportCanvas.height = canvas.offsetHeight * scale;
             const ctx = exportCanvas.getContext('2d');
 
-            // Háttér kitöltése
             ctx.fillStyle = canvas.style.backgroundColor || '#ffffff';
             ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
 
-            // Rendezés Z-index szerint
             const sortedItems = [...items].sort((a, b) => {
                 return parseInt(a.element.style.zIndex) - parseInt(b.element.style.zIndex);
             });
 
-            // Kirajzolás intelligens CROP számítással (object-fit: cover szimuláció)
+            // Promise alapú betöltés a biztos rendereléshez (bár itt már be vannak töltve, de a biztonság kedvéért új Image objektumok)
+            // Egyszerűsített szinkron megoldás (mivel a DOM-ban ott vannak)
             sortedItems.forEach(item => {
-                const img = item.element.querySelector('img');
+                // Új image objektum létrehozása az eredeti source-ból
+                // Fontos: Nem a DOM img-t használjuk, mert az lehet, hogy már base64 vágott. 
+                // Az eredeti src-t használjuk és a crop adatokat.
+                const tempImg = new Image();
+                tempImg.src = item.src;
                 
-                // Cél koordináták (skálázva)
+                // Mivel a tempImg.src lehet aszinkron, itt egy trükk: a drawImage működik, ha már be volt töltve böngésző cache-be.
+                // De a biztonság kedvéért (ha nagy képek):
+                // A legegyszerűbb, ha a DOM img-t használjuk, de az már a "vizuális vágott" verzió lehet.
+                // HA a visualCrop update lecserélte az src-t, akkor azt rajzoljuk ki direktben, crop paraméterek NÉLKÜL (mert már vágott).
+                // HA az eredeti src van (nincs crop), akkor mehet simán.
+                
+                const domImg = item.element.querySelector('img');
+                
                 const dx = parseFloat(item.element.style.left) * scale;
                 const dy = parseFloat(item.element.style.top) * scale;
                 const dw = parseFloat(item.element.style.width) * scale;
                 const dh = parseFloat(item.element.style.height) * scale;
 
-                // Forrás (kép) adatok
-                const sw = img.naturalWidth;
-                const sh = img.naturalHeight;
-
-                // Object-Fit: Cover Matematika Canvas-ra
-                // 1. Kiszámoljuk az arányokat
-                const sourceRatio = sw / sh;
-                const destRatio = dw / dh;
-
-                let sX, sY, sW, sH;
-
-                if (sourceRatio > destRatio) {
-                    // A forrás szélesebb, mint a cél -> a szélességből vágunk le
-                    sH = sh;
-                    sW = sh * destRatio;
-                    sX = (sw - sW) / 2; // Középre igazítás
-                    sY = 0;
-                } else {
-                    // A forrás magasabb, mint a cél -> a magasságból vágunk le
-                    sW = sw;
-                    sH = sw / destRatio;
-                    sX = 0;
-                    sY = (sh - sH) / 2; // Középre igazítás
-                }
-
-                // Rajzolás
-                ctx.drawImage(img, sX, sY, sW, sH, dx, dy, dw, dh);
+                // Ha van vágás, a DOM kép már a vágott verzió (base64). Így a teljes képet rajzoljuk ki a cél területre.
+                // Ez azért jó, mert a vizuális frissítésnél már megcsináltuk a vágást.
+                ctx.drawImage(domImg, 0, 0, domImg.naturalWidth, domImg.naturalHeight, dx, dy, dw, dh);
             });
 
-            // Letöltés
             const link = document.createElement('a');
             const suffix = scale > 1 ? '_HD' : '';
             link.download = `AeroCollage${suffix}_${Date.now()}.png`;
-            link.href = exportCanvas.toDataURL('image/png', 1.0); // Max minőség
+            link.href = exportCanvas.toDataURL('image/png', 1.0); 
             link.click();
         }
 
@@ -745,7 +1019,8 @@
                             y: parseFloat(i.element.style.top),
                             w: parseFloat(i.element.style.width),
                             h: parseFloat(i.element.style.height),
-                            z: parseInt(i.element.style.zIndex)
+                            z: parseInt(i.element.style.zIndex),
+                            crop: i.crop // Sync crop data
                         });
                     });
                 }, 1000);
@@ -773,6 +1048,12 @@
                         item.element.style.width = data.w + 'px';
                         item.element.style.height = data.h + 'px';
                         item.element.style.zIndex = data.z;
+                        
+                        // Crop sync update
+                        if(data.crop) {
+                            item.crop = data.crop;
+                            updateVisualCrop(item.element.querySelector('img'), item.crop);
+                        }
                     }
                 } else if(data.type === 'delete') {
                     const index = items.findIndex(i => i.id === data.id);
@@ -790,8 +1071,8 @@
             });
         }
 
-        function syncCreate(id, src, x, y, w, h, z) {
-            if(peer) broadcast({ type: 'create', id, src, x, y, w, h, z });
+        function syncCreate(id, src, x, y, w, h, z, crop) {
+            if(peer) broadcast({ type: 'create', id, src, x, y, w, h, z, crop });
         }
         function syncUpdate(item) {
             if(peer) broadcast({
@@ -801,7 +1082,8 @@
                 y: parseFloat(item.element.style.top),
                 w: parseFloat(item.element.style.width),
                 h: parseFloat(item.element.style.height),
-                z: parseInt(item.element.style.zIndex)
+                z: parseInt(item.element.style.zIndex),
+                crop: item.crop // Küldjük a crop adatokat is
             });
         }
         function syncDelete(id) {
@@ -849,13 +1131,8 @@
                     const dx = parseFloat(item.element.style.left)*scale, dy = parseFloat(item.element.style.top)*scale;
                     const dw = parseFloat(item.element.style.width)*scale, dh = parseFloat(item.element.style.height)*scale;
                     
-                    const sw = img.naturalWidth, sh = img.naturalHeight;
-                    const sR = sw/sh, dR = dw/dh;
-                    let sX, sY, sW, sH;
-                    if (sR > dR) { sH=sh; sW=sh*dR; sX=(sw-sW)/2; sY=0; }
-                    else { sW=sw; sH=sw/dR; sX=0; sY=(sh-sH)/2; }
-                    
-                    ctx.drawImage(img, sX, sY, sW, sH, dx, dy, dw, dh);
+                    // Itt is a már vágott DOM képet rajzoljuk ki
+                    ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, dx, dy, dw, dh);
                 });
                 
                 exportCanvas.toBlob(async blob => {
