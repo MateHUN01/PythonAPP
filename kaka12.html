@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroCode PRO v13.6 - Synced Physics & Color Mgr</title>
+    <title>AeroCode PRO v13.7 - Private Mode & Teamwork</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
@@ -327,6 +327,14 @@
                             <button onclick="startAsHost()" style="flex:1; padding:8px; background:var(--run-color); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">HOST</button>
                             <button onclick="joinAsGuest()" style="flex:1; padding:8px; background:#50fa7b; color:#222; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">JOIN</button>
                         </div>
+                        
+                        <div style="margin-top:10px; border-top:1px solid #333; padding-top:10px;">
+                            <div class="checkbox-container" style="margin:0;">
+                                <input type="checkbox" id="private-mode-toggle" onchange="togglePrivateMode()">
+                                <label for="private-mode-toggle" style="font-size:11px; cursor:pointer;">Privát Mód (Kód elrejtése)</label>
+                            </div>
+                        </div>
+
                     </div>
                     <div id="disconnect-ui" style="display:none;">
                         <div style="background:rgba(80, 250, 123, 0.1); color:#50fa7b; padding:8px; border-radius:4px; margin-bottom:10px; text-align:center; font-size:12px;">
@@ -363,14 +371,17 @@
             
             <div id="live-indicator">● LIVE</div>
             <textarea id="code-editor">
-# AeroCode PRO v13.6
-# Teamwork Edition - SYNCED PHYSICS
+# AeroCode PRO v13.7
+# Teamwork Edition - PRIVATE MODE
 #
-# 1. Host & Join.
-# 2. Ütközz a másik játékossal! Most már mindkét képernyőn ellökitek egymást!
-# 3. Nincs többé azonos színű karakter.
+# 1. Ha bekapcsolod a "Privát Mód"-ot a menüben:
+#    - A te kódodat NEM látják mások.
+#    - Te SEM látod, ha ők írnak (saját verziód marad).
+#    - DE a chat és a lökdösődés (fizika) megmarad!
+#
+# Próbáld ki!
 
-print("Hello Team!")
+print("Coding in secret...")
             </textarea>
         </div>
 
@@ -460,6 +471,9 @@ print("Hello Team!")
         let avatars = {}; 
         let myAvatar = { x: 150, y: 150, vx: 0, vy: 0, color: '#00f2ff', name: 'User', radius: 15, msg: null, msgExpires: 0 };
         let isDraggingAvatar = false;
+        
+        // --- ÚJ: PRIVÁT MÓD VÁLTOZÓ ---
+        let isPrivateMode = false;
 
         // --- 2. LOGGING HELPER ---
         function addToOutput(text, cls="") {
@@ -510,8 +524,21 @@ print("Hello Team!")
                 }
             } catch(e) {}
         }
+        
+        // --- ÚJ: PRIVÁT MÓD TOGGLE ---
+        function togglePrivateMode() {
+            isPrivateMode = document.getElementById('private-mode-toggle').checked;
+            if(isPrivateMode) {
+                logSystem("PRIVÁT MÓD: Be. A kódod nem látható mások számára, és te sem látod a többiekét.");
+            } else {
+                logSystem("PRIVÁT MÓD: Ki. Szinkronizáció aktív.");
+                // Ha visszakapcsoljuk, küldjük el a mostani állapotot, hogy szinkronba kerüljünk
+                if(isHost) broadcastCode(editor.getValue(), null);
+                else if(conn && conn.open) conn.send({ type: 'code_update', content: editor.getValue() });
+            }
+        }
 
-        // --- 4. AVATAR & GRAPHICS SYSTEM (SYNCED PHYSICS) ---
+        // --- 4. AVATAR & GRAPHICS SYSTEM ---
         const avCanvas = document.getElementById('avatar-layer');
         const avCtx = avCanvas.getContext('2d');
         const editorContainer = document.querySelector('.editor-container');
@@ -558,21 +585,16 @@ print("Hello Team!")
                         let angle = Math.atan2(dy, dx);
                         let force = 2.0; 
                         
-                        // 1. Saját magam ellökése (vizuális + fizika)
                         let pushX = Math.cos(angle) * force;
                         let pushY = Math.sin(angle) * force;
                         myAvatar.vx += pushX;
                         myAvatar.vy += pushY;
 
-                        // 2. Szétválasztás
                         let overlap = minDist - dist;
                         myAvatar.x += Math.cos(angle) * overlap * 0.5;
                         myAvatar.y += Math.sin(angle) * overlap * 0.5;
                         
                         spawnParticle(myAvatar.x, myAvatar.y, '#ffffff');
-
-                        // 3. ÜZENET KÜLDÉSE A MÁSIKNAK: "Löklek!"
-                        // -pushX, -pushY mert az ellentétes irányba lököm őt
                         broadcastImpulse(id, -pushX, -pushY);
                     }
                 }
@@ -1001,19 +1023,14 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             });
         }
 
-        // ÚJ: LÖKÉS KÜLDÉSE (Impulse Sync)
+        // LÖKÉS KÜLDÉSE (Impulse Sync)
         function broadcastImpulse(targetId, vx, vy) {
             if(isHost) {
-                // Ha Host vagyok, közvetlenül küldöm a célnak (vagy magamnak ha én vagyok a cél?)
-                // Ha én vagyok a host és ellöktek, akkor helyben alkalmazom? Nem, itt én lökök mást.
-                
-                // Megkeressük a célt a connectedUsers-ben
                 const target = connectedUsers.find(u => u.id === targetId);
                 if(target && target.conn.open) {
                     target.conn.send({ type: 'force_push', vx: vx, vy: vy });
                 }
             } else if(conn && conn.open) {
-                // Guest vagyok, küldöm a Hostnak, hogy "Lökd meg X-et"
                 conn.send({ type: 'request_push', targetId: targetId, vx: vx, vy: vy });
             }
         }
@@ -1028,7 +1045,6 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             usedColors.clear();
             
             myAvatar.name = currentUser;
-            // Host választ magának színt
             myAvatar.color = AVATAR_COLORS_POOL[0];
             usedColors.add(myAvatar.color);
             
@@ -1060,7 +1076,6 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                         connectedUsers.push(newUser);
                         logP2P(`${data.username} csatlakozott.`);
                         
-                        // UNIQUE COLOR ASSIGNMENT
                         let assignedColor = '#ffffff';
                         for(let c of AVATAR_COLORS_POOL) {
                             if(!usedColors.has(c)) { assignedColor = c; break; }
@@ -1069,14 +1084,16 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
 
                         avatars[connection.peer] = { x: 200, y: 200, vx:0, vy:0, name: data.username, color: assignedColor };
                         
-                        // Visszaküldjük a színét
                         connection.send({ type: 'init_data', color: assignedColor, code: editor.getValue() });
                         
                         broadcastUserList(); updateActiveUsersUI(); broadcastAvatarList(); 
                     }
                     else if(data.type === 'code_update') {
-                        broadcastCode(data.content, connection.peer);
-                        if (editor.getValue() !== data.content) { isSyncing = true; const cursor = editor.getCursor(); editor.setValue(data.content); editor.setCursor(cursor); isSyncing = false; }
+                        // CSAK HA NEM VAGYUNK PRIVÁTBAN
+                        if(!isPrivateMode) {
+                            broadcastCode(data.content, connection.peer);
+                            if (editor.getValue() !== data.content) { isSyncing = true; const cursor = editor.getCursor(); editor.setValue(data.content); editor.setCursor(cursor); isSyncing = false; }
+                        }
                     }
                     else if(data.type === 'avatar_move') {
                         if(avatars[connection.peer]) {
@@ -1094,11 +1111,10 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                         }
                     }
                     else if(data.type === 'request_push') {
-                        // A Guest kéri, hogy lökjünk meg valakit
                         if(data.targetId === 'HOST') {
-                            myAvatar.vx += data.vx; myAvatar.vy += data.vy; // Engem löktek
+                            myAvatar.vx += data.vx; myAvatar.vy += data.vy; 
                         } else {
-                            broadcastImpulse(data.targetId, data.vx, data.vy); // Mást löktek
+                            broadcastImpulse(data.targetId, data.vx, data.vy); 
                         }
                     }
                 });
@@ -1106,7 +1122,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                     const u = connectedUsers.find(user => user.id === connection.peer);
                     if(u) { 
                         logP2P(`${u.username} kilépett.`); 
-                        if(avatars[connection.peer]) usedColors.delete(avatars[connection.peer].color); // Szín felszabadítása
+                        if(avatars[connection.peer]) usedColors.delete(avatars[connection.peer].color); 
                         connectedUsers = connectedUsers.filter(user => user.id !== connection.peer); 
                         delete avatars[connection.peer]; 
                         broadcastUserList(); updateActiveUsersUI(); broadcastAvatarList(); 
@@ -1143,11 +1159,15 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                 });
                 conn.on('data', (data) => {
                     if(data.type === 'init_data') {
-                        // Host kiosztotta a színemet
                         myAvatar.color = data.color;
                         if (editor.getValue() !== data.code) { isSyncing = true; editor.setValue(data.code); isSyncing = false; }
                     }
-                    else if(data.type === 'code_update') { if (editor.getValue() !== data.content) { isSyncing = true; const cursor = editor.getCursor(); editor.setValue(data.content); editor.setCursor(cursor); isSyncing = false; } }
+                    else if(data.type === 'code_update') { 
+                        // CSAK HA NEM VAGYUNK PRIVÁTBAN
+                        if(!isPrivateMode) {
+                            if (editor.getValue() !== data.content) { isSyncing = true; const cursor = editor.getCursor(); editor.setValue(data.content); editor.setCursor(cursor); isSyncing = false; } 
+                        }
+                    }
                     else if (data.type === 'user_list') { connectedUsers = data.users; updateActiveUsersUI(); }
                     else if (data.type === 'avatar_list') { const newAvatars = data.avatars; delete newAvatars[peer.id]; avatars = newAvatars; }
                     else if (data.type === 'avatar_move') {
@@ -1157,10 +1177,9 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                         }
                     } 
                     else if(data.type === 'force_push') {
-                        // MEGLÖKTEK! Alkalmazom az erőt.
                         myAvatar.vx += data.vx;
                         myAvatar.vy += data.vy;
-                        broadcastAvatarMove(); // Jelzem, hogy elmozdultam
+                        broadcastAvatarMove(); 
                     }
                     else if (data.type === 'chat_message') {
                         if(data.peerId && avatars[data.peerId]) {
@@ -1168,7 +1187,6 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                             avatars[data.peerId].msgExpires = Date.now() + 15000;
                             addChatLog(avatars[data.peerId].name, data.text);
                         } else if(data.peerId === 'HOST') { 
-                             // Host üzenet kezelése, ha nincs a listában (itt egyszerűsítve)
                         }
                     }
                     else if (data.type === 'kick') { alert("Kirúgtak."); disconnectPeer(); }
@@ -1210,7 +1228,13 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         function resetP2PUI() { conn = null; peer = null; isHost = false; connectedUsers = []; avatars = {}; usedColors.clear(); document.getElementById('connect-ui').style.display = 'block'; document.getElementById('disconnect-ui').style.display = 'none'; document.getElementById('live-indicator').style.display = 'none'; document.getElementById('active-users-list').innerHTML = ""; updateP2PLog("Offline"); document.getElementById('p2p-log').style.color = "#888"; }
         function updateP2PLog(msg) { document.getElementById('p2p-log').innerText = msg; }
 
-        editor.on('change', (cm, change) => { if (!isSyncing) { if (isHost) { broadcastCode(editor.getValue(), null); } else if (conn && conn.open) { conn.send({ type: 'code_update', content: editor.getValue() }); } } });
+        editor.on('change', (cm, change) => { 
+            // CSAK HA NEM VAGYUNK PRIVÁTBAN KÜLDJÜK EL
+            if (!isSyncing && !isPrivateMode) { 
+                if (isHost) { broadcastCode(editor.getValue(), null); } 
+                else if (conn && conn.open) { conn.send({ type: 'code_update', content: editor.getValue() }); } 
+            } 
+        });
     </script>
 </body>
 </html>
