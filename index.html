@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroCode PRO v11.5 - Advanced P2P Lobby</title>
+    <title>AeroCode PRO v11.6 - Dark Glass Edition</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
@@ -31,22 +31,32 @@
 
     <style>
         :root {
-            --bg-color: #121214; 
+            /* --- SÖTÉT TÉMA SZÍNEK (Default) --- */
+            /* Szerkesztő háttér: Koromfekete */
+            --bg-color: #000000; 
+            
+            /* Oldalsáv: Nagyon sötét szürke */
+            --side-panel-bg: #111111;
+
             --text-color: #e0e0e0;
-            --panel-bg: #1e1e1e;
             --border-color: #2b2b2b;
             --accent-color: #2196F3;
-            --output-bg: #181818;
             
-            --glass-bg: rgba(20, 20, 20, 0.65);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-            --glass-blur: 20px;
+            /* Terminal háttér: Kicsit világosabb a panelnél */
+            --output-bg: #161616;
             
-            --modal-bg: #222;
-            --input-field-bg: #333;
+            /* --- ÜVEG HATÁS (GLASS) --- */
+            /* Sokkal áttetszőbb háttér, hogy látszódjon a homályosítás */
+            --glass-bg: rgba(15, 15, 15, 0.50);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.7);
+            /* Erősebb blur a menő hatáshoz */
+            --glass-blur: 15px;
             
-            --btn-hover: rgba(255, 255, 255, 0.1);
+            --modal-bg: #1a1a1a;
+            --input-field-bg: #252525;
+            
+            --btn-hover: rgba(255, 255, 255, 0.15);
             --run-color: #2196F3;
             --run-glow: rgba(33, 150, 243, 0.6);
 
@@ -61,13 +71,16 @@
 
         body.light-mode {
             --bg-color: #f5f5f7;
+            --side-panel-bg: #ffffff;
             --text-color: #333333;
-            --panel-bg: #ffffff;
             --border-color: #d1d1d1;
             --output-bg: #ffffff;
+            
             --glass-bg: rgba(255, 255, 255, 0.65);
             --glass-border: rgba(0, 0, 0, 0.05);
             --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+            --glass-blur: 15px;
+
             --modal-bg: #ffffff;
             --input-field-bg: #e6e6e6;
             --btn-hover: rgba(0, 0, 0, 0.05);
@@ -94,8 +107,21 @@
         }
 
         /* --- CODE MIRROR CUSTOMIZATION --- */
-        .CodeMirror { flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 14px; background: transparent !important; height: 100%; position: relative;}
-        .CodeMirror-gutters { background: var(--bg-color) !important; border-right: 1px solid var(--border-color); }
+        /* Itt kényszerítjük a fekete hátteret a szerkesztőre */
+        .CodeMirror { 
+            flex: 1; 
+            font-family: 'JetBrains Mono', monospace; 
+            font-size: 14px; 
+            background-color: var(--bg-color) !important; 
+            height: 100%; 
+            position: relative;
+            color: #f8f8f2;
+        }
+        .CodeMirror-gutters { 
+            background: var(--bg-color) !important; 
+            border-right: 1px solid #222; 
+        }
+        
         .CodeMirror-hints {
             position: absolute; z-index: 100000; overflow: hidden; list-style: none; margin: 0; padding: 2px;
             box-shadow: 0 4px 14px rgba(0,0,0,0.4); border-radius: 6px; border: 1px solid var(--border-color);
@@ -130,14 +156,21 @@
         }
 
         .glass-bubble {
-            pointer-events: auto; background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
-            border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); border-radius: 100px; padding: 6px 10px;
-            display: flex; align-items: center; gap: 10px; transition: transform 0.2s ease, box-shadow 0.2s ease;
+            pointer-events: auto; 
+            background: var(--glass-bg); 
+            backdrop-filter: blur(var(--glass-blur)); 
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border); 
+            box-shadow: var(--glass-shadow); 
+            border-radius: 100px; 
+            padding: 6px 10px;
+            display: flex; align-items: center; gap: 10px; 
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s;
         }
-        .glass-bubble:hover { transform: translateY(-2px); box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.6); }
+        .glass-bubble:hover { transform: translateY(-2px); box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.8); }
 
         .app-title { font-weight: 700; font-size: 14px; padding-left: 15px; padding-right: 10px; letter-spacing: 0.5px; color: var(--text-color); display: flex; align-items: center; gap: 8px; }
-        .vertical-divider { width: 1px; height: 24px; background-color: var(--border-color); margin: 0 5px; }
+        .vertical-divider { width: 1px; height: 24px; background-color: rgba(255,255,255,0.2); margin: 0 5px; }
 
         button.icon-btn { background: transparent; border: none; color: var(--text-color); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; position: relative;}
         button.icon-btn:hover { background: var(--btn-hover); transform: scale(1.1); }
@@ -145,7 +178,7 @@
         button.run-btn { background: var(--run-color); color: white; border: none; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-right: 2px; box-shadow: 0 4px 15px var(--run-glow); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         button.run-btn:hover { transform: scale(1.15); box-shadow: 0 6px 25px var(--run-glow); }
 
-        #user-btn { cursor: pointer; font-size:12px; opacity:0.7; margin-right:5px; padding: 5px 10px; border-radius: 20px; transition: background 0.2s; }
+        #user-btn { cursor: pointer; font-size:12px; opacity:0.8; margin-right:5px; padding: 6px 12px; border-radius: 20px; transition: background 0.2s; font-weight:600; letter-spacing:0.5px; }
         #user-btn:hover { background: var(--btn-hover); opacity: 1; }
 
         /* --- CLOUD DROPDOWN MENU --- */
@@ -153,7 +186,7 @@
         .dropdown-content {
             opacity: 0; visibility: hidden; position: absolute; right: 0; top: 50px;
             background-color: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
-            min-width: 280px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5);
+            min-width: 280px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.6);
             border-radius: 12px; border: 1px solid var(--glass-border);
             z-index: 2000; overflow: hidden;
             transition: opacity 0.3s ease 2s, visibility 0.3s ease 2s, transform 0.3s ease 2s;
@@ -199,7 +232,7 @@
         
         .editor-container { 
             flex: 6; display: flex; flex-direction: column; 
-            border-right: 1px solid var(--border-color); background: transparent;
+            background: var(--bg-color); /* FEKETE */
             min-width: 0; 
             position: relative;
         }
@@ -208,7 +241,9 @@
         
         .side-panel { 
             flex: 4; display: flex; flex-direction: column; 
-            background-color: var(--bg-color); min-width: 300px; padding-top: 100px;
+            background-color: var(--side-panel-bg); /* SÖTÉTSZÜRKE */
+            border-left: 1px solid #1f1f1f;
+            min-width: 300px; padding-top: 100px;
             flex-shrink: 0;
             background-repeat: repeat;
             background-size: 150px 100px;
@@ -216,17 +251,17 @@
         }
         
         .layout-left { flex-direction: row-reverse; }
-        .layout-left .editor-container { border-right: none; border-left: 1px solid var(--border-color); }
+        .layout-left .side-panel { border-left: none; border-right: 1px solid #1f1f1f; }
         
         .layout-bottom { flex-direction: column; }
         .layout-bottom .editor-container { border-right: none; flex: 1; border-bottom: 1px solid var(--border-color); }
         .layout-bottom .side-panel { 
             flex: none; height: 35vh; min-height: 200px; min-width: 100%; 
-            padding-top: 10px;
+            padding-top: 10px; border-left: none;
         }
 
         .panel-header { padding: 8px 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; opacity: 0.6; margin-bottom: 5px; }
-        .terminal-wrapper { flex: 1; display: flex; flex-direction: column; background-color: var(--output-bg); border-radius: 16px; margin: 0 20px 20px 20px; overflow: hidden; border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .terminal-wrapper { flex: 1; display: flex; flex-direction: column; background-color: var(--output-bg); border-radius: 16px; margin: 0 20px 20px 20px; overflow: hidden; border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
         
         #output { flex: 1; padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; white-space: pre-wrap; overflow-y: auto; color: var(--text-color); }
         
@@ -234,12 +269,12 @@
         .gear { width: 60px; height: 60px; fill: var(--accent-color); animation: spin 2s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
         
-        #terminal-input-bar { display: none; background: var(--panel-bg); padding: 12px; border-top: 1px solid var(--border-color); align-items: center; gap: 10px; }
+        #terminal-input-bar { display: none; background: #222; padding: 12px; border-top: 1px solid var(--border-color); align-items: center; gap: 10px; }
         #terminal-input-bar.visible { display: flex; }
         #term-input { flex: 1; background: transparent; border: none; color: var(--text-color); outline: none; font-family: 'JetBrains Mono'; font-size: 13px;}
         
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10001; backdrop-filter: blur(8px); justify-content: center; align-items: center; }
-        .modal { background: var(--modal-bg); width: 350px; padding: 25px; border-radius: 24px; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10001; backdrop-filter: blur(8px); justify-content: center; align-items: center; }
+        .modal { background: var(--modal-bg); width: 350px; padding: 25px; border-radius: 24px; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.7); }
         .modal button { background: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; float: right; margin-top: 15px; font-weight: 600; }
         .modal input, .modal select { width: 100%; padding: 12px; background: var(--input-field-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 8px; margin-bottom: 10px; outline: none;}
 
@@ -345,7 +380,7 @@
             <div id="live-indicator">● LIVE</div>
             <textarea id="code-editor">
 #AeroCode PRO
-#V11.5 Stable (Lobby Update)
+#V11.6 Glass Edition
 print("Hello WRLD")
             </textarea>
         </div>
@@ -385,8 +420,8 @@ print("Hello WRLD")
                 <option value="bottom">Lent (Vízszintes)</option>
             </select>
             
-            <label style="font-size:12px; opacity:0.7">Alkalmazás Háttérszín</label>
-            <input type="color" id="bgColorInput" value="#121214">
+            <label style="font-size:12px; opacity:0.7">Alkalmazás Háttérszín (Global)</label>
+            <input type="color" id="bgColorInput" value="#000000">
 
             <div class="checkbox-container">
                 <input type="checkbox" id="bgPatternInput" checked>
@@ -394,7 +429,7 @@ print("Hello WRLD")
             </div>
 
             <label style="font-size:12px; opacity:0.7">Szerkesztő Háttérszín</label>
-            <input type="color" id="editorBgColorInput" value="#282a36">
+            <input type="color" id="editorBgColorInput" value="#000000">
 
             <label style="font-size:12px; opacity:0.7">Betűméret (px)</label>
             <input type="number" id="fontSizeInput" value="14" min="10" max="30">
@@ -548,9 +583,16 @@ print("Hello WRLD")
 
         if(localStorage.getItem('ide_fontsize')) { document.querySelector('.CodeMirror').style.fontSize = localStorage.getItem('ide_fontsize') + 'px'; document.getElementById('fontSizeInput').value = localStorage.getItem('ide_fontsize'); }
         let exportExt = localStorage.getItem('ide_export_ext') || 'txt'; document.getElementById('exportFormatInput').value = exportExt;
-        let savedBgColor = localStorage.getItem('ide_custom_bg') || '#121214'; document.getElementById('bgColorInput').value = savedBgColor;
-        let savedPattern = localStorage.getItem('ide_pattern_on'); if(savedPattern === null) savedPattern = 'true'; document.getElementById('bgPatternInput').checked = (savedPattern === 'true');
-        let savedEditorBg = localStorage.getItem('ide_editor_bg') || '#282a36'; document.getElementById('editorBgColorInput').value = savedEditorBg;
+        
+        // --- SZÍN BEÁLLÍTÁSOK (DEFAULT FEKETE) ---
+        let savedBgColor = localStorage.getItem('ide_custom_bg') || '#000000'; 
+        document.getElementById('bgColorInput').value = savedBgColor;
+        
+        let savedPattern = localStorage.getItem('ide_pattern_on'); if(savedPattern === null) savedPattern = 'true'; 
+        document.getElementById('bgPatternInput').checked = (savedPattern === 'true');
+        
+        let savedEditorBg = localStorage.getItem('ide_editor_bg') || '#000000'; 
+        document.getElementById('editorBgColorInput').value = savedEditorBg;
         
         applyThemeSettings(savedBgColor, savedPattern === 'true', savedEditorBg);
         let savedLayout = localStorage.getItem('ide_layout') || 'right'; document.getElementById('layoutInput').value = savedLayout; applyLayout(savedLayout);
