@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroCode PRO v14.1 - Bidirectional Code Steal</title>
+    <title>AeroCode PRO v14.2 - Real Physics Sync</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
@@ -92,6 +92,7 @@
             overflow: hidden;
             position: relative;
             transition: background 0.3s ease;
+            user-select: none; /* Fontos, hogy ne jelöljön ki szöveget húzáskor */
         }
 
         /* --- CODE MIRROR --- */
@@ -104,6 +105,7 @@
             position: relative;
             color: #f8f8f2;
             z-index: 1; 
+            user-select: text; /* A kódot lehessen kijelölni */
         }
         .CodeMirror-gutters { 
             background-color: #000000 !important;
@@ -234,7 +236,7 @@
             border: 1px solid var(--border-color); position: relative; min-height: 120px;
         }
         #chat-history {
-            flex: 1; padding: 10px; overflow-y: auto; font-size: 12px; font-family: 'Inter'; color: #ccc;
+            flex: 1; padding: 10px; overflow-y: auto; font-size: 12px; font-family: 'Inter'; color: #ccc; user-select: text;
         }
         .chat-msg { margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 2px; }
         .chat-msg strong { color: var(--accent-color); }
@@ -243,7 +245,7 @@
             display: flex; padding: 8px; border-top: 1px solid var(--border-color); background: rgba(0,0,0,0.2);
         }
         #chat-input {
-            flex: 1; background: transparent; border: none; color: white; outline: none; font-size: 12px;
+            flex: 1; background: transparent; border: none; color: white; outline: none; font-size: 12px; user-select: text;
         }
         
         #output { flex: 1; padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; white-space: pre-wrap; overflow-y: auto; color: var(--text-color); }
@@ -398,16 +400,14 @@
             
             <div id="live-indicator">● LIVE</div>
             <textarea id="code-editor">
-# AeroCode PRO v14.1
-# Teamwork Edition - Manual Code Copy
+# AeroCode PRO v14.2
+# Teamwork Edition - SYNCED PHYSICS
 #
-# 1. Mostantól a gépelésed PRIVÁT. Senki sem látja!
-# 2. Ha át akarod venni valaki kódját:
-#    - Kattints a karakterére.
-#    - Válaszd a "Kód elkérése" opciót.
-#    - A te kódod felülíródik az övével!
+# 1. Különböző színű karakterek.
+# 2. Ha nekimész a másiknak, ő is látja, hogy ellökted!
+# 3. Kódlopás funkció (jobb klikk helyett sima kattintás a másikra).
 
-print("Working Alone...")
+print("Code & Clash")
             </textarea>
         </div>
 
@@ -585,7 +585,7 @@ print("Working Alone...")
                 if (myAvatar.y < r) { myAvatar.y = r; myAvatar.vy *= -0.5; }
                 if (myAvatar.y > height - r) { myAvatar.y = height - r; myAvatar.vy *= -0.5; }
 
-                // ÜTKÖZÉS
+                // ÜTKÖZÉS LOGIKA
                 for (let id in avatars) {
                     let other = avatars[id];
                     let dx = myAvatar.x - other.x;
@@ -595,18 +595,23 @@ print("Working Alone...")
 
                     if (dist < minDist) {
                         let angle = Math.atan2(dy, dx);
-                        let force = 2.0; 
+                        let force = 4.0; // ERŐSEBB LÖKÉS
                         
+                        // Saját magunkat is ellökjük
                         let pushX = Math.cos(angle) * force;
                         let pushY = Math.sin(angle) * force;
                         myAvatar.vx += pushX;
                         myAvatar.vy += pushY;
 
+                        // Szétválasztás
                         let overlap = minDist - dist;
                         myAvatar.x += Math.cos(angle) * overlap * 0.5;
                         myAvatar.y += Math.sin(angle) * overlap * 0.5;
                         
                         spawnParticle(myAvatar.x, myAvatar.y, '#ffffff');
+                        
+                        // FONTOS: Mivel mi ütköztünk neki, mi küldjük a lökést neki!
+                        // -pushX, -pushY mert az ő iránya ellentétes
                         broadcastImpulse(id, -pushX, -pushY);
                     }
                 }
