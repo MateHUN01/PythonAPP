@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroCode PRO v13.0 - Teamwork Avatar Edition</title>
+    <title>AeroCode PRO v13.1 - Teamwork Fixed</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
@@ -28,14 +28,14 @@
     <style>
         :root {
             /* --- SÖTÉT TÉMA SZÍNEK (Default) --- */
-            --bg-color: #000000; /* Teljes fekete */
-            --side-panel-bg: #111111; /* Majdnem fekete szürke */
+            --bg-color: #000000;
+            --side-panel-bg: #111111;
             --text-color: #e0e0e0;
             --border-color: #333333;
             --accent-color: #2196F3;
             --output-bg: #161616;
             
-            /* --- ÜVEG HATÁS (GLASS) --- */
+            /* --- ÜVEG HATÁS --- */
             --glass-bg: rgba(10, 10, 10, 0.6);
             --glass-border: rgba(255, 255, 255, 0.08);
             --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.7);
@@ -94,18 +94,19 @@
             transition: background 0.3s ease;
         }
 
-        /* --- CODE MIRROR FEKETE HÁTTÉR KÉNYSZERÍTÉSE --- */
+        /* --- CODE MIRROR STYLES --- */
         .CodeMirror { 
             flex: 1; 
             font-family: 'JetBrains Mono', monospace; 
             font-size: 14px; 
-            background-color: #000000 !important; /* KÉNYSZERÍTETT FEKETE */
+            background-color: #000000 !important; 
             height: 100%; 
             position: relative;
             color: #f8f8f2;
+            z-index: 1; /* Alacsony z-index */
         }
         .CodeMirror-gutters { 
-            background-color: #000000 !important; /* KÉNYSZERÍTETT FEKETE */
+            background-color: #000000 !important;
             border-right: 1px solid #222; 
         }
         
@@ -117,7 +118,7 @@
         .CodeMirror-hint { margin: 0; padding: 4px 8px; border-radius: 3px; white-space: pre; color: var(--hint-text); cursor: pointer; }
         li.CodeMirror-hint-active { background: var(--hint-select-bg); color: var(--hint-select-text); }
 
-        /* LIVE jelző */
+        /* --- UI ELEMENTS --- */
         #live-indicator {
             position: absolute;
             top: 10px; right: 20px;
@@ -129,7 +130,7 @@
             font-size: 10px;
             font-weight: bold;
             pointer-events: none;
-            z-index: 50;
+            z-index: 100;
             display: none;
             animation: pulse 2s infinite;
         }
@@ -139,7 +140,8 @@
         .header-wrapper {
             position: fixed; top: 25px; left: 0; width: 100%;
             display: flex; justify-content: space-between; padding: 0 40px;
-            z-index: 1000; pointer-events: none;
+            z-index: 2000; /* Legfelül */
+            pointer-events: none;
         }
 
         .glass-bubble {
@@ -168,7 +170,7 @@
         #user-btn { cursor: pointer; font-size:12px; opacity:0.8; margin-right:5px; padding: 6px 12px; border-radius: 20px; transition: background 0.2s; font-weight:600; letter-spacing:0.5px; }
         #user-btn:hover { background: var(--btn-hover); opacity: 1; }
 
-        /* --- FLUID DROPDOWN MENU --- */
+        /* --- DROPDOWN --- */
         .dropdown { position: relative; display: inline-block; }
         
         .dropdown-content {
@@ -183,7 +185,7 @@
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.6);
             border-radius: 12px; 
             border: 1px solid var(--glass-border);
-            z-index: 2000; 
+            z-index: 3000; 
             overflow: hidden;
             transition: all 0.2s ease-in-out;
             transform: translateY(-10px) scale(0.98);
@@ -197,7 +199,6 @@
             transform: translateY(0) scale(1); 
         }
         
-        /* Dropdown elemek */
         .menu-item {
             color: var(--text-color); padding: 12px 16px; text-decoration: none;
             display: flex; align-items: center; gap: 10px; font-size: 13px;
@@ -205,7 +206,6 @@
         }
         .menu-item:hover { background-color: var(--accent-color); color: white; }
 
-        /* P2P USER LIST STYLES */
         .user-chip-container {
             display: flex; flex-direction: column; gap: 5px; margin-top: 10px; margin-bottom: 10px;
         }
@@ -236,6 +236,7 @@
             background: #000000; 
             min-width: 0; 
             position: relative;
+            z-index: 1;
         }
         
         .CodeMirror-scroll { padding-top: 100px; padding-bottom: 50px; }
@@ -249,12 +250,11 @@
             background-repeat: repeat;
             background-size: 150px 100px;
             background-blend-mode: overlay;
-            z-index: 20; /* Side panel is UI, should be above canvas if overlapping, but canvas is overlay */
+            z-index: 100; /* Menü alatti, de canvas feletti */
         }
         
         .layout-left { flex-direction: row-reverse; }
         .layout-left .side-panel { border-left: none; border-right: 1px solid #1f1f1f; }
-        
         .layout-bottom { flex-direction: column; }
         .layout-bottom .editor-container { border-right: none; flex: 1; border-bottom: 1px solid var(--border-color); }
         .layout-bottom .side-panel { 
@@ -264,8 +264,7 @@
 
         .panel-header { padding: 8px 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; opacity: 0.6; margin-bottom: 5px; }
         .terminal-wrapper { 
-            flex: 2; /* Több helyet kap a terminal */
-            display: flex; flex-direction: column; 
+            flex: 2; display: flex; flex-direction: column; 
             background-color: var(--output-bg); 
             border-radius: 16px; 
             margin: 0 20px 20px 20px; 
@@ -275,8 +274,7 @@
         }
 
         .notepad-wrapper {
-            flex: 1; /* Kevesebb helyet kap a jegyzettömb, de rugalmas */
-            display: flex; flex-direction: column;
+            flex: 1; display: flex; flex-direction: column;
             background-color: var(--output-bg);
             border-radius: 16px;
             margin: 0 20px 20px 20px;
@@ -287,17 +285,10 @@
         }
 
         #shared-notepad {
-            width: 100%;
-            height: 100%;
-            background: transparent;
-            color: var(--text-color);
-            border: none;
-            padding: 15px;
-            resize: none;
-            font-family: 'Inter', sans-serif;
-            font-size: 13px;
-            outline: none;
-            line-height: 1.5;
+            width: 100%; height: 100%; background: transparent;
+            color: var(--text-color); border: none; padding: 15px;
+            resize: none; font-family: 'Inter', sans-serif; font-size: 13px;
+            outline: none; line-height: 1.5;
         }
         #shared-notepad::placeholder { opacity: 0.5; font-style: italic; }
         
@@ -326,13 +317,13 @@
         .system-msg { color: var(--system-msg-color); font-style: italic; }
         .p2p-msg { color: var(--p2p-msg-color); font-weight: bold; }
         
-        /* --- AVATAR RÉTEG (ÚJ) --- */
+        /* --- AVATAR RÉTEG (JAVÍTOTT Z-INDEX) --- */
         #avatar-layer {
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            pointer-events: none; /* Alapból átengedi a kattintást */
-            z-index: 900; /* Kód felett, de UI (header/side panel) alatt? Nem, inkább legyen mindent fedő, de átlátszó */
+            pointer-events: none; /* A kattintásokat átengedi */
+            z-index: 50; /* A Kód (1) felett, de a UI (100+) alatt */
         }
         
     </style>
@@ -428,11 +419,11 @@
         <div class="editor-container">
             <div id="live-indicator">● LIVE</div>
             <textarea id="code-editor">
-# AeroCode PRO v13.0
-# Teamwork Edition - Mozgasd az Avatárodat!
-# 1. Jelentkezz be
-# 2. Indíts egy HOST-ot vagy JOIN-olj
-# 3. Húzd az egereddel a kis karakteredet!
+# AeroCode PRO v13.1
+# Teamwork Edition - Fixed
+# Most már látnod kell a kis karakteredet!
+# Mozgasd az egereddel (Drag & Drop)
+
 print("Hello Team!")
             </textarea>
         </div>
@@ -629,7 +620,7 @@ print("Hello Team!")
             lineWrapping: false 
         });
 
-        const notepad = document.getElementById('shared-notepad'); // Notepad változó
+        const notepad = document.getElementById('shared-notepad');
 
         if(localStorage.getItem('ide_fontsize')) { document.querySelector('.CodeMirror').style.fontSize = localStorage.getItem('ide_fontsize') + 'px'; document.getElementById('fontSizeInput').value = localStorage.getItem('ide_fontsize'); }
         let exportExt = localStorage.getItem('ide_export_ext') || 'txt'; document.getElementById('exportFormatInput').value = exportExt;
@@ -751,7 +742,6 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             const container = document.querySelector('.main-container'); container.classList.remove('layout-left', 'layout-bottom');
             if (layout === 'left') container.classList.add('layout-left'); else if (layout === 'bottom') container.classList.add('layout-bottom');
             setTimeout(() => editor.refresh(), 100);
-            // Vászon átméretezése layout váltáskor
             resizeCanvas();
         }
 
@@ -802,7 +792,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             isDark = !isDark; document.body.className = isDark ? "" : "light-mode"; editor.setOption("theme", isDark ? "dracula" : "eclipse");
         }
 
-        // --- P2P IMPLEMENTÁCIÓ (Bővített - Notepad Sync + AVATAROK) ---
+        // --- P2P IMPLEMENTÁCIÓ + AVATAR RENDSZER ---
         let peer = null;
         let conn = null; 
         let isSyncing = false; 
@@ -814,8 +804,8 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
 
         // AVATAR SYSTEM STATE
         const AVATAR_COLORS = ['#ff0055', '#00f2ff', '#00ff44', '#ffcc00', '#aa00ff', '#ffffff'];
-        let avatars = {}; // { id: {x, y, vx, vy, color, name} }
-        let myAvatar = { x: 100, y: 100, vx: 0, vy: 0, color: '#00f2ff', name: 'Me' };
+        let avatars = {}; 
+        let myAvatar = { x: 150, y: 150, vx: 0, vy: 0, color: '#00f2ff', name: 'Me' };
         let isDraggingAvatar = false;
 
         const ROOM_MAPPING = {
@@ -834,14 +824,15 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         // --- AVATAR CANVAS RENDERING ---
         const avCanvas = document.getElementById('avatar-layer');
         const avCtx = avCanvas.getContext('2d');
-        let particles = []; // Részecske effekt rendszer a "menőséghez"
+        let particles = []; 
 
         function resizeCanvas() {
             avCanvas.width = window.innerWidth;
             avCanvas.height = window.innerHeight;
         }
         window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+        // Initkor is futtatjuk, hogy biztos legyen méret
+        setTimeout(resizeCanvas, 100);
 
         function spawnParticle(x, y, color) {
             particles.push({
@@ -854,19 +845,15 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         function updateAndDrawAvatars() {
             avCtx.clearRect(0, 0, avCanvas.width, avCanvas.height);
             
-            // Csak akkor rajzolunk, ha van P2P kapcsolat (vagy legalábbis szándék)
-            if(!peer && !currentUser) return;
-
-            // 1. Saját avatár kirajzolása (ha be vagyunk lépve)
+            // Ha nincs belépve senki, akkor is rajzoljunk magunknak, ha be vagyunk jelentkezve
             if(currentUser) {
                 drawAvatar(myAvatar, true);
-                // Részecske generálás mozgáskor
                 if(Math.abs(myAvatar.vx) > 0.1 || Math.abs(myAvatar.vy) > 0.1) {
                     spawnParticle(myAvatar.x, myAvatar.y, myAvatar.color);
                 }
             }
 
-            // 2. Többiek kirajzolása
+            // Többiek
             Object.values(avatars).forEach(av => {
                 drawAvatar(av, false);
                 if(Math.abs(av.vx) > 0.1 || Math.abs(av.vy) > 0.1) {
@@ -874,7 +861,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                 }
             });
 
-            // 3. Részecskék frissítése
+            // Részecskék
             for(let i=particles.length-1; i>=0; i--) {
                 let p = particles[i];
                 p.x += p.vx; p.y += p.vy;
@@ -890,33 +877,29 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         }
 
         function drawAvatar(av, isSelf) {
-            // Fizika simítás (lerp) a szemeknek
             av.vx *= 0.9; av.vy *= 0.9; 
 
             // Test
             avCtx.beginPath();
             avCtx.arc(av.x, av.y, 15, 0, Math.PI * 2);
             avCtx.fillStyle = av.color;
-            avCtx.shadowBlur = 15; avCtx.shadowColor = av.color; // Glow
+            avCtx.shadowBlur = 15; avCtx.shadowColor = av.color; 
             avCtx.fill();
             avCtx.shadowBlur = 0;
 
-            // Szemek (Irány a sebességből vagy utolsó mozgásból)
-            // Ha épp húzod, akkor a sebesség nagy lehet
+            // Szemek
             let lookX = (av.vx || 0) * 1.5;
             let lookY = (av.vy || 0) * 1.5;
-            
-            // Limitáljuk a szemmozgást
             const maxLook = 6;
             if(lookX > maxLook) lookX = maxLook; if(lookX < -maxLook) lookX = -maxLook;
             if(lookY > maxLook) lookY = maxLook; if(lookY < -maxLook) lookY = -maxLook;
 
-            // Fehér rész
+            // Fehér
             avCtx.fillStyle = 'white';
             avCtx.beginPath(); avCtx.arc(av.x - 5 + lookX, av.y - 4 + lookY, 5, 0, Math.PI*2); avCtx.fill();
             avCtx.beginPath(); avCtx.arc(av.x + 5 + lookX, av.y - 4 + lookY, 5, 0, Math.PI*2); avCtx.fill();
             
-            // Fekete pupilla
+            // Pupilla
             avCtx.fillStyle = 'black';
             avCtx.beginPath(); avCtx.arc(av.x - 5 + lookX*1.2, av.y - 4 + lookY*1.2, 2, 0, Math.PI*2); avCtx.fill();
             avCtx.beginPath(); avCtx.arc(av.x + 5 + lookX*1.2, av.y - 4 + lookY*1.2, 2, 0, Math.PI*2); avCtx.fill();
@@ -929,40 +912,30 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
 
             if(isSelf && isDraggingAvatar) {
                 avCtx.strokeStyle = 'white'; avCtx.lineWidth = 2;
-                avCtx.stroke(); // Kijelölés jelzése
+                avCtx.stroke(); 
             }
         }
 
-        // --- DRAG & DROP LOGIKA ---
-        // Trükk: A canvas pointer-events: none, hogy át lehessen kattintani a kódra.
-        // De a window eventet elkapjuk. Ha a kattintás a SAJÁT avatárod közelében van,
-        // akkor átváltunk 'húzás' módba.
-
+        // --- DRAG LOGIKA ---
         window.addEventListener('mousedown', (e) => {
-            if(!currentUser) return; // Csak bejelentkezve
-            
+            if(!currentUser) return;
             const dx = e.clientX - myAvatar.x;
             const dy = e.clientY - myAvatar.y;
             const dist = Math.sqrt(dx*dx + dy*dy);
 
-            // Ha a karakterre kattintott (radius 20px tolerancia)
             if(dist < 25) {
                 isDraggingAvatar = true;
-                e.preventDefault(); // Ne jelöljön ki szöveget
-                e.stopPropagation(); // Ne vigye át a fókuszt a szerkesztőre
+                e.preventDefault(); 
+                e.stopPropagation(); 
             }
         });
 
         window.addEventListener('mousemove', (e) => {
             if(isDraggingAvatar) {
-                // Sebesség számítása a szemhez
                 myAvatar.vx = e.clientX - myAvatar.x;
                 myAvatar.vy = e.clientY - myAvatar.y;
-                
                 myAvatar.x = e.clientX;
                 myAvatar.y = e.clientY;
-                
-                // Küldés P2P-n (Throttle-elni kéne, de kis létszámnál belefér)
                 broadcastAvatarMove();
             }
         });
@@ -971,20 +944,17 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             if(isDraggingAvatar) {
                 isDraggingAvatar = false;
                 myAvatar.vx = 0; myAvatar.vy = 0;
-                broadcastAvatarMove(); // Végső pozíció küldése
+                broadcastAvatarMove(); 
             }
         });
 
-        // Indítjuk a render loopot
         requestAnimationFrame(updateAndDrawAvatars);
 
-
-        // --- EREDETI FÜGGVÉNYEK FOLYTATÁSA ---
+        // --- P2P FÜGGVÉNYEK ---
 
         function updateActiveUsersUI() {
             const container = document.getElementById('active-users-list');
             container.innerHTML = "";
-
             const selfChip = document.createElement('div');
             selfChip.className = "user-chip self";
             selfChip.innerHTML = `<span class="username">${currentUser} (Én)</span>`;
@@ -993,13 +963,10 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             connectedUsers.forEach(u => {
                 const chip = document.createElement('div');
                 chip.className = "user-chip";
-                
                 let html = `<span class="username">${u.username || 'Ismeretlen'}</span>`;
-                
                 if (isHost) {
                     html += `<button class="kick-btn" onclick="kickUser('${u.id}')" title="Kirúgás"><span class="material-icons" style="font-size:14px;">close</span></button>`;
                 }
-                
                 chip.innerHTML = html;
                 container.appendChild(chip);
             });
@@ -1011,14 +978,12 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             
             isHost = true;
             connectedUsers = [];
-            avatars = {}; // Reset avatars
+            avatars = {}; 
             
-            // Random szín beállítása magamnak
             myAvatar.name = currentUser;
             myAvatar.color = AVATAR_COLORS[Math.floor(Math.random()*AVATAR_COLORS.length)];
 
             maxParticipants = parseInt(document.getElementById('room-size-limit').value) || 3;
-
             const selectedVal = document.getElementById('channel-select').value;
             const roomId = ROOM_MAPPING[selectedVal];
             
@@ -1056,20 +1021,18 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                         connectedUsers.push(newUser);
                         logP2P(`${data.username} csatlakozott.`);
                         
-                        // Új avatár inicializálása a Hostnál
                         avatars[connection.peer] = {
-                            x: 200, y: 200, vx:0, vy:0, // Kezdőpozíció
+                            x: 200, y: 200, vx:0, vy:0,
                             name: data.username,
                             color: data.color || AVATAR_COLORS[Math.floor(Math.random()*AVATAR_COLORS.length)]
                         };
 
-                        // Kód, Jegyzettömb és AVATÁR LISTA küldése az újnak
                         connection.send({ type: 'code_update', content: editor.getValue() });
                         connection.send({ type: 'notepad_update', content: notepad.value });
                         
                         broadcastUserList();
                         updateActiveUsersUI();
-                        broadcastAvatarList(); // Mindenkinek küldjük az új avatár helyzetét
+                        broadcastAvatarList(); 
                     }
                     else if(data.type === 'code_update') {
                         broadcastCode(data.content, connection.peer);
@@ -1090,12 +1053,18 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                         }
                     }
                     else if(data.type === 'avatar_move') {
-                        // Host megkapja a mozgást, frissíti és továbbküldi mindenkinek
                         if(avatars[connection.peer]) {
                             const av = avatars[connection.peer];
                             av.x = data.x; av.y = data.y;
                             av.vx = data.vx; av.vy = data.vy;
-                            broadcastAvatarMove(connection.peer, data); // Továbbküldés
+                            
+                            // Host továbbküldi mindenkinek az új pozíciót
+                            broadcastAvatarMove(connection.peer, {
+                                type: 'avatar_move',
+                                peerId: connection.peer, // Jelezzük ki mozgott
+                                x: data.x, y: data.y,
+                                vx: data.vx, vy: data.vy
+                            });
                         }
                     }
                 });
@@ -1105,10 +1074,10 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                     if(u) {
                         logP2P(`${u.username} kilépett.`);
                         connectedUsers = connectedUsers.filter(user => user.id !== connection.peer);
-                        delete avatars[connection.peer]; // Avatár törlése
+                        delete avatars[connection.peer]; 
                         broadcastUserList();
                         updateActiveUsersUI();
-                        broadcastAvatarList(); // Lista frissítése mindenkinek
+                        broadcastAvatarList();
                     }
                 });
             });
@@ -1128,9 +1097,8 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             if (peer) { alert("Már kapcsolódtál!"); return; }
             
             isHost = false;
-            avatars = {}; // Reset
+            avatars = {}; 
             
-            // Random szín
             myAvatar.name = currentUser;
             myAvatar.color = AVATAR_COLORS[Math.floor(Math.random()*AVATAR_COLORS.length)];
 
@@ -1177,18 +1145,14 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                         connectedUsers = data.users; 
                         updateActiveUsersUI();
                     } else if (data.type === 'avatar_list') {
-                        // Teljes lista szinkronizálása
-                        // A data.avatars nem tartalmaz engem, ezért azt külön kezeljük a rajzolásnál
-                        // Szűrjük ki saját magunkat, ha esetleg visszajön
                         const newAvatars = data.avatars;
-                        delete newAvatars[peer.id]; // Ha véletlenül benne lennék
+                        delete newAvatars[peer.id]; // Ne írjuk felül magunkat a listából
                         avatars = newAvatars;
                     } else if (data.type === 'avatar_move') {
-                        // Egyedi mozgás frissítés
-                        if(data.peerId !== peer.id) { // Ne írjuk felül magunkat
+                        // Ha valaki más mozog (és nem én vagyok az)
+                        if(data.peerId !== peer.id) {
                             if(!avatars[data.peerId]) {
-                                // Ha új, létrehozzuk
-                                avatars[data.peerId] = { x: data.x, y: data.y, color: '#fff', name: '?' };
+                                avatars[data.peerId] = { x: data.x, y: data.y, color: '#fff', name: '?', vx:0, vy:0 };
                             }
                             avatars[data.peerId].x = data.x;
                             avatars[data.peerId].y = data.y;
@@ -1211,8 +1175,6 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             peer.on('error', () => { updateP2PLog("Hálózati Hiba."); });
         }
 
-        // --- BROADCAST FUNCTIONS ---
-
         function broadcastCode(content, senderIdToExclude) {
             if(!isHost) return;
             connectedUsers.forEach(u => {
@@ -1231,14 +1193,12 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             });
         }
         
-        // ÚJ: Avatar pozíció küldése
         function broadcastAvatarMove(senderIdToExclude = null, moveData = null) {
             if (isHost) {
-                // Ha Host vagyok, elküldöm mindenkinek a frissítést
-                // Vagy a sajátomat (ha moveData null), vagy valaki másét
+                // Host küldi mindenkinek
                 const dataToSend = moveData || { 
                     type: 'avatar_move', 
-                    peerId: 'HOST', // Host ID-je speciális
+                    peerId: 'HOST', 
                     x: myAvatar.x, y: myAvatar.y, 
                     vx: myAvatar.vx, vy: myAvatar.vy 
                 };
@@ -1249,7 +1209,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                     }
                 });
             } else {
-                // Ha Guest vagyok, csak a Hostnak küldöm a sajátomat
+                // Guest küldi a Hostnak
                 if(conn && conn.open) {
                     conn.send({ 
                         type: 'avatar_move', 
@@ -1262,10 +1222,11 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         
         function broadcastAvatarList() {
             if(!isHost) return;
-            // Összerakjuk a teljes listát: Host + Kliensek
             let allAvatars = { ...avatars };
-            allAvatars['HOST'] = myAvatar; // Host hozzáadása a listához
-
+            allAvatars['HOST'] = myAvatar; 
+            
+            // Másolat, hogy ne legyen körkörös hivatkozás
+            // Bár itt az objektum sima adatokból áll, de a biztonság kedvéért
             connectedUsers.forEach(u => {
                 if(u.conn.open) {
                     u.conn.send({ type: 'avatar_list', avatars: allAvatars });
@@ -1312,7 +1273,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             peer = null;
             isHost = false;
             connectedUsers = [];
-            avatars = {}; // Töröljük a többieket
+            avatars = {}; 
             document.getElementById('connect-ui').style.display = 'block';
             document.getElementById('disconnect-ui').style.display = 'none';
             document.getElementById('live-indicator').style.display = 'none';
@@ -1323,7 +1284,6 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
 
         function updateP2PLog(msg) { document.getElementById('p2p-log').innerText = msg; }
 
-        // EDITOR CHANGE EVENT
         editor.on('change', (cm, change) => {
             if (!isSyncing) {
                 if (isHost) {
@@ -1334,7 +1294,6 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             }
         });
 
-        // NOTEPAD CHANGE EVENT
         notepad.addEventListener('input', () => {
             if (!isNotepadSyncing) {
                 if (isHost) {
