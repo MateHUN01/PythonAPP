@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroDraw PRO v2.0 - Layers & Colors</title>
+    <title>AeroDraw PRO v2.1 - Undo/Redo Update</title>
     
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
@@ -103,6 +103,10 @@
         .vertical-divider { width: 1px; height: 24px; background-color: rgba(255,255,255,0.2); margin: 0 5px; }
         button.icon-btn { background: transparent; border: none; color: var(--text-color); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; position: relative;}
         button.icon-btn:hover { background: var(--btn-hover); transform: scale(1.1); }
+        /* Disabled state for undo/redo */
+        button.icon-btn:disabled { opacity: 0.3; cursor: default; transform: none; }
+        button.icon-btn:disabled:hover { background: transparent; }
+        
         #user-btn { cursor: pointer; font-size:12px; opacity:0.8; margin-right:5px; padding: 6px 12px; border-radius: 20px; transition: background 0.2s; font-weight:600; letter-spacing:0.5px; }
         #user-btn:hover { background: var(--btn-hover); opacity: 1; }
 
@@ -148,6 +152,11 @@
                 AeroDraw PRO v2
             </div>
             <div class="vertical-divider"></div>
+            
+            <button class="icon-btn" id="btn-undo" onclick="undoLastAction()" title="Visszavonás"><span class="material-icons">undo</span></button>
+            <button class="icon-btn" id="btn-redo" onclick="redoLastAction()" title="Visszavonás visszavonása"><span class="material-icons">redo</span></button>
+            <div class="vertical-divider" style="height: 16px; margin: 0 2px; opacity: 0.5;"></div>
+            
             <button class="icon-btn" onclick="clearCurrentLayer()" title="Réteg Törlése"><span class="material-icons">delete</span></button>
             <button class="icon-btn" onclick="downloadImage()" title="Mentés képként"><span class="material-icons">image</span></button>
         </div>
@@ -287,11 +296,92 @@
         let penWidth = 5;
         let canvasBgColor = '#000000';
 
+        // --- UNDO / REDO RENDSZER ---
+        const MAX_HISTORY = 30; // Maximum ennyi lépést jegyzünk meg a memória kímélése érdekében
+        let undoStack = [];
+        let redoStack = [];
+
+        function saveStateForUndo() {
+            if (!activeLayerId) return;
+            const activeLayer = layers.find(l => l.id === activeLayerId);
+            if (!activeLayer) return;
+
+            // Mentjük az aktív réteg jelenlegi állapotát (ImageData) és az ID-ját
+            const currentState = {
+                layerId: activeLayerId,
+                imageData: activeLayer.ctx.getImageData(0, 0, activeLayer.canvas.width, activeLayer.canvas.height)
+            };
+
+            undoStack.push(currentState);
+
+            // Ha túllépjük a limitet, a legrégebbit eldobjuk
+            if (undoStack.length > MAX_HISTORY) {
+                undoStack.shift();
+            }
+
+            // Új műveletnél a Redo stack mindig törlődik
+            redoStack = [];
+            updateUndoRedoButtons();
+        }
+
+        function undoLastAction() {
+            if (undoStack.length === 0) return;
+
+            // 1. Kivesszük az utolsó állapotot a veremből
+            const previousState = undoStack.pop();
+            const targetLayer = layers.find(l => l.id === previousState.layerId);
+
+            if (targetLayer) {
+                // 2. Mielőtt visszaállítjuk, elmentjük a JELENLEGI állapotot a Redo stackbe
+                const redoState = {
+                    layerId: previousState.layerId,
+                    imageData: targetLayer.ctx.getImageData(0, 0, targetLayer.canvas.width, targetLayer.canvas.height)
+                };
+                redoStack.push(redoState);
+
+                // 3. Visszaállítjuk a régit
+                targetLayer.ctx.putImageData(previousState.imageData, 0, 0);
+            } else {
+                // Ha a réteg időközben törlődött, rekurzívan próbálkozunk a következővel
+                console.warn("A réteg már nem létezik, ugrás a következő visszavonásra.");
+                undoLastAction();
+            }
+            updateUndoRedoButtons();
+        }
+
+        function redoLastAction() {
+            if (redoStack.length === 0) return;
+
+            // 1. Kivesszük a Redo állapotot
+            const nextState = redoStack.pop();
+            const targetLayer = layers.find(l => l.id === nextState.layerId);
+
+            if (targetLayer) {
+                // 2. Elmentjük a mostani állapotot az Undo stackbe (hogy újra visszavonható legyen)
+                const undoState = {
+                    layerId: nextState.layerId,
+                    imageData: targetLayer.ctx.getImageData(0, 0, targetLayer.canvas.width, targetLayer.canvas.height)
+                };
+                undoStack.push(undoState);
+
+                // 3. Visszaállítjuk a jövőbeli állapotot
+                targetLayer.ctx.putImageData(nextState.imageData, 0, 0);
+            }
+            updateUndoRedoButtons();
+        }
+
+        function updateUndoRedoButtons() {
+            document.getElementById('btn-undo').disabled = undoStack.length === 0;
+            document.getElementById('btn-redo').disabled = redoStack.length === 0;
+            // Opacity kezelése CSS-ben van a :disabled szelektorral
+        }
+
         // --- RÉTEGKEZELÉS ---
         function initLayers() {
             // Kezdeti réteg létrehozása
             addNewLayer("Réteg 1");
             resizeCanvases();
+            updateUndoRedoButtons(); // Init gombok
         }
 
         function createLayerCanvas(id) {
@@ -329,6 +419,12 @@
             if(layers.length <= 1) { alert("Legalább egy rétegnek maradnia kell!"); return; }
             const index = layers.findIndex(l => l.id === id);
             if(index > -1) {
+                // Törlés előtt ürítjük a history-t, mert az ID-k bezavarhatnak (vagy bonyolultabb logika kellene)
+                // Egyszerűsítés: törlés után tiszta lappal indul a history, hogy ne legyen hiba
+                undoStack = undoStack.filter(state => state.layerId !== id);
+                redoStack = redoStack.filter(state => state.layerId !== id);
+                updateUndoRedoButtons();
+
                 canvasWrapper.removeChild(layers[index].canvas);
                 layers.splice(index, 1);
                 // Ha az aktívat töröltük, válasszuk ki az előzőt (vagy a legelsőt)
@@ -373,6 +469,8 @@
         function clearCurrentLayer() {
             const activeLayer = layers.find(l => l.id === activeLayerId);
             if(activeLayer) {
+                // MENTÉS TÖRLÉS ELŐTT
+                saveStateForUndo();
                 activeLayer.ctx.clearRect(0, 0, activeLayer.canvas.width, activeLayer.canvas.height);
                 broadcastDrawEvent({ type: 'clear_layer', layerId: activeLayerId });
             }
@@ -397,16 +495,26 @@
 
             // Rajz rétegek
             layers.forEach(layer => {
-                // Mentés átméretezés előtt (opcionális, de bonyolult)
+                // Mentés átméretezés előtt
                 const tempCvs = document.createElement('canvas'); tempCvs.width = layer.canvas.width; tempCvs.height = layer.canvas.height; tempCvs.getContext('2d').drawImage(layer.canvas,0,0);
                 layer.canvas.width = width; layer.canvas.height = height;
-                layer.ctx.drawImage(tempCvs, 0, 0); // Visszatöltés (torzulhat)
+                layer.ctx.drawImage(tempCvs, 0, 0); // Visszatöltés
             });
+            
+            // Átméretezéskor érdemes törölni a history-t, mert a képméretek nem fognak egyezni
+            undoStack = [];
+            redoStack = [];
+            updateUndoRedoButtons();
         }
         window.addEventListener('resize', resizeCanvases);
 
         function startDraw(e) {
             if(!activeLayerId) return;
+            
+            // MENTÉS RAJZOLÁS ELŐTT (Undo funkcióhoz)
+            // Csak akkor mentünk, ha új vonalat kezdünk
+            saveStateForUndo();
+
             isDrawing = true;
             [lastX, lastY] = [e.offsetX, e.offsetY];
         }
@@ -522,6 +630,9 @@
                 canvasWrapper.innerHTML = '<canvas id="background-layer" class="drawing-layer"></canvas>';
                 const newBg = document.getElementById('background-layer'); bgCtx = newBg.getContext('2d');
                 layers = [];
+                // Reset history vendég oldalon struktúra váltáskor
+                undoStack = []; redoStack = []; updateUndoRedoButtons();
+                
                 changeCanvasBg(data.bg);
                 data.layers.forEach(lData => {
                     const newCanvas = createLayerCanvas(lData.id);
