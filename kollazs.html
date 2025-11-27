@@ -54,7 +54,7 @@
             background: #ffffff;
             box-shadow: 0 0 50px rgba(0,0,0,0.5);
             position: relative;
-            overflow: hidden; 
+            /* overflow: hidden;  <-- Ezt kivettem, hogy a képek lóghassanak, ha kell, de alapvetően a vásznon belül maradnak */
             transition: width 0.3s, height 0.3s, background 0.3s;
         }
 
@@ -67,7 +67,7 @@
             transition: border 0.1s;
             /* Flex center a képhez */
             display: flex; justify-content: center; align-items: center;
-            overflow: hidden; /* Crop határok */
+            /* overflow: hidden;  <-- EZ VOLT A HIBA! Ez rejtette el a menüt. Kivettem. */
         }
         
         .collage-item.selected {
@@ -78,8 +78,9 @@
         .collage-item img {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* EZ BIZTOSÍTJA A TORZÍTÁSMENTESSÉGET (CROP) */
+            object-fit: cover; /* Ez végzi a "Chrop" funkciót (levágja a felesleget torzítás nélkül) */
             pointer-events: none; 
+            display: block;
         }
 
         /* Resize Handle (Jobb alsó sarok) */
@@ -96,10 +97,10 @@
         }
         .collage-item.selected .resize-handle { display: block; }
 
-        /* --- MINI HUD (Réteg vezérlő + Crop) --- */
+        /* --- MINI HUD (Ez a lebegő menü) --- */
         .mini-hud {
             position: absolute;
-            top: -50px; /* Kicsit feljebb, mert több gomb lett */
+            top: -45px; /* A kép fölött jelenik meg */
             left: 50%;
             transform: translateX(-50%);
             background: var(--glass-bg);
@@ -107,9 +108,9 @@
             padding: 5px;
             border-radius: 8px;
             border: 1px solid var(--glass-border);
-            display: none; 
+            display: none; /* Csak ha selected */
             gap: 5px;
-            z-index: 2000;
+            z-index: 99999; /* Legyen nagyon felül */
             white-space: nowrap;
             box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
@@ -472,8 +473,7 @@
 
                 // Ha be van kapcsolva a képarány zár (pl 1:1)
                 if (selectedItem.ratioLocked) {
-                    // Kényszerítsük a négyzet alakot a nagyobb mérethez igazítva vagy egér mozgás alapján
-                    // Egyszerűsítés: használjuk a szélességet vezérlőnek
+                    // Kényszerítsük a négyzet alakot
                     newH = newW;
                 }
 
@@ -527,7 +527,7 @@
 
             if (type === '1:1') {
                 item.ratioLocked = true;
-                // Azonnali átméretezés négyzetre (a rövidebb oldalhoz igazítva vagy átlag)
+                // Azonnali átméretezés négyzetre (a rövidebb oldalhoz igazítva)
                 const s = Math.min(item.element.offsetWidth, item.element.offsetHeight);
                 item.element.style.width = s + 'px';
                 item.element.style.height = s + 'px';
@@ -664,8 +664,7 @@
                     sY = (sh - sH) / 2; // Középre igazítás
                 }
 
-                // Rajzolás: csak a kép kivágott (crop) részét méretezzük át a célterületre.
-                // Így a kép NEM nyomódik össze, megmarad az aránya.
+                // Rajzolás
                 ctx.drawImage(img, sX, sY, sW, sH, dx, dy, dw, dh);
             });
 
@@ -730,7 +729,6 @@
                 if(!p2pHost) {
                     conn = peer.connect(document.getElementById('channel-select').value);
                     setupConn(conn);
-                    // Beköszönés a hostnak
                     conn.on('open', () => {
                         conn.send({type: 'hello', username: currentUser});
                     });
@@ -738,7 +736,6 @@
             });
             peer.on('connection', (c) => {
                 setupConn(c);
-                // Send current state to new guest
                 setTimeout(() => {
                     items.forEach(i => {
                         c.send({
@@ -760,10 +757,8 @@
 
         function setupConn(c) {
             c.on('data', (data) => {
-                // USER JOIN NOTIFICATION
                 if(data.type === 'hello') {
                     showToast(`${data.username} csatlakozott a kollázshoz!`);
-                    // Ha host vagyunk, továbbíthatjuk másoknak (basic mesh logic could go here)
                 }
 
                 if(data.type === 'create') {
@@ -826,7 +821,7 @@
             location.reload();
         }
 
-        // --- DRIVE SAVING (Megtartva) ---
+        // --- DRIVE SAVING ---
         const CLIENT_ID = '138100233309-v575n23j2b6pdek9t9clvkg3immlkrdi.apps.googleusercontent.com'; 
         const API_KEY = 'AIzaSyAfC2viqoOsVVjcShnqY2rrRsxdV7WHMEg'; 
         const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
@@ -842,8 +837,7 @@
             tokenClient.callback = async (resp) => {
                 if(resp.error) return;
                 
-                // Ugyanazt a logikát használjuk, mint a HD mentésnél, csak blobba
-                const scale = 2; // Drive-ra alapból jobb minőséget küldünk
+                const scale = 2; 
                 const exportCanvas = document.createElement('canvas');
                 exportCanvas.width = canvas.offsetWidth * scale; exportCanvas.height = canvas.offsetHeight * scale;
                 const ctx = exportCanvas.getContext('2d');
@@ -855,7 +849,6 @@
                     const dx = parseFloat(item.element.style.left)*scale, dy = parseFloat(item.element.style.top)*scale;
                     const dw = parseFloat(item.element.style.width)*scale, dh = parseFloat(item.element.style.height)*scale;
                     
-                    // Cover math again
                     const sw = img.naturalWidth, sh = img.naturalHeight;
                     const sR = sw/sh, dR = dw/dh;
                     let sX, sY, sW, sH;
