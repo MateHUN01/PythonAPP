@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroCode PRO v11</title>
+    <title>AeroCode PRO v11 - P2P</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
@@ -93,7 +93,7 @@
         }
 
         /* --- CODE MIRROR CUSTOMIZATION --- */
-        .CodeMirror { flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 14px; background: transparent !important; height: 100%; }
+        .CodeMirror { flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 14px; background: transparent !important; height: 100%; position: relative;}
         .CodeMirror-gutters { background: var(--bg-color) !important; border-right: 1px solid var(--border-color); }
         .CodeMirror-hints {
             position: absolute; z-index: 100000; overflow: hidden; list-style: none; margin: 0; padding: 2px;
@@ -102,6 +102,24 @@
         }
         .CodeMirror-hint { margin: 0; padding: 4px 8px; border-radius: 3px; white-space: pre; color: var(--hint-text); cursor: pointer; }
         li.CodeMirror-hint-active { background: var(--hint-select-bg); color: var(--hint-select-text); }
+
+        /* LIVE jelző a szerkesztőben */
+        #live-indicator {
+            position: absolute;
+            top: 10px; right: 20px;
+            background: rgba(80, 250, 123, 0.2);
+            color: #50fa7b;
+            border: 1px solid #50fa7b;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 50;
+            display: none;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
 
         /* --- HEADER --- */
         .header-wrapper {
@@ -134,19 +152,23 @@
         .dropdown-content {
             opacity: 0; visibility: hidden; position: absolute; right: 0; top: 50px;
             background-color: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
-            min-width: 160px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5);
+            min-width: 250px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5);
             border-radius: 12px; border: 1px solid var(--glass-border);
             z-index: 2000; overflow: hidden;
             transition: opacity 0.3s ease 2s, visibility 0.3s ease 2s, transform 0.3s ease 2s;
             transform: translateY(-10px);
+            padding: 10px;
+            cursor: default;
         }
         .dropdown:hover .dropdown-content { opacity: 1; visibility: visible; transform: translateY(0); transition-delay: 0s; }
-        .dropdown-content a {
+        
+        /* Dropdown elemek */
+        .menu-item {
             color: var(--text-color); padding: 12px 16px; text-decoration: none;
             display: flex; align-items: center; gap: 10px; font-size: 13px;
-            transition: background 0.2s; cursor: pointer;
+            transition: background 0.2s; cursor: pointer; border-radius: 6px;
         }
-        .dropdown-content a:hover { background-color: var(--accent-color); color: white; }
+        .menu-item:hover { background-color: var(--accent-color); color: white; }
 
         /* --- LAYOUT --- */
         .main-container { display: flex; height: 100vh; width: 100%; }
@@ -155,6 +177,7 @@
             flex: 6; display: flex; flex-direction: column; 
             border-right: 1px solid var(--border-color); background: transparent;
             min-width: 0; 
+            position: relative;
         }
         
         .CodeMirror-scroll { padding-top: 100px; padding-bottom: 50px; }
@@ -204,6 +227,20 @@
         .error { color: #ff5555; }
         .success { color: #50fa7b; }
         .system-msg { color: var(--system-msg-color); font-style: italic; }
+        
+        /* P2P UI Elemek */
+        .p2p-code-display {
+            font-family: 'JetBrains Mono', monospace; 
+            font-size: 20px; letter-spacing: 2px;
+            background: rgba(0,0,0,0.3); 
+            padding: 10px; border-radius: 8px; 
+            text-align: center; margin-bottom: 15px; 
+            color: var(--accent-color); font-weight: bold;
+            border: 1px dashed var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .p2p-code-display:hover { background: rgba(0,0,0,0.5); border-color: var(--accent-color); }
     </style>
 </head>
 <body>
@@ -227,35 +264,31 @@
             <div id="user-btn" onclick="openLoginModal()">Log in</div>
             
             <div class="dropdown">
-                <button class="icon-btn" title="Valós idejű közös munka" onclick="initPeerIfNeeded()">
+                <button class="icon-btn" title="Közös Munka (P2P)" onclick="initPeerIfNeeded()">
                     <span class="material-icons">group</span>
                 </button>
-                <div class="dropdown-content" style="min-width: 280px; padding: 15px; cursor: default;">
-                    <h4 style="margin:0 0 10px 0; border-bottom:1px solid #444; padding-bottom:5px;">Közös Munka (P2P)</h4>
+                <div class="dropdown-content">
+                    <h4 style="margin:0 0 10px 0; border-bottom:1px solid #444; padding-bottom:5px;">Közös Munka</h4>
                     
-                    <div style="font-size:11px; opacity:0.7; margin-bottom:5px">A Te Kódod (küldd el a társadnak):</div>
-                    <div id="my-peer-id" onclick="copyToClipboard(this.innerText)" title="Kattints a másoláshoz" 
-                         style="font-family:monospace; background:rgba(0,0,0,0.2); padding:5px; border-radius:4px; margin-bottom:15px; cursor:pointer; user-select:all; word-break:break-all; color:var(--accent-color); font-weight:bold;">
-                         Generálás...
+                    <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Saját 4-jegyű kódod:</div>
+                    <div id="my-peer-id" class="p2p-code-display" onclick="copyToClipboard()" title="Másolás">
+                        ...
                     </div>
 
                     <div id="connect-ui">
-                        <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Barát kódja:</div>
-                        <input type="text" id="friend-id-input" placeholder="Illeszd be ide a kódot..." 
-                               style="width:100%; padding:8px; margin-bottom:10px; background:var(--input-field-bg); border:1px solid var(--border-color); color:var(--text-color); border-radius:4px; outline:none;">
-                        
-                        <button onclick="connectToPeer()" style="width:100%; padding:8px; background:var(--run-color); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Csatlakozás</button>
+                        <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Partner kódja:</div>
+                        <div style="display:flex; gap:5px;">
+                            <input type="text" id="friend-id-input" placeholder="pl. A7X2" maxlength="4"
+                                   style="width:100%; padding:8px; background:var(--input-field-bg); border:1px solid var(--border-color); color:var(--text-color); border-radius:4px; outline:none; font-family:'JetBrains Mono'; text-transform:uppercase;">
+                            <button onclick="connectToPeer()" style="padding:0 12px; background:var(--run-color); color:white; border:none; border-radius:4px; cursor:pointer;"><span class="material-icons">login</span></button>
+                        </div>
                     </div>
 
                     <div id="disconnect-ui" style="display:none;">
-                        <div style="background:rgba(80, 250, 123, 0.1); color:#50fa7b; padding:8px; border-radius:4px; margin-bottom:10px; text-align:center; font-size:12px;">
-                            <span class="material-icons" style="font-size:12px; vertical-align:middle;">link</span> Kapcsolódva
-                        </div>
                         <button onclick="disconnectPeer()" style="width:100%; padding:8px; background:#ff5555; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Szétkapcsolás</button>
-                        <div style="font-size:10px; opacity:0.5; text-align:center; margin-top:5px;">A kód megmarad mindkét félnél.</div>
                     </div>
                     
-                    <div id="p2p-log" style="font-size:10px; color:#888; margin-top:10px; font-style:italic;"></div>
+                    <div id="p2p-log" style="font-size:10px; color:#888; margin-top:10px; font-style:italic;">Offline</div>
                 </div>
             </div>
 
@@ -264,8 +297,8 @@
                     <span class="material-icons">cloud_queue</span>
                 </button>
                 <div class="dropdown-content">
-                    <a onclick="handleDriveSave()"><span class="material-icons">save</span> Mentés Drive-ra</a>
-                    <a onclick="handleDriveLoad()"><span class="material-icons">folder_open</span> Betöltés</a>
+                    <a class="menu-item" onclick="handleDriveSave()"><span class="material-icons">save</span> Mentés Drive-ra</a>
+                    <a class="menu-item" onclick="handleDriveLoad()"><span class="material-icons">folder_open</span> Betöltés</a>
                 </div>
             </div>
 
@@ -278,6 +311,7 @@
 
     <div class="main-container">
         <div class="editor-container">
+            <div id="live-indicator">● LIVE</div>
             <textarea id="code-editor">
 #AeroCode PRO
 #V11.0 Stable
@@ -381,7 +415,7 @@ print("Hello WRLD")
             if(currentUser) {
                 if(confirm("Kijelentkezel?")) {
                     currentUser = null;
-                    localStorage.removeItem('saved_username'); // Törlés kijelentkezéskor
+                    localStorage.removeItem('saved_username'); 
                     document.getElementById('user-btn').innerText = "Log in";
                     addToOutput("Kijelentkezve.", "system-msg");
                 }
@@ -394,152 +428,79 @@ print("Hello WRLD")
         function performLogin() {
             const name = document.getElementById('loginNameInput').value.trim();
             if(!name) return;
-            
-            // Mentés localStorage-ba az automatikus belépéshez
             localStorage.setItem('saved_username', name);
-
             const userKey = 'user_data_' + name;
-            let msg = "";
-            if(localStorage.getItem(userKey)) {
-                msg = `Üdvözöllek újra, ${name}!`;
-            } else {
-                localStorage.setItem(userKey, Date.now());
-                msg = `Sikeres bejelentkezés: ${name}!`;
-            }
+            let msg = localStorage.getItem(userKey) ? `Üdvözöllek újra, ${name}!` : `Sikeres bejelentkezés: ${name}!`;
+            if(!localStorage.getItem(userKey)) localStorage.setItem(userKey, Date.now());
             
             currentUser = name;
             document.getElementById('user-btn').innerText = name;
             document.getElementById('loginModal').style.display = 'none';
             logSystem(msg);
             
-            // Google Auth indítása a háttérben
-            if(gapiInited && gisInited && !gapi.client.getToken()) {
-                tokenClient.requestAccessToken({prompt: ''}); 
-            }
+            if(gapiInited && gisInited && !gapi.client.getToken()) tokenClient.requestAccessToken({prompt: ''}); 
         }
 
         // --- GOOGLE DRIVE INTEGRÁCIÓ ---
-        function gapiLoaded() {
-            gapi.load('client', async () => {
-                await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC], });
-                gapiInited = true;
-            });
-        }
-        function gisLoaded() {
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: CLIENT_ID, scope: SCOPES, 
-                callback: (resp) => {
-                    if (resp.error !== undefined) {
-                        logSystem("Google hiba: " + resp.error);
-                    } else {
-                        logSystem("Google Fiók csatlakoztatva.");
-                    }
-                },
-            });
-            gisInited = true;
-        }
+        function gapiLoaded() { gapi.load('client', async () => { await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC], }); gapiInited = true; }); }
+        function gisLoaded() { tokenClient = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPES, callback: (resp) => { if (resp.error) logSystem("Google hiba: " + resp.error); else logSystem("Google Fiók csatlakoztatva."); }, }); gisInited = true; }
 
         let userFolderId = null;
         async function getFolderId() {
             if(!currentUser) { alert("Jelentkezz be először!"); return null; }
             if(userFolderId) return userFolderId;
-            
-            if(!gapi.client.getToken()) {
-                await new Promise((resolve) => {
-                    tokenClient.callback = (resp) => { resolve(resp); };
-                    tokenClient.requestAccessToken({prompt: 'consent'});
-                });
-            }
-
+            if(!gapi.client.getToken()) await new Promise((resolve) => { tokenClient.callback = (resp) => { resolve(resp); }; tokenClient.requestAccessToken({prompt: 'consent'}); });
             try {
                 const folderName = `ProPythonIDE_${currentUser}`;
                 const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
                 const response = await gapi.client.drive.files.list({q: q, fields: 'files(id, name)'});
-
-                if (response.result.files && response.result.files.length > 0) {
-                    userFolderId = response.result.files[0].id;
-                } else {
-                    const meta = { 'name': folderName, 'mimeType': 'application/vnd.google-apps.folder' };
-                    const createRes = await gapi.client.drive.files.create({ resource: meta, fields: 'id' });
-                    userFolderId = createRes.result.id;
-                }
+                if (response.result.files && response.result.files.length > 0) userFolderId = response.result.files[0].id;
+                else { const meta = { 'name': folderName, 'mimeType': 'application/vnd.google-apps.folder' }; const createRes = await gapi.client.drive.files.create({ resource: meta, fields: 'id' }); userFolderId = createRes.result.id; }
                 return userFolderId;
-            } catch(e) {
-                logSystem("Drive hiba: " + e.message);
-                return null;
-            }
+            } catch(e) { logSystem("Drive hiba: " + e.message); return null; }
         }
 
         async function handleDriveSave() {
             showLoading(true);
             const folderId = await getFolderId();
             if(!folderId) { showLoading(false); return; }
-
             const content = editor.getValue();
             const dateStr = new Date().toISOString().slice(0,10);
             const filename = `${currentUser}_${dateStr}.py`;
-            
             const file = new Blob([content], {type: 'text/plain'});
             const metadata = { 'name': filename, 'mimeType': 'text/plain', 'parents': [folderId] };
-            
             const form = new FormData();
             form.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
             form.append('file', file);
-
-            fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                method: 'POST',
-                headers: new Headers({'Authorization': 'Bearer ' + gapi.client.getToken().access_token}),
-                body: form
-            }).then(res => res.json()).then(val => {
-                logSystem(`Sikeres mentés: ${filename}`);
-                showLoading(false);
-            }).catch(err => {
-                logSystem("Mentési hiba!");
-                showLoading(false);
-            });
+            fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: new Headers({'Authorization': 'Bearer ' + gapi.client.getToken().access_token}), body: form }).then(res => res.json()).then(val => { logSystem(`Sikeres mentés: ${filename}`); showLoading(false); }).catch(err => { logSystem("Mentési hiba!"); showLoading(false); });
         }
 
         async function handleDriveLoad() {
             showLoading(true);
             const folderId = await getFolderId();
             if(!folderId) { showLoading(false); return; }
-
-            const response = await gapi.client.drive.files.list({
-                q: `'${folderId}' in parents and trashed=false`,
-                fields: 'files(id, name)',
-            });
-            
+            const response = await gapi.client.drive.files.list({ q: `'${folderId}' in parents and trashed=false`, fields: 'files(id, name)', });
             const files = response.result.files;
             const listDiv = document.getElementById('file-list');
             listDiv.innerHTML = "";
-            
             if (files && files.length > 0) {
                 files.forEach(file => {
                     const div = document.createElement('div');
                     div.style.padding = "8px"; div.style.cursor = "pointer"; div.style.borderBottom = "1px solid #444";
                     div.innerText = file.name;
                     div.onclick = () => loadFileContent(file.id);
-                    div.onmouseover = () => div.style.background = "#444";
-                    div.onmouseout = () => div.style.background = "transparent";
+                    div.onmouseover = () => div.style.background = "#444"; div.onmouseout = () => div.style.background = "transparent";
                     listDiv.appendChild(div);
                 });
                 document.getElementById('loadModal').style.display = 'flex';
-            } else {
-                alert("Nincs fájl a mappában.");
-            }
+            } else { alert("Nincs fájl a mappában."); }
             showLoading(false);
         }
 
         async function loadFileContent(fileId) {
             document.getElementById('loadModal').style.display = 'none';
             showLoading(true);
-            try {
-                const response = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
-                editor.setValue(response.body);
-                logSystem("Fájl betöltve");
-            } catch(e) {
-                logSystem("Hiba betöltéskor.");
-            }
+            try { const response = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' }); editor.setValue(response.body); logSystem("Fájl betöltve"); } catch(e) { logSystem("Hiba betöltéskor."); }
             showLoading(false);
         }
 
@@ -549,45 +510,22 @@ print("Hello WRLD")
             lineNumbers: true, indentUnit: 4, smartIndent: true, matchBrackets: true, autoCloseBrackets: true,
             extraKeys: { "Ctrl-Space": "autocomplete", "Ctrl-Enter": function() { runPython(); } },
             hintOptions: { completeSingle: false },
-            lineWrapping: false // Vízszintes görgetés engedélyezése
+            lineWrapping: false 
         });
 
-        // Beállítások betöltése
-        if(localStorage.getItem('ide_fontsize')) {
-            document.querySelector('.CodeMirror').style.fontSize = localStorage.getItem('ide_fontsize') + 'px';
-            document.getElementById('fontSizeInput').value = localStorage.getItem('ide_fontsize');
-        }
+        if(localStorage.getItem('ide_fontsize')) { document.querySelector('.CodeMirror').style.fontSize = localStorage.getItem('ide_fontsize') + 'px'; document.getElementById('fontSizeInput').value = localStorage.getItem('ide_fontsize'); }
+        let exportExt = localStorage.getItem('ide_export_ext') || 'txt'; document.getElementById('exportFormatInput').value = exportExt;
+        let savedBgColor = localStorage.getItem('ide_custom_bg') || '#121214'; document.getElementById('bgColorInput').value = savedBgColor;
+        let savedPattern = localStorage.getItem('ide_pattern_on'); if(savedPattern === null) savedPattern = 'true'; document.getElementById('bgPatternInput').checked = (savedPattern === 'true');
+        let savedEditorBg = localStorage.getItem('ide_editor_bg') || '#282a36'; document.getElementById('editorBgColorInput').value = savedEditorBg;
         
-        let exportExt = localStorage.getItem('ide_export_ext') || 'txt';
-        document.getElementById('exportFormatInput').value = exportExt;
-
-        // Szín és minta betöltése
-        let savedBgColor = localStorage.getItem('ide_custom_bg') || '#121214';
-        document.getElementById('bgColorInput').value = savedBgColor;
-        
-        let savedPattern = localStorage.getItem('ide_pattern_on');
-        if(savedPattern === null) savedPattern = 'true'; 
-        document.getElementById('bgPatternInput').checked = (savedPattern === 'true');
-
-        // Szerkesztő háttér betöltése
-        let savedEditorBg = localStorage.getItem('ide_editor_bg') || '#282a36';
-        document.getElementById('editorBgColorInput').value = savedEditorBg;
-
-        // Alkalmazás induláskor
         applyThemeSettings(savedBgColor, savedPattern === 'true', savedEditorBg);
+        let savedLayout = localStorage.getItem('ide_layout') || 'right'; document.getElementById('layoutInput').value = savedLayout; applyLayout(savedLayout);
 
-        // Layout betöltése
-        let savedLayout = localStorage.getItem('ide_layout') || 'right';
-        document.getElementById('layoutInput').value = savedLayout;
-        applyLayout(savedLayout);
-
-        // AutoComplete Trigger
         editor.on("keyup", function (cm, event) {
             const excludedKeys = [8, 9, 13, 27, 37, 38, 39, 40, 46]; 
             if (!excludedKeys.includes(event.keyCode) && !cm.state.completionActive) {
-                if ((event.keyCode >= 65 && event.keyCode <= 90) || event.keyCode === 190) { 
-                    CodeMirror.commands.autocomplete(cm, null, {completeSingle: false});
-                }
+                if ((event.keyCode >= 65 && event.keyCode <= 90) || event.keyCode === 190) { CodeMirror.commands.autocomplete(cm, null, {completeSingle: false}); }
             }
         });
 
@@ -597,68 +535,40 @@ print("Hello WRLD")
         let inputResolver = null;
         const outputElement = document.getElementById("output");
 
-        function showLoading(show) {
-            document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
-        }
+        function showLoading(show) { document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none'; }
 
         async function initPyodide() {
             try {
                 pyodide = await loadPyodide();
-                
                 await pyodide.runPythonAsync(`
                     import sys
                     import js
                     import asyncio
-
                     class JSWriter:
-                        def write(self, text):
-                            js.printToTerminal(text)
-                        def flush(self):
-                            pass
-
-                    sys.stdout = JSWriter()
-                    sys.stderr = JSWriter()
-
+                        def write(self, text): js.printToTerminal(text)
+                        def flush(self): pass
+                    sys.stdout = JSWriter(); sys.stderr = JSWriter()
                     async def custom_input(prompt=""):
-                        if prompt:
-                            print(prompt, end="")
+                        if prompt: print(prompt, end="")
                         val = await js.waitForInput()
-                        print(val) 
-                        return str(val)
+                        print(val); return str(val)
                 `);
-
                 pyodideReady = true;
                 logSystem("Rendszer kész.");
-                
-                // Automatikus bejelentkezés ellenőrzése a betöltés végén
                 const savedUser = localStorage.getItem('saved_username');
-                if(savedUser) {
-                    currentUser = savedUser;
-                    document.getElementById('user-btn').innerText = savedUser;
-                    logSystem(`Üdvözöllek újra, ${savedUser}!`);
-                }
-
-            } catch (e) {
-                console.error(e);
-                logSystem("Rendszer hiba: " + e);
-            }
+                if(savedUser) { currentUser = savedUser; document.getElementById('user-btn').innerText = savedUser; logSystem(`Üdvözöllek újra, ${savedUser}!`); }
+            } catch (e) { console.error(e); logSystem("Rendszer hiba: " + e); }
         }
         initPyodide();
 
-        // --- TERMINAL I/O ---
-        window.printToTerminal = (text) => {
-            addToOutput(text, "");
-        };
-
+        window.printToTerminal = (text) => { addToOutput(text, ""); };
         const inputBar = document.getElementById("terminal-input-bar");
         const inputField = document.getElementById("term-input");
 
         window.waitForInput = () => {
             return new Promise(resolve => {
                 inputResolver = resolve;
-                inputBar.style.display = "flex";
-                inputField.value = "";
-                inputField.focus();
+                inputBar.style.display = "flex"; inputField.value = ""; inputField.focus();
                 setTimeout(() => outputElement.scrollTop = outputElement.scrollHeight, 10);
             });
         };
@@ -667,61 +577,42 @@ print("Hello WRLD")
             e.stopPropagation(); 
             if (e.key === "Enter" && inputResolver) {
                 e.preventDefault(); 
-                const val = inputField.value;
-                inputBar.style.display = "none";
-                inputResolver(val);
-                inputResolver = null;
-                setTimeout(() => editor.focus(), 50);
+                const val = inputField.value; inputBar.style.display = "none";
+                inputResolver(val); inputResolver = null; setTimeout(() => editor.focus(), 50);
             }
         });
 
         function addToOutput(text, cls="") {
-            const span = document.createElement("span");
-            span.textContent = text;
-            if(cls) span.className = cls;
-            outputElement.appendChild(span);
+            const span = document.createElement("span"); span.textContent = text;
+            if(cls) span.className = cls; outputElement.appendChild(span);
             outputElement.scrollTop = outputElement.scrollHeight;
         }
-        
-        function logSystem(msg) {
-            addToOutput("> " + msg + "\n", "system-msg");
-        }
+        function logSystem(msg) { addToOutput("> " + msg + "\n", "system-msg"); }
 
         async function runPython() {
             if(!pyodideReady) return;
             outputElement.innerHTML = ""; 
-            
             let code = editor.getValue();
             code = code.replace(/\binput\s*\(/g, "await custom_input(");
-            
             try {
                 await pyodide.runPythonAsync(`
                     import asyncio
                     async def main_wrapper():
                         try:
 ${code.split('\n').map(l => '                            ' + l).join('\n')}
-                        except Exception as e:
-                            print(e)
+                        except Exception as e: print(e)
                     await main_wrapper()
                 `);
-            } catch(e) {
-                addToOutput(e.toString() + "\n", "error");
-            }
+            } catch(e) { addToOutput(e.toString() + "\n", "error"); }
         }
 
-        // --- EGYÉB FUNKCIÓK ---
-
         function downloadCode() {
-            let code = editor.getValue();
-            let filename = prompt("Fájlnév?", "program");
+            let code = editor.getValue(); let filename = prompt("Fájlnév?", "program");
             if (filename) {
                 const ext = document.getElementById('exportFormatInput').value; 
                 if (!filename.endsWith("." + ext)) filename += "." + ext;
-                
                 const blob = new Blob([code], { type: 'text/plain' });
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = filename;
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
                 document.body.appendChild(a); a.click(); document.body.removeChild(a);
             }
         }
@@ -732,36 +623,18 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         function openSettings() { document.getElementById("settingsModal").style.display = "flex"; }
         
         function applyLayout(layout) {
-            const container = document.querySelector('.main-container');
-            container.classList.remove('layout-left', 'layout-bottom');
-            
-            if (layout === 'left') {
-                container.classList.add('layout-left');
-            } else if (layout === 'bottom') {
-                container.classList.add('layout-bottom');
-            }
+            const container = document.querySelector('.main-container'); container.classList.remove('layout-left', 'layout-bottom');
+            if (layout === 'left') container.classList.add('layout-left'); else if (layout === 'bottom') container.classList.add('layout-bottom');
             setTimeout(() => editor.refresh(), 100);
         }
 
-        // Segédfüggvény a téma alkalmazásához
         function applyThemeSettings(color, patternOn, editorColor) {
-            // Alkalmazás háttérszín
             document.documentElement.style.setProperty('--bg-color', color);
-            
-            // Minta beállítás a side-panelre
             const sidePanel = document.querySelector('.side-panel');
-            if(patternOn) {
-                sidePanel.style.backgroundImage = "url('aeroLOGO.png')";
-            } else {
-                sidePanel.style.backgroundImage = "none";
-            }
-
-            // Szerkesztő háttérszín
+            if(patternOn) sidePanel.style.backgroundImage = "url('aeroLOGO.png')"; else sidePanel.style.backgroundImage = "none";
             if(editorColor) {
-                const cm = document.querySelector('.CodeMirror');
-                const gutters = document.querySelector('.CodeMirror-gutters');
-                if(cm) cm.style.backgroundColor = editorColor;
-                if(gutters) gutters.style.backgroundColor = editorColor;
+                const cm = document.querySelector('.CodeMirror'); const gutters = document.querySelector('.CodeMirror-gutters');
+                if(cm) cm.style.backgroundColor = editorColor; if(gutters) gutters.style.backgroundColor = editorColor;
             }
         }
 
@@ -770,65 +643,63 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             const fSize = document.getElementById("fontSizeInput").value;
             const ext = document.getElementById("exportFormatInput").value;
             const layout = document.getElementById("layoutInput").value;
-            
-            // Új beállítások mentése
             const customBg = document.getElementById("bgColorInput").value;
             const patternOn = document.getElementById("bgPatternInput").checked;
             const editorBg = document.getElementById("editorBgColorInput").value;
 
-            localStorage.setItem("gemini_api_key", apiKey);
-            localStorage.setItem("ide_fontsize", fSize);
-            localStorage.setItem("ide_export_ext", ext);
-            localStorage.setItem("ide_layout", layout);
-            
-            // Szín és minta mentése
-            localStorage.setItem("ide_custom_bg", customBg);
-            localStorage.setItem("ide_pattern_on", patternOn);
+            localStorage.setItem("gemini_api_key", apiKey); localStorage.setItem("ide_fontsize", fSize);
+            localStorage.setItem("ide_export_ext", ext); localStorage.setItem("ide_layout", layout);
+            localStorage.setItem("ide_custom_bg", customBg); localStorage.setItem("ide_pattern_on", patternOn);
             localStorage.setItem("ide_editor_bg", editorBg);
             
             document.querySelector('.CodeMirror').style.fontSize = fSize + 'px';
-            applyLayout(layout);
-            applyThemeSettings(customBg, patternOn, editorBg);
-            
-            document.getElementById("settingsModal").style.display = "none";
-            logSystem("Beállítások mentve.");
+            applyLayout(layout); applyThemeSettings(customBg, patternOn, editorBg);
+            document.getElementById("settingsModal").style.display = "none"; logSystem("Beállítások mentve.");
         }
 
         async function askGemini() {
-            const key = localStorage.getItem("gemini_api_key");
-            if(!key) { openSettings(); return; }
-            const div = document.getElementById("gemini-response");
-            div.innerHTML = "Elemzés...";
+            const key = localStorage.getItem("gemini_api_key"); if(!key) { openSettings(); return; }
+            const div = document.getElementById("gemini-response"); if(div) div.innerHTML = "Elemzés...";
             try {
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${key}`, {
-                    method:"POST",
-                    headers:{"Content-Type":"application/json"},
+                    method:"POST", headers:{"Content-Type":"application/json"},
                     body:JSON.stringify({contents:[{parts:[{text:"Röviden, magyarul elemezd és javítsd:\n"+editor.getValue()}]}]})
                 });
                 const d = await res.json();
-                div.innerHTML = d.candidates[0].content.parts[0].text.replace(/\*\*(.*?)\*\*/g,"<b>$1</b>").replace(/\n/g,"<br>");
-            } catch(e) { div.innerHTML = "Hiba történt."; }
+                addToOutput("\n[AI]: " + d.candidates[0].content.parts[0].text + "\n", "system-msg");
+            } catch(e) { addToOutput("AI Hiba.", "error"); }
         }
 
         let isDark=true;
         function toggleTheme() {
-            isDark = !isDark;
-            document.body.className = isDark ? "" : "light-mode";
-            editor.setOption("theme", isDark ? "dracula" : "eclipse");
+            isDark = !isDark; document.body.className = isDark ? "" : "light-mode"; editor.setOption("theme", isDark ? "dracula" : "eclipse");
         }
 
-        // --- P2P KOLLABORÁCIÓ (PeerJS - JAVÍTOTT) ---
+        // --- P2P IMPLEMENTÁCIÓ (4 KARAKTERES KÓDDAL) ---
         let peer = null;
         let conn = null;
         let isSyncing = false; 
 
+        // 4 karakteres véletlen ID generátor (Angol ABC + Számok)
+        function generateShortId() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // I, O, 0, 1 kihagyva a keverhetőség miatt
+            let result = '';
+            for (let i = 0; i < 4; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
         function initPeerIfNeeded() {
             if (peer && !peer.destroyed) return; 
 
-            updateP2PLog("Csatlakozás a P2P szerverhez...");
+            // Frissítjük a logot
+            updateP2PLog("Kód generálása...");
+
+            // Generálunk egy ID-t és megpróbáljuk beregisztrálni
+            const shortId = generateShortId();
             
-            // Google STUN szerverek használata a tűzfal áttöréséhez
-            peer = new Peer(null, {
+            peer = new Peer(shortId, {
                 debug: 1,
                 config: {
                     'iceServers': [
@@ -840,83 +711,80 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
 
             peer.on('open', (id) => {
                 document.getElementById('my-peer-id').innerText = id;
-                document.getElementById('my-peer-id').style.color = "#50fa7b"; // Zöld jelzés ha sikerült
-                updateP2PLog("Készenlétben. Add meg a kódod.");
+                document.getElementById('my-peer-id').style.color = "#50fa7b";
+                updateP2PLog("Kód aktív! Várakozás...");
             });
 
             peer.on('connection', (connection) => {
                 handleConnection(connection);
-                updateP2PLog("Valaki csatlakozott hozzád!");
+                updateP2PLog("Valaki csatlakozott!");
             });
 
+            // Ha foglalt az ID (ritka, de lehetséges), újrapróbáljuk
             peer.on('error', (err) => {
-                document.getElementById('my-peer-id').innerText = "HIBA! (Lásd konzol)";
-                document.getElementById('my-peer-id').style.color = "#ff5555";
-                updateP2PLog("Hiba: " + err.type);
-                console.error("PeerJS Hiba:", err);
+                if (err.type === 'unavailable-id') {
+                    console.log("ID foglalt, újrapróbálkozás...");
+                    peer.destroy();
+                    peer = null;
+                    setTimeout(initPeerIfNeeded, 500);
+                } else {
+                    updateP2PLog("Hiba: " + err.type);
+                }
             });
-            
-            peer.on('disconnected', () => {
-                 updateP2PLog("Megszakadt a kapcsolat a szerverrel.");
-                 peer.reconnect();
-            });
+
+            peer.on('disconnected', () => { peer.reconnect(); });
         }
 
         function connectToPeer() {
-            const friendId = document.getElementById('friend-id-input').value.trim();
-            if(!friendId) return alert("Írd be a barátod kódját!");
+            let friendId = document.getElementById('friend-id-input').value.trim().toUpperCase();
+            if(friendId.length !== 4) return alert("A kódnak 4 karakternek kell lennie!");
             
-            updateP2PLog("Csatlakozás...");
+            updateP2PLog("Csatlakozás: " + friendId + "...");
             const connection = peer.connect(friendId);
             handleConnection(connection);
         }
 
         function handleConnection(connection) {
             conn = connection;
-
             document.getElementById('connect-ui').style.display = 'none';
             document.getElementById('disconnect-ui').style.display = 'block';
 
             conn.on('data', (data) => {
+                // Adat fogadása a másiktól
                 if(data.type === 'code_update') {
                     if (editor.getValue() !== data.content) {
-                        isSyncing = true; 
-                        const cursor = editor.getCursor(); 
-                        editor.setValue(data.content);
-                        editor.setCursor(cursor); 
+                        isSyncing = true; // Zárjuk a visszaküldést
+                        const cursor = editor.getCursor(); // Mentsük a kurzorunkat
+                        editor.setValue(data.content); // Frissítjük a kódot
+                        editor.setCursor(cursor); // Visszarakjuk a kurzort
                         isSyncing = false;
                     }
                 }
             });
 
             conn.on('open', () => {
-                sendCode(); 
-                updateP2PLog("Sikeres kapcsolat!");
+                sendCode();
+                updateP2PLog("ÖSSZEKAPCSOLVA! 🟢");
+                logSystem("P2P KAPCSOLAT ÉL! Közös munka indul.");
+                document.getElementById('live-indicator').style.display = 'block';
             });
 
-            conn.on('close', () => {
-                resetP2PUI();
-                alert("A kapcsolat megszakadt.");
-            });
-            
-            conn.on('error', (err) => {
-                console.error("Kapcsolódási hiba:", err);
-                alert("Hiba a kapcsolatban.");
-            });
+            conn.on('close', () => { resetP2PUI(); alert("A kapcsolat megszakadt."); });
+            conn.on('error', (err) => { alert("Hiba a kapcsolatban."); });
         }
 
         function disconnectPeer() {
-            if(conn) {
-                conn.close(); 
-            }
+            if(conn) conn.close();
             resetP2PUI();
-            updateP2PLog("Szétkapcsolva. A tartalom megmaradt.");
+            logSystem("P2P kapcsolat bontva.");
         }
 
         function resetP2PUI() {
             conn = null;
             document.getElementById('connect-ui').style.display = 'block';
             document.getElementById('disconnect-ui').style.display = 'none';
+            document.getElementById('live-indicator').style.display = 'none';
+            updateP2PLog("Offline");
         }
 
         function sendCode() {
@@ -928,17 +796,14 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             }
         }
         
-        function updateP2PLog(msg) {
-            document.getElementById('p2p-log').innerText = msg;
-        }
+        function updateP2PLog(msg) { document.getElementById('p2p-log').innerText = msg; }
         
-        function copyToClipboard(text) {
-            if(text.includes("...")) return; // Ne másolja le ha még tölt
-            navigator.clipboard.writeText(text).then(() => {
-                updateP2PLog("Kód másolva a vágólapra!");
-            });
+        function copyToClipboard() {
+            const txt = document.getElementById('my-peer-id').innerText;
+            if(txt !== "..." ) navigator.clipboard.writeText(txt).then(() => { updateP2PLog("Kód másolva!"); });
         }
 
+        // Kétirányú szinkronizáció trigger
         editor.on('change', (cm, change) => {
             if (!isSyncing) {
                 sendCode();
