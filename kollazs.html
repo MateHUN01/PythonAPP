@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AeroCollage PRO - P2P Collage Maker</title>
+    
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #121212;
+            --workspace-bg: #1a1a1a;
+            --text-color: #e0e0e0;
+            --accent-color: #2196F3;
+            --border-color: #333;
+            
+            /* Glassmorphism */
+            --glass-bg: rgba(20, 20, 20, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+            --glass-blur: 15px;
+
+            --btn-hover: rgba(255, 255, 255, 0.1);
+            --handle-color: #fff;
+        }
+
+        body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); height: 100vh; overflow: hidden; user-select: none; }
+        * { box-sizing: border-box; }
+
+        /* --- COLLAGE WORKSPACE --- */
+        .main-container { display: flex; height: 100vh; width: 100%; }
+        
+        #collage-area {
+            flex: 1;
+            background-color: var(--workspace-bg);
+            background-image: radial-gradient(#333 1px, transparent 1px);
+            background-size: 20px 20px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #collage-canvas {
+            width: 800px;
+            height: 600px;
+            background: #ffffff;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden; /* A képek ne lógjanak ki a vászonról */
+            transition: width 0.3s, height 0.3s, background 0.3s;
+        }
+
+        /* --- DRAGGABLE IMAGE ITEM --- */
+        .collage-item {
+            position: absolute;
+            cursor: grab;
+            user-select: none;
+            border: 2px solid transparent;
+            transition: border 0.1s;
+            /* Flex center a képhez */
+            display: flex; justify-content: center; align-items: center;
+        }
+        
+        .collage-item.selected {
+            border: 2px solid var(--accent-color);
+            z-index: 1000 !important; /* Kiemelés szerkesztéskor, de a valódi z-index tárolva van */
+        }
+
+        .collage-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            pointer-events: none; /* Fontos a drag miatt */
+        }
+
+        /* Resize Handle (Jobb alsó sarok) */
+        .resize-handle {
+            width: 12px; height: 12px;
+            background: var(--accent-color);
+            position: absolute;
+            bottom: -6px; right: -6px;
+            cursor: nwse-resize;
+            border-radius: 50%;
+            display: none;
+            border: 1px solid white;
+        }
+        .collage-item.selected .resize-handle { display: block; }
+
+        /* --- MINI HUD (Réteg vezérlő) --- */
+        .mini-hud {
+            position: absolute;
+            top: -45px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            padding: 5px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            display: none; /* Csak ha selected */
+            gap: 5px;
+            z-index: 2000;
+            white-space: nowrap;
+        }
+        .collage-item.selected .mini-hud { display: flex; }
+
+        .hud-btn {
+            background: transparent; border: none; color: white;
+            cursor: pointer; width: 24px; height: 24px;
+            border-radius: 4px; display: flex; align-items: center; justify-content: center;
+        }
+        .hud-btn:hover { background: rgba(255,255,255,0.2); }
+
+
+        /* --- UI PANELEK --- */
+        .floating-panel {
+            position: absolute; background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border); padding: 15px; border-radius: 12px;
+            display: flex; flex-direction: column; gap: 10px; z-index: 100;
+        }
+
+        .toolbar-left { top: 100px; left: 20px; width: 220px; }
+
+        .section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; opacity: 0.6; margin-bottom: 5px; letter-spacing: 1px;}
+        
+        .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        .big-btn {
+            background: rgba(255,255,255,0.05); border: 1px solid var(--border-color);
+            color: var(--text-color); padding: 10px; border-radius: 6px; cursor: pointer;
+            font-size: 12px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 5px;
+            transition: 0.2s;
+        }
+        .big-btn:hover { background: var(--btn-hover); border-color: var(--accent-color); }
+        .big-btn .material-icons { font-size: 20px; }
+
+        input[type="file"] { display: none; }
+
+        /* --- HEADER --- */
+        .header-wrapper { position: fixed; top: 25px; left: 0; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; z-index: 1000; pointer-events: none; }
+        .glass-bubble { pointer-events: auto; background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)); border: 1px solid var(--glass-border); border-radius: 100px; padding: 6px 15px; display: flex; align-items: center; gap: 10px; }
+        .app-title { font-weight: 700; font-size: 14px; color: var(--text-color); display: flex; align-items: center; gap: 8px; }
+        
+        .icon-btn { background: transparent; border: none; color: var(--text-color); width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .icon-btn:hover { background: var(--btn-hover); }
+
+        #user-btn { cursor: pointer; font-size:12px; opacity:0.8; margin-right:5px; padding: 6px 12px; border-radius: 20px; background: rgba(255,255,255,0.05); }
+
+        /* P2P & Modal styles from previous version */
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content { opacity: 0; visibility: hidden; position: absolute; right: 0; top: 45px; background: var(--glass-bg); backdrop-filter: blur(20px); min-width: 250px; border-radius: 12px; border: 1px solid var(--glass-border); padding: 10px; transition: 0.2s; transform: translateY(-10px); }
+        .dropdown:hover .dropdown-content { opacity: 1; visibility: visible; transform: translateY(0); }
+        
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .modal { background: #222; padding: 20px; border-radius: 12px; width: 300px; border: 1px solid #444; }
+        .modal input { width: 100%; padding: 10px; background: #333; border: 1px solid #444; color: white; margin-bottom: 10px; border-radius: 4px; }
+        .modal button { padding: 8px 16px; background: var(--accent-color); color: white; border: none; border-radius: 4px; cursor: pointer; float: right; }
+
+        /* Loading */
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 10000; display: none; justify-content: center; align-items: center; color: var(--accent-color); }
+        .user-chip { background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 15px; font-size: 11px; margin-top:5px; display:flex; justify-content:space-between; }
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay">Feldolgozás...</div>
+
+    <div class="header-wrapper">
+        <div class="glass-bubble">
+            <div class="app-title">
+                <span class="material-icons" style="color:var(--accent-color)">dashboard_customize</span>
+                AeroCollage PRO
+            </div>
+            <div style="width:1px; height:20px; background:rgba(255,255,255,0.2); margin:0 5px;"></div>
+            <button class="icon-btn" onclick="saveCollage()" title="Mentés képként"><span class="material-icons">download</span></button>
+            <button class="icon-btn" onclick="clearCollage()" title="Összes törlése"><span class="material-icons">delete_sweep</span></button>
+        </div>
+
+        <div class="glass-bubble">
+            <div id="user-btn" onclick="openLoginModal()">Belépés</div>
+            
+            <div class="dropdown">
+                <button class="icon-btn" title="Közös Munka"><span class="material-icons">group</span></button>
+                <div class="dropdown-content">
+                    <h4 style="margin:0 0 10px 0; border-bottom:1px solid #444; padding-bottom:5px;">Közös Kollázs</h4>
+                    <div id="p2p-controls">
+                        <select id="channel-select" style="width:100%; padding:8px; background:#333; color:white; border:none; border-radius:4px; margin-bottom:5px;">
+                            <option value="collage_1">Szoba 1</option>
+                            <option value="collage_2">Szoba 2</option>
+                        </select>
+                        <div style="display:flex; gap:5px;">
+                            <button onclick="startHost()" style="flex:1; padding:5px; background:var(--accent-color); border:none; color:white; border-radius:4px; cursor:pointer;">HOST</button>
+                            <button onclick="joinGuest()" style="flex:1; padding:5px; background:#4CAF50; border:none; color:white; border-radius:4px; cursor:pointer;">JOIN</button>
+                        </div>
+                    </div>
+                    <div id="p2p-status" style="display:none;">
+                        <div style="color:#4CAF50; font-size:12px; margin-bottom:5px;">● Kapcsolódva</div>
+                        <div id="user-list"></div>
+                        <button onclick="disconnectP2P()" style="width:100%; padding:5px; background:#f44336; border:none; color:white; border-radius:4px; cursor:pointer; margin-top:5px;">Kilépés</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dropdown">
+                <button class="icon-btn" title="Felhő"><span class="material-icons">cloud</span></button>
+                <div class="dropdown-content">
+                    <a href="#" onclick="handleDriveSave()" style="display:block; padding:8px; color:#e0e0e0; text-decoration:none;"><span class="material-icons" style="font-size:14px; vertical-align:middle">save</span> Mentés Drive-ra</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="floating-panel toolbar-left">
+            <div class="section-title">Képek</div>
+            <button class="big-btn" onclick="document.getElementById('img-input').click()">
+                <span class="material-icons">add_photo_alternate</span>
+                Képek Importálása
+            </button>
+            <input type="file" id="img-input" multiple accept="image/*" onchange="handleFiles(this.files)">
+
+            <div style="height:10px;"></div>
+
+            <div class="section-title">Sablonok (Auto)</div>
+            <div class="tool-grid">
+                <button class="big-btn" onclick="applyLayout('grid')">
+                    <span class="material-icons">grid_view</span>
+                    Rács
+                </button>
+                <button class="big-btn" onclick="applyLayout('columns')">
+                    <span class="material-icons">view_column</span>
+                    Oszlopok
+                </button>
+                <button class="big-btn" onclick="applyLayout('scatter')">
+                    <span class="material-icons">grain</span>
+                    Szórt
+                </button>
+                <button class="big-btn" onclick="applyLayout('rows')">
+                    <span class="material-icons">table_rows</span>
+                    Sorok
+                </button>
+            </div>
+
+            <div style="height:10px;"></div>
+
+            <div class="section-title">Vászon Beállítások</div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
+                <span style="font-size:12px;">Háttérszín:</span>
+                <input type="color" id="canvas-bg" value="#ffffff" onchange="updateCanvasBg(this.value)" style="width:30px; height:30px; border:none; padding:0; background:none;">
+            </div>
+            
+        </div>
+
+        <div id="collage-area" onmousedown="deselectAll(event)">
+            <div id="collage-canvas">
+                </div>
+        </div>
+    </div>
+
+    <div id="loginModal" class="modal-overlay">
+        <div class="modal">
+            <h3>Bejelentkezés</h3>
+            <input type="text" id="username" placeholder="Felhasználónév">
+            <button onclick="login()">OK</button>
+            <button onclick="document.getElementById('loginModal').style.display='none'" style="background:transparent; margin-right:10px;">Mégse</button>
+        </div>
+    </div>
+
+    <script>
+        // --- CORE VARIABLES ---
+        const canvas = document.getElementById('collage-canvas');
+        let items = []; // { id, x, y, w, h, z, src, element }
+        let selectedItem = null;
+        let zCounter = 1;
+        let isDragging = false;
+        let isResizing = false;
+        let dragOffset = { x: 0, y: 0 };
+        let startSize = { w: 0, h: 0, x: 0, y: 0 }; // Resizehez
+
+        // --- IMAGE HANDLING ---
+        function handleFiles(files) {
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    createCollageItem(e.target.result);
+                };
+                reader.readAsDataURL(file);
+            });
+            // Reset input
+            document.getElementById('img-input').value = '';
+        }
+
+        function createCollageItem(src, remoteParams = null) {
+            const id = remoteParams ? remoteParams.id : 'item_' + Date.now() + Math.random().toString(36).substr(2, 5);
+            const zIndex = remoteParams ? remoteParams.z : zCounter++;
+
+            // Create DOM structure
+            const div = document.createElement('div');
+            div.className = 'collage-item';
+            div.id = id;
+            div.style.zIndex = zIndex;
+            
+            // Image
+            const img = document.createElement('img');
+            img.src = src;
+            img.onload = () => {
+                // Set initial size/pos if not remote
+                if (!remoteParams) {
+                    // Fit to reasonable size
+                    let w = img.naturalWidth;
+                    let h = img.naturalHeight;
+                    if (w > 300) { h = (300/w)*h; w = 300; }
+                    
+                    div.style.width = w + 'px';
+                    div.style.height = h + 'px';
+                    div.style.left = (Math.random() * (canvas.clientWidth - w)) + 'px';
+                    div.style.top = (Math.random() * (canvas.clientHeight - h)) + 'px';
+
+                    syncCreate(id, src, parseFloat(div.style.left), parseFloat(div.style.top), w, h, zIndex);
+                } else {
+                    div.style.width = remoteParams.w + 'px';
+                    div.style.height = remoteParams.h + 'px';
+                    div.style.left = remoteParams.x + 'px';
+                    div.style.top = remoteParams.y + 'px';
+                }
+            };
+
+            // Resize Handle
+            const handle = document.createElement('div');
+            handle.className = 'resize-handle';
+            
+            // Mini HUD
+            const hud = document.createElement('div');
+            hud.className = 'mini-hud';
+            hud.innerHTML = `
+                <button class="hud-btn" onclick="changeLayer('${id}', 1)" title="Előre"><span class="material-icons" style="font-size:16px">arrow_upward</span></button>
+                <button class="hud-btn" onclick="changeLayer('${id}', -1)" title="Hátra"><span class="material-icons" style="font-size:16px">arrow_downward</span></button>
+                <div style="width:1px; height:15px; background:rgba(255,255,255,0.3); margin:0 2px;"></div>
+                <button class="hud-btn" style="color:#ff5555" onclick="deleteItem('${id}')" title="Törlés"><span class="material-icons" style="font-size:16px">delete</span></button>
+            `;
+
+            div.appendChild(img);
+            div.appendChild(handle);
+            div.appendChild(hud);
+            canvas.appendChild(div);
+
+            // Store Logic
+            const itemObj = { id, element: div, src };
+            items.push(itemObj);
+
+            // Events
+            div.onmousedown = (e) => startDrag(e, itemObj);
+            handle.onmousedown = (e) => startResize(e, itemObj);
+        }
+
+        // --- INTERACTION ENGINE ---
+
+        function startDrag(e, item) {
+            if (e.target.closest('.hud-btn') || e.target.classList.contains('resize-handle')) return;
+            e.stopPropagation();
+            e.preventDefault();
+            
+            selectItem(item);
+            isDragging = true;
+            
+            const rect = item.element.getBoundingClientRect();
+            const canvasRect = canvas.getBoundingClientRect();
+            
+            // Calculate offset within the element
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+        }
+
+        function startResize(e, item) {
+            e.stopPropagation();
+            e.preventDefault();
+            isResizing = true;
+            selectItem(item);
+            
+            startSize = {
+                w: item.element.offsetWidth,
+                h: item.element.offsetHeight,
+                x: e.clientX,
+                y: e.clientY
+            };
+        }
+
+        function selectItem(item) {
+            if (selectedItem) selectedItem.element.classList.remove('selected');
+            selectedItem = item;
+            item.element.classList.add('selected');
+        }
+
+        function deselectAll(e) {
+            if (e.target.id === 'collage-area' || e.target.id === 'collage-canvas') {
+                if (selectedItem) selectedItem.element.classList.remove('selected');
+                selectedItem = null;
+            }
+        }
+
+        // Global Mouse Move / Up
+        window.addEventListener('mousemove', (e) => {
+            if (!selectedItem) return;
+
+            if (isDragging) {
+                const canvasRect = canvas.getBoundingClientRect();
+                let newX = e.clientX - canvasRect.left - dragOffset.x;
+                let newY = e.clientY - canvasRect.top - dragOffset.y;
+
+                selectedItem.element.style.left = newX + 'px';
+                selectedItem.element.style.top = newY + 'px';
+            } 
+            else if (isResizing) {
+                const dx = e.clientX - startSize.x;
+                const dy = e.clientY - startSize.y;
+                
+                selectedItem.element.style.width = (startSize.w + dx) + 'px';
+                selectedItem.element.style.height = (startSize.h + dy) + 'px';
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            if ((isDragging || isResizing) && selectedItem) {
+                // Sync on drop/finish
+                syncUpdate(selectedItem);
+            }
+            isDragging = false;
+            isResizing = false;
+        });
+
+        // --- ITEM MANIPULATION ---
+
+        function changeLayer(id, direction) {
+            const item = items.find(i => i.id === id);
+            if (!item) return;
+            
+            let currentZ = parseInt(item.element.style.zIndex);
+            let newZ = currentZ + direction;
+            if (newZ < 0) newZ = 0;
+            
+            item.element.style.zIndex = newZ;
+            // Update global counter if needed
+            if (newZ >= zCounter) zCounter = newZ + 1;
+            
+            syncUpdate(item);
+        }
+
+        function deleteItem(id) {
+            const index = items.findIndex(i => i.id === id);
+            if (index > -1) {
+                items[index].element.remove();
+                items.splice(index, 1);
+                selectedItem = null;
+                syncDelete(id);
+            }
+        }
+
+        function updateCanvasBg(color) {
+            canvas.style.backgroundColor = color;
+            if (p2pHost) broadcast({ type: 'bg_change', color });
+        }
+
+        // --- LAYOUTS (TEMPLATES) ---
+        function applyLayout(type) {
+            if (items.length === 0) return;
+            
+            const count = items.length;
+            const canvasW = canvas.offsetWidth;
+            const canvasH = canvas.offsetHeight;
+
+            if (type === 'grid') {
+                const cols = Math.ceil(Math.sqrt(count));
+                const rows = Math.ceil(count / cols);
+                const cellW = canvasW / cols;
+                const cellH = canvasH / rows;
+
+                items.forEach((item, i) => {
+                    const row = Math.floor(i / cols);
+                    const col = i % cols;
+                    
+                    item.element.style.width = (cellW - 10) + 'px';
+                    item.element.style.height = (cellH - 10) + 'px';
+                    item.element.style.left = (col * cellW + 5) + 'px';
+                    item.element.style.top = (row * cellH + 5) + 'px';
+                    syncUpdate(item);
+                });
+            } else if (type === 'columns') {
+                const w = canvasW / count;
+                items.forEach((item, i) => {
+                    item.element.style.width = (w - 10) + 'px';
+                    item.element.style.height = (canvasH - 20) + 'px';
+                    item.element.style.left = (i * w + 5) + 'px';
+                    item.element.style.top = '10px';
+                    syncUpdate(item);
+                });
+            } else if (type === 'rows') {
+                const h = canvasH / count;
+                items.forEach((item, i) => {
+                    item.element.style.width = (canvasW - 20) + 'px';
+                    item.element.style.height = (h - 10) + 'px';
+                    item.element.style.left = '10px';
+                    item.element.style.top = (i * h + 5) + 'px';
+                    syncUpdate(item);
+                });
+            } else if (type === 'scatter') {
+                items.forEach(item => {
+                    item.element.style.width = '200px';
+                    item.element.style.height = 'auto'; // keep aspect ratio roughly
+                    item.element.style.left = (Math.random() * (canvasW - 200)) + 'px';
+                    item.element.style.top = (Math.random() * (canvasH - 200)) + 'px';
+                    syncUpdate(item);
+                });
+            }
+        }
+
+        // --- SAVING ---
+        function saveCollage() {
+            // Simple render to canvas approach
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = canvas.offsetWidth;
+            exportCanvas.height = canvas.offsetHeight;
+            const ctx = exportCanvas.getContext('2d');
+
+            // Draw Background
+            ctx.fillStyle = canvas.style.backgroundColor || '#ffffff';
+            ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+            // Sort items by z-index
+            const sortedItems = [...items].sort((a, b) => {
+                return parseInt(a.element.style.zIndex) - parseInt(b.element.style.zIndex);
+            });
+
+            // Draw images
+            sortedItems.forEach(item => {
+                const img = item.element.querySelector('img');
+                const x = parseFloat(item.element.style.left);
+                const y = parseFloat(item.element.style.top);
+                const w = parseFloat(item.element.style.width);
+                const h = parseFloat(item.element.style.height);
+                ctx.drawImage(img, x, y, w, h);
+            });
+
+            const link = document.createElement('a');
+            link.download = 'AeroCollage.png';
+            link.href = exportCanvas.toDataURL();
+            link.click();
+        }
+
+        function clearCollage() {
+            if(confirm("Biztos törölsz mindent?")) {
+                canvas.innerHTML = '';
+                items = [];
+                if(p2pHost) broadcast({type: 'clear'});
+            }
+        }
+
+        // --- P2P SYNC ---
+        let peer, conn, p2pHost = false;
+        let currentUser = null;
+
+        function login() {
+            currentUser = document.getElementById('username').value;
+            if(!currentUser) return;
+            document.getElementById('user-btn').innerText = currentUser;
+            document.getElementById('loginModal').style.display = 'none';
+        }
+        function openLoginModal() { document.getElementById('loginModal').style.display='flex'; }
+
+        function startHost() {
+            if(!currentUser) { openLoginModal(); return; }
+            p2pHost = true;
+            initPeer(document.getElementById('channel-select').value);
+        }
+        function joinGuest() {
+            if(!currentUser) { openLoginModal(); return; }
+            p2pHost = false;
+            initPeer(null);
+        }
+
+        function initPeer(id) {
+            peer = new Peer(id);
+            peer.on('open', () => {
+                document.getElementById('p2p-controls').style.display='none';
+                document.getElementById('p2p-status').style.display='block';
+                if(!p2pHost) {
+                    conn = peer.connect(document.getElementById('channel-select').value);
+                    setupConn(conn);
+                }
+            });
+            peer.on('connection', (c) => {
+                setupConn(c);
+                // Send current state to new guest
+                setTimeout(() => {
+                    items.forEach(i => {
+                        c.send({
+                            type: 'create',
+                            id: i.id, src: i.src,
+                            x: parseFloat(i.element.style.left),
+                            y: parseFloat(i.element.style.top),
+                            w: parseFloat(i.element.style.width),
+                            h: parseFloat(i.element.style.height),
+                            z: parseInt(i.element.style.zIndex)
+                        });
+                    });
+                }, 1000);
+            });
+        }
+
+        function setupConn(c) {
+            c.on('data', (data) => {
+                if(data.type === 'create') {
+                    // Check if exists
+                    if(!items.find(i => i.id === data.id)) {
+                        createCollageItem(data.src, data);
+                    }
+                } else if(data.type === 'update') {
+                    const item = items.find(i => i.id === data.id);
+                    if(item) {
+                        item.element.style.left = data.x + 'px';
+                        item.element.style.top = data.y + 'px';
+                        item.element.style.width = data.w + 'px';
+                        item.element.style.height = data.h + 'px';
+                        item.element.style.zIndex = data.z;
+                    }
+                } else if(data.type === 'delete') {
+                    const index = items.findIndex(i => i.id === data.id);
+                    if(index > -1) {
+                        items[index].element.remove();
+                        items.splice(index, 1);
+                    }
+                } else if(data.type === 'bg_change') {
+                    canvas.style.backgroundColor = data.color;
+                    document.getElementById('canvas-bg').value = data.color;
+                } else if(data.type === 'clear') {
+                    canvas.innerHTML = '';
+                    items = [];
+                }
+                
+                // If Host, relay to others (simple star topology logic omitted for brevity, assuming simple Host-Guest or Full Mesh need)
+            });
+        }
+
+        function syncCreate(id, src, x, y, w, h, z) {
+            if(peer) broadcast({ type: 'create', id, src, x, y, w, h, z });
+        }
+        function syncUpdate(item) {
+            if(peer) broadcast({
+                type: 'update',
+                id: item.id,
+                x: parseFloat(item.element.style.left),
+                y: parseFloat(item.element.style.top),
+                w: parseFloat(item.element.style.width),
+                h: parseFloat(item.element.style.height),
+                z: parseInt(item.element.style.zIndex)
+            });
+        }
+        function syncDelete(id) {
+            if(peer) broadcast({ type: 'delete', id });
+        }
+        function broadcast(msg) {
+            if(p2pHost) {
+                // Iterate connections? PeerJS handles basic connection array?
+                // For simplicity in this snippets:
+                for(let conId in peer.connections) {
+                    peer.connections[conId].forEach(c => c.send(msg));
+                }
+            } else if(conn) {
+                conn.send(msg);
+            }
+        }
+        function disconnectP2P() {
+            if(peer) peer.destroy();
+            location.reload();
+        }
+
+        // --- DRIVE SAVING (Placeholder/Structure from prev code) ---
+        const CLIENT_ID = '138100233309-v575n23j2b6pdek9t9clvkg3immlkrdi.apps.googleusercontent.com'; 
+        const API_KEY = 'AIzaSyAfC2viqoOsVVjcShnqY2rrRsxdV7WHMEg'; 
+        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+        let gapiInited=false, gisInited=false, tokenClient;
+        function gapiLoaded(){gapi.load('client',async()=>{await gapi.client.init({apiKey:API_KEY,discoveryDocs:[DISCOVERY_DOC]});gapiInited=true;});}
+        function gisLoaded(){tokenClient=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPES,callback:(r)=>{}});gisInited=true;}
+
+        async function handleDriveSave() {
+            if(!currentUser) { alert("Jelentkezz be!"); return; }
+            if(!gapiInited || !gisInited) return;
+            // Need token
+            tokenClient.callback = async (resp) => {
+                if(resp.error) return;
+                // Render Canvas
+                const exportCanvas = document.createElement('canvas');
+                exportCanvas.width = canvas.offsetWidth; exportCanvas.height = canvas.offsetHeight;
+                const ctx = exportCanvas.getContext('2d');
+                ctx.fillStyle = canvas.style.backgroundColor || '#ffffff'; ctx.fillRect(0,0,exportCanvas.width,exportCanvas.height);
+                [...items].sort((a,b)=>parseInt(a.element.style.zIndex)-parseInt(b.element.style.zIndex)).forEach(item=>{
+                    ctx.drawImage(item.element.querySelector('img'), parseFloat(item.element.style.left), parseFloat(item.element.style.top), parseFloat(item.element.style.width), parseFloat(item.element.style.height));
+                });
+                
+                exportCanvas.toBlob(async blob => {
+                    const meta = {'name':`AeroCollage_${Date.now()}.png`, 'mimeType':'image/png'};
+                    const form = new FormData();
+                    form.append('metadata', new Blob([JSON.stringify(meta)],{type:'application/json'}));
+                    form.append('file', blob);
+                    await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                        method:'POST', headers: new Headers({'Authorization': 'Bearer '+gapi.client.getToken().access_token}), body: form
+                    });
+                    alert("Mentve Drive-ra!");
+                });
+            };
+            tokenClient.requestAccessToken({prompt: ''});
+        }
+    </script>
+</body>
+</html>
