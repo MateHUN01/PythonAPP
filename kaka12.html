@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroCode PRO v13.5 - Chat Bubbles</title>
+    <title>AeroCode PRO v13.6 - Synced Physics & Color Mgr</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
@@ -226,7 +226,7 @@
             border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0,0,0,0.3); 
         }
 
-        /* --- CHAT STYLES (ÚJ) --- */
+        /* --- CHAT STYLES --- */
         .chat-wrapper {
             flex: 1; display: flex; flex-direction: column;
             background-color: var(--output-bg); border-radius: 16px;
@@ -275,9 +275,8 @@
         /* --- AVATAR LAYER --- */
         #avatar-layer {
             position: absolute; top: 0; left: 0;
-            /* width/heightet a JS állítja be dinamikusan */
-            pointer-events: none; /* Átengedi a kattintást a kódra, hacsak nem drag-elünk */
-            z-index: 50; /* A Kód (1) felett */
+            pointer-events: none; 
+            z-index: 50; 
         }
         
     </style>
@@ -364,16 +363,14 @@
             
             <div id="live-indicator">● LIVE</div>
             <textarea id="code-editor">
-# AeroCode PRO v13.5
-# Teamwork Edition - Chat Bubbles!
+# AeroCode PRO v13.6
+# Teamwork Edition - SYNCED PHYSICS
 #
-# 1. Jelentkezz be és csatlakozz (P2P).
-# 2. Írj valamit a jobb oldali CHAT panelbe.
-# 3. Nyomj ENTER-t!
-# 4. A karaktered feje felett megjelenik az üzenet!
-# 5. 15 másodperc múlva eltűnik.
+# 1. Host & Join.
+# 2. Ütközz a másik játékossal! Most már mindkét képernyőn ellökitek egymást!
+# 3. Nincs többé azonos színű karakter.
 
-print("Hello Chat!")
+print("Hello Team!")
             </textarea>
         </div>
 
@@ -459,7 +456,7 @@ print("Hello Chat!")
         let gapiInited = false;
         let gisInited = false;
 
-        const AVATAR_COLORS = ['#ff0055', '#00f2ff', '#00ff44', '#ffcc00', '#aa00ff', '#ffffff'];
+        const AVATAR_COLORS_POOL = ['#ff0055', '#00f2ff', '#00ff44', '#ffcc00', '#aa00ff', '#ffffff'];
         let avatars = {}; 
         let myAvatar = { x: 150, y: 150, vx: 0, vy: 0, color: '#00f2ff', name: 'User', radius: 15, msg: null, msgExpires: 0 };
         let isDraggingAvatar = false;
@@ -502,7 +499,8 @@ print("Hello Chat!")
             currentUser = name;
             localStorage.setItem('saved_username', name);
             myAvatar.name = name;
-            myAvatar.color = AVATAR_COLORS[Math.floor(Math.random()*AVATAR_COLORS.length)];
+            // Színválasztás majd P2P-nél, vagy alap random
+            myAvatar.color = AVATAR_COLORS_POOL[Math.floor(Math.random()*AVATAR_COLORS_POOL.length)];
             
             logSystem(`Sikeres bejelentkezés: ${name}!`);
 
@@ -513,7 +511,7 @@ print("Hello Chat!")
             } catch(e) {}
         }
 
-        // --- 4. AVATAR & GRAPHICS SYSTEM (With Chat Bubbles) ---
+        // --- 4. AVATAR & GRAPHICS SYSTEM (SYNCED PHYSICS) ---
         const avCanvas = document.getElementById('avatar-layer');
         const avCtx = avCanvas.getContext('2d');
         const editorContainer = document.querySelector('.editor-container');
@@ -538,16 +536,17 @@ print("Hello Chat!")
             avCtx.clearRect(0, 0, avCanvas.width, avCanvas.height);
             
             if(currentUser) {
-                // BOUNDARY & COLLISION
                 const r = myAvatar.radius;
                 const width = avCanvas.width;
                 const height = avCanvas.height;
 
+                // Falak
                 if (myAvatar.x < r) { myAvatar.x = r; myAvatar.vx *= -0.5; }
                 if (myAvatar.x > width - r) { myAvatar.x = width - r; myAvatar.vx *= -0.5; }
                 if (myAvatar.y < r) { myAvatar.y = r; myAvatar.vy *= -0.5; }
                 if (myAvatar.y > height - r) { myAvatar.y = height - r; myAvatar.vy *= -0.5; }
 
+                // ÜTKÖZÉS & SZINKRONIZÁCIÓ
                 for (let id in avatars) {
                     let other = avatars[id];
                     let dx = myAvatar.x - other.x;
@@ -558,12 +557,23 @@ print("Hello Chat!")
                     if (dist < minDist) {
                         let angle = Math.atan2(dy, dx);
                         let force = 2.0; 
-                        myAvatar.vx += Math.cos(angle) * force;
-                        myAvatar.vy += Math.sin(angle) * force;
+                        
+                        // 1. Saját magam ellökése (vizuális + fizika)
+                        let pushX = Math.cos(angle) * force;
+                        let pushY = Math.sin(angle) * force;
+                        myAvatar.vx += pushX;
+                        myAvatar.vy += pushY;
+
+                        // 2. Szétválasztás
                         let overlap = minDist - dist;
                         myAvatar.x += Math.cos(angle) * overlap * 0.5;
                         myAvatar.y += Math.sin(angle) * overlap * 0.5;
+                        
                         spawnParticle(myAvatar.x, myAvatar.y, '#ffffff');
+
+                        // 3. ÜZENET KÜLDÉSE A MÁSIKNAK: "Löklek!"
+                        // -pushX, -pushY mert az ellentétes irányba lököm őt
+                        broadcastImpulse(id, -pushX, -pushY);
                     }
                 }
 
@@ -597,7 +607,6 @@ print("Hello Chat!")
         function drawAvatar(av, isSelf) {
             av.vx *= 0.9; av.vy *= 0.9; 
 
-            // Test
             avCtx.beginPath();
             avCtx.arc(av.x, av.y, 15, 0, Math.PI * 2);
             avCtx.fillStyle = av.color;
@@ -605,7 +614,6 @@ print("Hello Chat!")
             avCtx.fill();
             avCtx.shadowBlur = 0;
 
-            // Szemek
             let lookX = (av.vx || 0) * 1.5;
             let lookY = (av.vy || 0) * 1.5;
             const maxLook = 6;
@@ -620,7 +628,6 @@ print("Hello Chat!")
             avCtx.beginPath(); avCtx.arc(av.x - 5 + lookX*1.2, av.y - 4 + lookY*1.2, 2, 0, Math.PI*2); avCtx.fill();
             avCtx.beginPath(); avCtx.arc(av.x + 5 + lookX*1.2, av.y - 4 + lookY*1.2, 2, 0, Math.PI*2); avCtx.fill();
 
-            // Név
             avCtx.fillStyle = '#fff';
             avCtx.font = "bold 10px Inter";
             avCtx.textAlign = "center";
@@ -630,7 +637,6 @@ print("Hello Chat!")
                 avCtx.strokeStyle = 'white'; avCtx.lineWidth = 2; avCtx.stroke(); 
             }
 
-            // CHAT BUBORÉK RAJZOLÁSA (ÚJ)
             if(av.msg && av.msgExpires > Date.now()) {
                 const text = av.msg;
                 avCtx.font = "12px Inter";
@@ -641,25 +647,21 @@ print("Hello Chat!")
                 const bubbleX = av.x - bubbleW / 2;
                 const bubbleY = av.y - 50;
 
-                // Buborék háttér
                 avCtx.fillStyle = "white";
                 avCtx.strokeStyle = "black";
                 avCtx.lineWidth = 1;
                 
-                // Lekerekített téglalap (egyszerűsítve)
                 avCtx.beginPath();
                 avCtx.roundRect(bubbleX, bubbleY, bubbleW, bubbleH, 10);
                 avCtx.fill();
                 avCtx.stroke();
 
-                // Kis "tüske" alul
                 avCtx.beginPath();
-                avCtx.moveTo(av.x, av.y - 24); // Karakter feje
+                avCtx.moveTo(av.x, av.y - 24); 
                 avCtx.lineTo(av.x - 5, bubbleY + bubbleH);
                 avCtx.lineTo(av.x + 5, bubbleY + bubbleH);
                 avCtx.fill();
 
-                // Szöveg
                 avCtx.fillStyle = "black";
                 avCtx.fillText(text, av.x, bubbleY + 17);
             }
@@ -712,18 +714,10 @@ print("Hello Chat!")
         function sendChatMessage() {
             const text = chatInput.value.trim();
             if(!text || !currentUser) return;
-
-            // 1. Saját buborék beállítása
             myAvatar.msg = text;
-            myAvatar.msgExpires = Date.now() + 15000; // 15 másodperc
-
-            // 2. Naplóba írás
+            myAvatar.msgExpires = Date.now() + 15000; 
             addChatLog(currentUser, text);
-
-            // 3. P2P Küldés
             broadcastChatMessage(text);
-
-            // 4. Input törlés
             chatInput.value = "";
         }
 
@@ -974,6 +968,9 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         let isHost = false;
         let connectedUsers = []; 
         let maxParticipants = 3;
+        
+        // UNIQUE COLOR MANAGEMENT
+        const usedColors = new Set(); // Csak host használja
 
         const ROOM_MAPPING = {
             "1": "aerocode_pro_v11_secure_channel_alpha_92837465_student_access_key_x99_unique_hash_a1",
@@ -1004,6 +1001,23 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             });
         }
 
+        // ÚJ: LÖKÉS KÜLDÉSE (Impulse Sync)
+        function broadcastImpulse(targetId, vx, vy) {
+            if(isHost) {
+                // Ha Host vagyok, közvetlenül küldöm a célnak (vagy magamnak ha én vagyok a cél?)
+                // Ha én vagyok a host és ellöktek, akkor helyben alkalmazom? Nem, itt én lökök mást.
+                
+                // Megkeressük a célt a connectedUsers-ben
+                const target = connectedUsers.find(u => u.id === targetId);
+                if(target && target.conn.open) {
+                    target.conn.send({ type: 'force_push', vx: vx, vy: vy });
+                }
+            } else if(conn && conn.open) {
+                // Guest vagyok, küldöm a Hostnak, hogy "Lökd meg X-et"
+                conn.send({ type: 'request_push', targetId: targetId, vx: vx, vy: vy });
+            }
+        }
+
         function startAsHost() {
             if (!currentUser) { openLoginModal(); document.getElementById('login-warning').style.display='block'; return; }
             if (peer) { alert("Már kapcsolódtál!"); return; }
@@ -1011,8 +1025,12 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             isHost = true;
             connectedUsers = [];
             avatars = {}; 
+            usedColors.clear();
             
-            myAvatar.name = currentUser; 
+            myAvatar.name = currentUser;
+            // Host választ magának színt
+            myAvatar.color = AVATAR_COLORS_POOL[0];
+            usedColors.add(myAvatar.color);
             
             maxParticipants = parseInt(document.getElementById('room-size-limit').value) || 3;
             const roomId = ROOM_MAPPING[document.getElementById('channel-select').value];
@@ -1041,8 +1059,19 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                         const newUser = { id: connection.peer, conn: connection, username: data.username };
                         connectedUsers.push(newUser);
                         logP2P(`${data.username} csatlakozott.`);
-                        avatars[connection.peer] = { x: 200, y: 200, vx:0, vy:0, name: data.username, color: data.color || '#fff' };
-                        connection.send({ type: 'code_update', content: editor.getValue() });
+                        
+                        // UNIQUE COLOR ASSIGNMENT
+                        let assignedColor = '#ffffff';
+                        for(let c of AVATAR_COLORS_POOL) {
+                            if(!usedColors.has(c)) { assignedColor = c; break; }
+                        }
+                        usedColors.add(assignedColor);
+
+                        avatars[connection.peer] = { x: 200, y: 200, vx:0, vy:0, name: data.username, color: assignedColor };
+                        
+                        // Visszaküldjük a színét
+                        connection.send({ type: 'init_data', color: assignedColor, code: editor.getValue() });
+                        
                         broadcastUserList(); updateActiveUsersUI(); broadcastAvatarList(); 
                     }
                     else if(data.type === 'code_update') {
@@ -1057,19 +1086,31 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                         }
                     }
                     else if(data.type === 'chat_message') {
-                        // CHAT FOGADÁS
                         if(avatars[connection.peer]) {
                             avatars[connection.peer].msg = data.text;
                             avatars[connection.peer].msgExpires = Date.now() + 15000;
                             addChatLog(avatars[connection.peer].name, data.text);
-                            // Továbbküldés
                             broadcastChatMessage(data.text, connection.peer);
+                        }
+                    }
+                    else if(data.type === 'request_push') {
+                        // A Guest kéri, hogy lökjünk meg valakit
+                        if(data.targetId === 'HOST') {
+                            myAvatar.vx += data.vx; myAvatar.vy += data.vy; // Engem löktek
+                        } else {
+                            broadcastImpulse(data.targetId, data.vx, data.vy); // Mást löktek
                         }
                     }
                 });
                 connection.on('close', () => {
                     const u = connectedUsers.find(user => user.id === connection.peer);
-                    if(u) { logP2P(`${u.username} kilépett.`); connectedUsers = connectedUsers.filter(user => user.id !== connection.peer); delete avatars[connection.peer]; broadcastUserList(); updateActiveUsersUI(); broadcastAvatarList(); }
+                    if(u) { 
+                        logP2P(`${u.username} kilépett.`); 
+                        if(avatars[connection.peer]) usedColors.delete(avatars[connection.peer].color); // Szín felszabadítása
+                        connectedUsers = connectedUsers.filter(user => user.id !== connection.peer); 
+                        delete avatars[connection.peer]; 
+                        broadcastUserList(); updateActiveUsersUI(); broadcastAvatarList(); 
+                    }
                 });
             });
             peer.on('error', (err) => {
@@ -1093,7 +1134,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             peer.on('open', (id) => {
                 conn = peer.connect(roomId);
                 conn.on('open', () => {
-                    conn.send({ type: 'handshake', username: currentUser, color: myAvatar.color });
+                    conn.send({ type: 'handshake', username: currentUser });
                     document.getElementById('connect-ui').style.display = 'none';
                     document.getElementById('disconnect-ui').style.display = 'block';
                     document.getElementById('live-indicator').style.display = 'block';
@@ -1101,7 +1142,12 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                     logP2P("Csatlakozva a szobához."); updateActiveUsersUI(); 
                 });
                 conn.on('data', (data) => {
-                    if(data.type === 'code_update') { if (editor.getValue() !== data.content) { isSyncing = true; const cursor = editor.getCursor(); editor.setValue(data.content); editor.setCursor(cursor); isSyncing = false; } }
+                    if(data.type === 'init_data') {
+                        // Host kiosztotta a színemet
+                        myAvatar.color = data.color;
+                        if (editor.getValue() !== data.code) { isSyncing = true; editor.setValue(data.code); isSyncing = false; }
+                    }
+                    else if(data.type === 'code_update') { if (editor.getValue() !== data.content) { isSyncing = true; const cursor = editor.getCursor(); editor.setValue(data.content); editor.setCursor(cursor); isSyncing = false; } }
                     else if (data.type === 'user_list') { connectedUsers = data.users; updateActiveUsersUI(); }
                     else if (data.type === 'avatar_list') { const newAvatars = data.avatars; delete newAvatars[peer.id]; avatars = newAvatars; }
                     else if (data.type === 'avatar_move') {
@@ -1109,16 +1155,23 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                             if(!avatars[data.peerId]) avatars[data.peerId] = { x: data.x, y: data.y, color: '#fff', name: '?', vx:0, vy:0 };
                             avatars[data.peerId].x = data.x; avatars[data.peerId].y = data.y; avatars[data.peerId].vx = data.vx; avatars[data.peerId].vy = data.vy;
                         }
-                    } else if (data.type === 'chat_message') {
+                    } 
+                    else if(data.type === 'force_push') {
+                        // MEGLÖKTEK! Alkalmazom az erőt.
+                        myAvatar.vx += data.vx;
+                        myAvatar.vy += data.vy;
+                        broadcastAvatarMove(); // Jelzem, hogy elmozdultam
+                    }
+                    else if (data.type === 'chat_message') {
                         if(data.peerId && avatars[data.peerId]) {
                             avatars[data.peerId].msg = data.text;
                             avatars[data.peerId].msgExpires = Date.now() + 15000;
                             addChatLog(avatars[data.peerId].name, data.text);
-                        } else if(data.peerId === 'HOST') { // Ha a hosttól jön
-                             // Hostnak nincs külön ID-je a listában, ezért ezt kezelni kell
-                             // Egyszerűsítés: Host avatárját a lista szinkronizálja
+                        } else if(data.peerId === 'HOST') { 
+                             // Host üzenet kezelése, ha nincs a listában (itt egyszerűsítve)
                         }
-                    } else if (data.type === 'kick') { alert("Kirúgtak."); disconnectPeer(); }
+                    }
+                    else if (data.type === 'kick') { alert("Kirúgtak."); disconnectPeer(); }
                     else if (data.type === 'error') { alert(data.message); disconnectPeer(); }
                 });
                 conn.on('close', () => { resetP2PUI(); alert("Megszakadt a kapcsolat."); });
@@ -1131,10 +1184,9 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         
         function broadcastChatMessage(text, senderIdToExclude) {
             if(isHost) {
-                const data = { type: 'chat_message', text: text, peerId: 'HOST' }; // Default host
+                const data = { type: 'chat_message', text: text, peerId: 'HOST' }; 
                 connectedUsers.forEach(u => { 
                     if(u.id !== senderIdToExclude && u.conn.open) { 
-                        // Ha továbbítunk, akkor az eredeti ID kell, ha host ír, akkor HOST
                         const finalData = senderIdToExclude ? { type: 'chat_message', text: text, peerId: senderIdToExclude } : data;
                         u.conn.send(finalData); 
                     } 
@@ -1155,7 +1207,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         function broadcastUserList() { if(!isHost) return; const safeList = connectedUsers.map(u => ({ id: u.id, username: u.username })); safeList.unshift({ id: 'HOST', username: currentUser + " (HOST)" }); connectedUsers.forEach(u => { if(u.conn.open) { u.conn.send({ type: 'user_list', users: safeList }); } }); }
         function kickUser(peerId) { if(!isHost) return; const target = connectedUsers.find(u => u.id === peerId); if(target) { if(target.conn.open) target.conn.send({ type: 'kick' }); setTimeout(() => { target.conn.close(); }, 100); } }
         function disconnectPeer() { if (isHost) { connectedUsers.forEach(u => { if(u.conn.open) u.conn.close(); }); } else { if(conn) conn.close(); } if(peer) peer.destroy(); resetP2PUI(); logSystem("Szétkapcsolva."); }
-        function resetP2PUI() { conn = null; peer = null; isHost = false; connectedUsers = []; avatars = {}; document.getElementById('connect-ui').style.display = 'block'; document.getElementById('disconnect-ui').style.display = 'none'; document.getElementById('live-indicator').style.display = 'none'; document.getElementById('active-users-list').innerHTML = ""; updateP2PLog("Offline"); document.getElementById('p2p-log').style.color = "#888"; }
+        function resetP2PUI() { conn = null; peer = null; isHost = false; connectedUsers = []; avatars = {}; usedColors.clear(); document.getElementById('connect-ui').style.display = 'block'; document.getElementById('disconnect-ui').style.display = 'none'; document.getElementById('live-indicator').style.display = 'none'; document.getElementById('active-users-list').innerHTML = ""; updateP2PLog("Offline"); document.getElementById('p2p-log').style.color = "#888"; }
         function updateP2PLog(msg) { document.getElementById('p2p-log').innerText = msg; }
 
         editor.on('change', (cm, change) => { if (!isSyncing) { if (isHost) { broadcastCode(editor.getValue(), null); } else if (conn && conn.open) { conn.send({ type: 'code_update', content: editor.getValue() }); } } });
