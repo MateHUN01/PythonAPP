@@ -3,14 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroCollage PRO - HD Crop Edition</title>
+    <title>AeroCollage PRO - P2P Collage Maker</title>
     
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -68,23 +65,24 @@
             user-select: none;
             border: 2px solid transparent;
             transition: border 0.1s;
+            /* Flex center a képhez */
             display: flex; justify-content: center; align-items: center;
-            overflow: hidden; /* Ez biztosítja a vágást vizuálisan */
+            overflow: hidden; /* Crop határok */
         }
         
         .collage-item.selected {
             border: 2px solid var(--accent-color);
-            z-index: 1000 !important;
+            z-index: 1000 !important; 
         }
 
         .collage-item img {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* Ez tartja meg az arányokat a dobozban */
-            pointer-events: none;
+            object-fit: cover; /* EZ BIZTOSÍTJA A TORZÍTÁSMENTESSÉGET (CROP) */
+            pointer-events: none; 
         }
 
-        /* Resize Handle */
+        /* Resize Handle (Jobb alsó sarok) */
         .resize-handle {
             width: 12px; height: 12px;
             background: var(--accent-color);
@@ -94,14 +92,14 @@
             border-radius: 50%;
             display: none;
             border: 1px solid white;
-            z-index: 10;
+            z-index: 2001;
         }
         .collage-item.selected .resize-handle { display: block; }
 
         /* --- MINI HUD (Réteg vezérlő + Crop) --- */
         .mini-hud {
             position: absolute;
-            top: -45px;
+            top: -50px; /* Kicsit feljebb, mert több gomb lett */
             left: 50%;
             transform: translateX(-50%);
             background: var(--glass-bg);
@@ -109,19 +107,23 @@
             padding: 5px;
             border-radius: 8px;
             border: 1px solid var(--glass-border);
-            display: none;
+            display: none; 
             gap: 5px;
             z-index: 2000;
             white-space: nowrap;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
         .collage-item.selected .mini-hud { display: flex; }
 
         .hud-btn {
             background: transparent; border: none; color: white;
-            cursor: pointer; width: 24px; height: 24px;
+            cursor: pointer; width: 28px; height: 28px;
             border-radius: 4px; display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
         }
         .hud-btn:hover { background: rgba(255,255,255,0.2); }
+        .hud-divider { width:1px; height:18px; background:rgba(255,255,255,0.2); margin:0 2px; align-self:center; }
+
 
         /* --- UI PANELEK --- */
         .floating-panel {
@@ -146,49 +148,47 @@
 
         input[type="file"] { display: none; }
 
-        /* --- CROP MODAL STYLES (ÚJ) --- */
-        #crop-modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); z-index: 10000; flex-direction: column;
-        }
-        .crop-container { flex: 1; padding: 20px; display: flex; justify-content: center; align-items: center; overflow: hidden; }
-        .crop-controls {
-            height: 80px; background: #222; display: flex; align-items: center; justify-content: center; gap: 20px; border-top: 1px solid #444;
-        }
-        .crop-btn {
-            background: #333; color: #ddd; border: 1px solid #555; padding: 8px 15px;
-            border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;
-        }
-        .crop-btn.active { background: var(--accent-color); border-color: var(--accent-color); color: white; }
-        .crop-btn.action { background: var(--accent-color); border: none; color: white; }
-        #image-to-crop { max-width: 100%; max-height: 80vh; display: block; }
-
-        /* --- HEADER & ELEMENTS --- */
+        /* --- HEADER --- */
         .header-wrapper { position: fixed; top: 25px; left: 0; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; z-index: 1000; pointer-events: none; }
         .glass-bubble { pointer-events: auto; background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)); border: 1px solid var(--glass-border); border-radius: 100px; padding: 6px 15px; display: flex; align-items: center; gap: 10px; }
         .app-title { font-weight: 700; font-size: 14px; color: var(--text-color); display: flex; align-items: center; gap: 8px; }
+        
         .icon-btn { background: transparent; border: none; color: var(--text-color); width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .icon-btn:hover { background: var(--btn-hover); }
+
         #user-btn { cursor: pointer; font-size:12px; opacity:0.8; margin-right:5px; padding: 6px 12px; border-radius: 20px; background: rgba(255,255,255,0.05); }
 
+        /* P2P & Modal styles */
         .dropdown { position: relative; display: inline-block; }
         .dropdown-content { opacity: 0; visibility: hidden; position: absolute; right: 0; top: 45px; background: var(--glass-bg); backdrop-filter: blur(20px); min-width: 250px; border-radius: 12px; border: 1px solid var(--glass-border); padding: 10px; transition: 0.2s; transform: translateY(-10px); }
         .dropdown:hover .dropdown-content { opacity: 1; visibility: visible; transform: translateY(0); }
         
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
-        .modal { background: #222; padding: 20px; border-radius: 12px; width: 300px; border: 1px solid #444; }
-        .modal input { width: 100%; padding: 10px; background: #333; border: 1px solid #444; color: white; margin-bottom: 10px; border-radius: 4px; }
-        .modal button { padding: 8px 16px; background: var(--accent-color); color: white; border: none; border-radius: 4px; cursor: pointer; float: right; }
+        .modal { background: #222; padding: 20px; border-radius: 12px; width: 300px; border: 1px solid #444; color: #fff; }
+        .modal h3 { margin-top: 0; font-weight: 600; }
+        .modal input, .modal select { width: 100%; padding: 10px; background: #333; border: 1px solid #444; color: white; margin-bottom: 10px; border-radius: 4px; }
+        .modal button { padding: 8px 16px; background: var(--accent-color); color: white; border: none; border-radius: 4px; cursor: pointer; float: right; margin-left: 10px; }
+        .modal button.secondary { background: transparent; border: 1px solid #555; }
 
-        select.settings-select { width: 100%; padding: 8px; background: rgba(255,255,255,0.1); color: white; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; outline: none; }
-        select.settings-select option { background: #222; color: white; }
+        /* Export Options Styling */
+        .export-option { display:block; margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 6px; cursor: pointer; border:1px solid transparent; }
+        .export-option:hover { border-color: var(--accent-color); }
+        .export-option.active { background: rgba(33, 150, 243, 0.2); border-color: var(--accent-color); }
 
+        /* Toast Notification */
+        .toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 10001; }
+        .toast { background: rgba(33, 150, 243, 0.9); backdrop-filter: blur(10px); color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); font-size: 13px; animation: slideIn 0.3s ease-out; display: flex; align-items: center; gap: 10px; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Loading */
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 10000; display: none; justify-content: center; align-items: center; color: var(--accent-color); }
+        .user-chip { background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 15px; font-size: 11px; margin-top:5px; display:flex; justify-content:space-between; }
     </style>
 </head>
 <body>
 
     <div id="loading-overlay">Feldolgozás...</div>
+    <div class="toast-container" id="toast-area"></div>
 
     <div class="header-wrapper">
         <div class="glass-bubble">
@@ -197,12 +197,13 @@
                 AeroCollage PRO
             </div>
             <div style="width:1px; height:20px; background:rgba(255,255,255,0.2); margin:0 5px;"></div>
-            <button class="icon-btn" onclick="saveCollage()" title="Exportálás"><span class="material-icons">download</span></button>
-            <button class="icon-btn" onclick="clearCollage()" title="Törlés"><span class="material-icons">delete_sweep</span></button>
+            <button class="icon-btn" onclick="openExportModal()" title="Mentés beállításokkal"><span class="material-icons">download</span></button>
+            <button class="icon-btn" onclick="clearCollage()" title="Összes törlése"><span class="material-icons">delete_sweep</span></button>
         </div>
 
         <div class="glass-bubble">
             <div id="user-btn" onclick="openLoginModal()">Belépés</div>
+            
             <div class="dropdown">
                 <button class="icon-btn" title="Közös Munka"><span class="material-icons">group</span></button>
                 <div class="dropdown-content">
@@ -219,14 +220,16 @@
                     </div>
                     <div id="p2p-status" style="display:none;">
                         <div style="color:#4CAF50; font-size:12px; margin-bottom:5px;">● Kapcsolódva</div>
+                        <div id="user-list"></div>
                         <button onclick="disconnectP2P()" style="width:100%; padding:5px; background:#f44336; border:none; color:white; border-radius:4px; cursor:pointer; margin-top:5px;">Kilépés</button>
                     </div>
                 </div>
             </div>
+
             <div class="dropdown">
                 <button class="icon-btn" title="Felhő"><span class="material-icons">cloud</span></button>
                 <div class="dropdown-content">
-                    <a href="#" onclick="handleDriveSave()" style="display:block; padding:8px; color:#e0e0e0; text-decoration:none;"><span class="material-icons" style="font-size:14px; vertical-align:middle">save</span> Mentés Drive-ra (HD)</a>
+                    <a href="#" onclick="handleDriveSave()" style="display:block; padding:8px; color:#e0e0e0; text-decoration:none;"><span class="material-icons" style="font-size:14px; vertical-align:middle">save</span> Mentés Drive-ra</a>
                 </div>
             </div>
         </div>
@@ -243,78 +246,96 @@
 
             <div style="height:10px;"></div>
 
-            <div class="section-title">Sablonok</div>
+            <div class="section-title">Sablonok (Auto)</div>
             <div class="tool-grid">
-                <button class="big-btn" onclick="applyLayout('grid')"><span class="material-icons">grid_view</span>Rács</button>
-                <button class="big-btn" onclick="applyLayout('columns')"><span class="material-icons">view_column</span>Oszlop</button>
-                <button class="big-btn" onclick="applyLayout('scatter')"><span class="material-icons">grain</span>Szórt</button>
-                <button class="big-btn" onclick="applyLayout('rows')"><span class="material-icons">table_rows</span>Sorok</button>
+                <button class="big-btn" onclick="applyLayout('grid')">
+                    <span class="material-icons">grid_view</span>
+                    Rács
+                </button>
+                <button class="big-btn" onclick="applyLayout('columns')">
+                    <span class="material-icons">view_column</span>
+                    Oszlopok
+                </button>
+                <button class="big-btn" onclick="applyLayout('scatter')">
+                    <span class="material-icons">grain</span>
+                    Szórt
+                </button>
+                <button class="big-btn" onclick="applyLayout('rows')">
+                    <span class="material-icons">table_rows</span>
+                    Sorok
+                </button>
             </div>
 
             <div style="height:10px;"></div>
-            <div class="section-title">Vászon</div>
+
+            <div class="section-title">Vászon Beállítások</div>
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
                 <span style="font-size:12px;">Háttérszín:</span>
                 <input type="color" id="canvas-bg" value="#ffffff" onchange="updateCanvasBg(this.value)" style="width:30px; height:30px; border:none; padding:0; background:none;">
             </div>
-            <div class="section-title">Export Minőség (HD)</div>
-            <select id="export-quality" class="settings-select">
-                <option value="1">Normál (1x)</option>
-                <option value="2">HD (2x)</option>
-                <option value="4">Ultra (4x)</option>
-            </select>
+            
         </div>
 
         <div id="collage-area" onmousedown="deselectAll(event)">
-            <div id="collage-canvas"></div>
-        </div>
-    </div>
-
-    <div id="crop-modal">
-        <div class="crop-container">
-            <img id="image-to-crop" src="">
-        </div>
-        <div class="crop-controls">
-            <button class="crop-btn active" onclick="setCropRatio(NaN, this)">Free (Szabad)</button>
-            <button class="crop-btn" onclick="setCropRatio(1, this)">1:1 (Négyzet)</button>
-            <button class="crop-btn" onclick="setCropRatio(16/9, this)">16:9</button>
-            <div style="width:1px; height:30px; background:#555;"></div>
-            <button class="crop-btn" style="background:#444;" onclick="closeCropModal()">Mégse</button>
-            <button class="crop-btn action" onclick="applyCrop()">Kész</button>
+            <div id="collage-canvas">
+                </div>
         </div>
     </div>
 
     <div id="loginModal" class="modal-overlay">
         <div class="modal">
             <h3>Bejelentkezés</h3>
+            <p style="font-size:12px; color:#aaa; margin-bottom:10px;">Add meg a neved a közös munkához.</p>
             <input type="text" id="username" placeholder="Felhasználónév">
-            <button onclick="login()">OK</button>
-            <button onclick="document.getElementById('loginModal').style.display='none'" style="background:transparent; margin-right:10px;">Mégse</button>
+            <div style="overflow:hidden;">
+                <button onclick="login()">OK</button>
+                <button class="secondary" onclick="document.getElementById('loginModal').style.display='none'">Mégse</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="exportModal" class="modal-overlay">
+        <div class="modal">
+            <h3>Exportálás</h3>
+            <div class="export-option active" onclick="setExportQuality(1, this)">
+                <div style="font-weight:bold;">Normál (Screen)</div>
+                <div style="font-size:11px; opacity:0.7;">Gyors mentés, képernyőméret (1x)</div>
+            </div>
+            <div class="export-option" onclick="setExportQuality(3, this)">
+                <div style="font-weight:bold;">HD (Print Quality)</div>
+                <div style="font-size:11px; opacity:0.7;">Nagy felbontás, nyomtatáshoz (3x skálázás)</div>
+            </div>
+            
+            <div style="overflow:hidden; margin-top:15px;">
+                <button onclick="executeSave()">Mentés</button>
+                <button class="secondary" onclick="document.getElementById('exportModal').style.display='none'">Mégse</button>
+            </div>
         </div>
     </div>
 
     <script>
         // --- CORE VARIABLES ---
         const canvas = document.getElementById('collage-canvas');
-        let items = []; // { id, x, y, w, h, z, src, element }
+        let items = []; // { id, x, y, w, h, z, src, element, ratioLocked }
         let selectedItem = null;
         let zCounter = 1;
         let isDragging = false;
         let isResizing = false;
         let dragOffset = { x: 0, y: 0 };
-        let startSize = { w: 0, h: 0, x: 0, y: 0 };
-
-        // Crop Változók
-        let cropper = null;
-        let croppingItemId = null;
+        let startSize = { w: 0, h: 0, x: 0, y: 0 }; // Resizehez
+        
+        let exportScale = 1; // 1 = normal, 3 = HD
 
         // --- IMAGE HANDLING ---
         function handleFiles(files) {
             Array.from(files).forEach(file => {
                 const reader = new FileReader();
-                reader.onload = (e) => { createCollageItem(e.target.result); };
+                reader.onload = (e) => {
+                    createCollageItem(e.target.result);
+                };
                 reader.readAsDataURL(file);
             });
+            // Reset input
             document.getElementById('img-input').value = '';
         }
 
@@ -324,296 +345,538 @@
 
             // Create DOM structure
             const div = document.createElement('div');
-            div.className = 'collage-item'; div.id = id; div.style.zIndex = zIndex;
+            div.className = 'collage-item';
+            div.id = id;
+            div.style.zIndex = zIndex;
             
             // Image
             const img = document.createElement('img');
             img.src = src;
             img.onload = () => {
+                // Set initial size/pos if not remote
                 if (!remoteParams) {
-                    let w = img.naturalWidth, h = img.naturalHeight;
+                    // Fit to reasonable size
+                    let w = img.naturalWidth;
+                    let h = img.naturalHeight;
                     if (w > 300) { h = (300/w)*h; w = 300; }
-                    div.style.width = w + 'px'; div.style.height = h + 'px';
+                    
+                    div.style.width = w + 'px';
+                    div.style.height = h + 'px';
                     div.style.left = (Math.random() * (canvas.clientWidth - w)) + 'px';
                     div.style.top = (Math.random() * (canvas.clientHeight - h)) + 'px';
+
                     syncCreate(id, src, parseFloat(div.style.left), parseFloat(div.style.top), w, h, zIndex);
                 } else {
-                    div.style.width = remoteParams.w + 'px'; div.style.height = remoteParams.h + 'px';
-                    div.style.left = remoteParams.x + 'px'; div.style.top = remoteParams.y + 'px';
+                    div.style.width = remoteParams.w + 'px';
+                    div.style.height = remoteParams.h + 'px';
+                    div.style.left = remoteParams.x + 'px';
+                    div.style.top = remoteParams.y + 'px';
                 }
             };
 
-            const handle = document.createElement('div'); handle.className = 'resize-handle';
+            // Resize Handle
+            const handle = document.createElement('div');
+            handle.className = 'resize-handle';
             
-            // HUD (Hozzáadva a Crop gomb)
+            // Mini HUD (Bővítve Crop/Ratio gombokkal)
             const hud = document.createElement('div');
             hud.className = 'mini-hud';
             hud.innerHTML = `
                 <button class="hud-btn" onclick="changeLayer('${id}', 1)" title="Előre"><span class="material-icons" style="font-size:16px">arrow_upward</span></button>
                 <button class="hud-btn" onclick="changeLayer('${id}', -1)" title="Hátra"><span class="material-icons" style="font-size:16px">arrow_downward</span></button>
-                <div style="width:1px; height:15px; background:rgba(255,255,255,0.3); margin:0 2px;"></div>
-                <button class="hud-btn" onclick="openCropMode('${id}')" title="Vágás"><span class="material-icons" style="font-size:16px; color:#50fa7b">crop</span></button>
+                <div class="hud-divider"></div>
+                <button class="hud-btn" onclick="setAspectRatio('${id}', '1:1')" title="1:1 Kocka (Crop)"><span class="material-icons" style="font-size:16px">crop_square</span></button>
+                <button class="hud-btn" onclick="setAspectRatio('${id}', 'free')" title="Szabad Méretezés"><span class="material-icons" style="font-size:16px">crop_free</span></button>
+                <div class="hud-divider"></div>
                 <button class="hud-btn" style="color:#ff5555" onclick="deleteItem('${id}')" title="Törlés"><span class="material-icons" style="font-size:16px">delete</span></button>
             `;
 
-            div.appendChild(img); div.appendChild(handle); div.appendChild(hud);
+            div.appendChild(img);
+            div.appendChild(handle);
+            div.appendChild(hud);
             canvas.appendChild(div);
 
-            const itemObj = { id, element: div, src };
+            // Store Logic
+            const itemObj = { id, element: div, src, ratioLocked: false };
             items.push(itemObj);
 
+            // Events
             div.onmousedown = (e) => startDrag(e, itemObj);
             handle.onmousedown = (e) => startResize(e, itemObj);
         }
 
-        // --- CROP FUNCTIONALITY (ÚJ) ---
-        function openCropMode(id) {
-            croppingItemId = id;
-            const item = items.find(i => i.id === id);
-            if(!item) return;
-
-            const modal = document.getElementById('crop-modal');
-            const imgEl = document.getElementById('image-to-crop');
-            
-            // Betöltjük a képet a modalba
-            imgEl.src = item.element.querySelector('img').src;
-            modal.style.display = 'flex';
-
-            // Cropper indítása
-            if(cropper) cropper.destroy();
-            cropper = new Cropper(imgEl, {
-                viewMode: 1,
-                autoCropArea: 0.8,
-                responsive: true
-            });
-        }
-
-        function setCropRatio(ratio, btn) {
-            if(!cropper) return;
-            cropper.setAspectRatio(ratio);
-            document.querySelectorAll('.crop-btn').forEach(b => b.classList.remove('active'));
-            if(btn) btn.classList.add('active');
-        }
-
-        function closeCropModal() {
-            document.getElementById('crop-modal').style.display = 'none';
-            if(cropper) { cropper.destroy(); cropper = null; }
-            croppingItemId = null;
-        }
-
-        function applyCrop() {
-            if(!cropper || !croppingItemId) return;
-            
-            const croppedCanvas = cropper.getCroppedCanvas();
-            const newDataUrl = croppedCanvas.toDataURL('image/png');
-            
-            // Frissítjük a helyi elemet
-            const item = items.find(i => i.id === croppingItemId);
-            if(item) {
-                const img = item.element.querySelector('img');
-                img.src = newDataUrl;
-                item.src = newDataUrl; // Update stored src
-                
-                // Arányok igazítása (hogy ne torzuljon a dobozban)
-                const currentW = parseFloat(item.element.style.width);
-                const newRatio = croppedCanvas.width / croppedCanvas.height;
-                item.element.style.height = (currentW / newRatio) + 'px';
-                
-                // P2P Szinkronizálás
-                if(p2pHost) broadcast({ type: 'image_update', id: item.id, src: newDataUrl, w: currentW, h: (currentW / newRatio) });
-                else if(conn) conn.send({ type: 'image_update', id: item.id, src: newDataUrl, w: currentW, h: (currentW / newRatio) });
-            }
-            closeCropModal();
-        }
-
         // --- INTERACTION ENGINE ---
+
         function startDrag(e, item) {
             if (e.target.closest('.hud-btn') || e.target.classList.contains('resize-handle')) return;
-            e.stopPropagation(); e.preventDefault();
-            selectItem(item); isDragging = true;
+            e.stopPropagation();
+            e.preventDefault();
+            
+            selectItem(item);
+            isDragging = true;
+            
             const rect = item.element.getBoundingClientRect();
-            dragOffset.x = e.clientX - rect.left; dragOffset.y = e.clientY - rect.top;
+            // Calculate offset within the element
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
         }
+
         function startResize(e, item) {
-            e.stopPropagation(); e.preventDefault();
-            isResizing = true; selectItem(item);
-            startSize = { w: item.element.offsetWidth, h: item.element.offsetHeight, x: e.clientX, y: e.clientY };
+            e.stopPropagation();
+            e.preventDefault();
+            isResizing = true;
+            selectItem(item);
+            
+            startSize = {
+                w: item.element.offsetWidth,
+                h: item.element.offsetHeight,
+                x: e.clientX,
+                y: e.clientY
+            };
         }
+
         function selectItem(item) {
             if (selectedItem) selectedItem.element.classList.remove('selected');
-            selectedItem = item; item.element.classList.add('selected');
+            selectedItem = item;
+            item.element.classList.add('selected');
         }
+
         function deselectAll(e) {
             if (e.target.id === 'collage-area' || e.target.id === 'collage-canvas') {
                 if (selectedItem) selectedItem.element.classList.remove('selected');
                 selectedItem = null;
             }
         }
+
+        // Global Mouse Move / Up
         window.addEventListener('mousemove', (e) => {
             if (!selectedItem) return;
+
             if (isDragging) {
-                const r = canvas.getBoundingClientRect();
-                selectedItem.element.style.left = (e.clientX - r.left - dragOffset.x) + 'px';
-                selectedItem.element.style.top = (e.clientY - r.top - dragOffset.y) + 'px';
-            } else if (isResizing) {
-                const dx = e.clientX - startSize.x; const dy = e.clientY - startSize.y;
-                selectedItem.element.style.width = (startSize.w + dx) + 'px';
-                selectedItem.element.style.height = (startSize.h + dy) + 'px';
+                const canvasRect = canvas.getBoundingClientRect();
+                let newX = e.clientX - canvasRect.left - dragOffset.x;
+                let newY = e.clientY - canvasRect.top - dragOffset.y;
+
+                selectedItem.element.style.left = newX + 'px';
+                selectedItem.element.style.top = newY + 'px';
+            } 
+            else if (isResizing) {
+                const dx = e.clientX - startSize.x;
+                const dy = e.clientY - startSize.y;
+                
+                let newW = startSize.w + dx;
+                let newH = startSize.h + dy;
+
+                if (newW < 20) newW = 20;
+                if (newH < 20) newH = 20;
+
+                // Ha be van kapcsolva a képarány zár (pl 1:1)
+                if (selectedItem.ratioLocked) {
+                    // Kényszerítsük a négyzet alakot a nagyobb mérethez igazítva vagy egér mozgás alapján
+                    // Egyszerűsítés: használjuk a szélességet vezérlőnek
+                    newH = newW;
+                }
+
+                selectedItem.element.style.width = newW + 'px';
+                selectedItem.element.style.height = newH + 'px';
             }
         });
+
         window.addEventListener('mouseup', () => {
-            if ((isDragging || isResizing) && selectedItem) syncUpdate(selectedItem);
-            isDragging = false; isResizing = false;
+            if ((isDragging || isResizing) && selectedItem) {
+                syncUpdate(selectedItem);
+            }
+            isDragging = false;
+            isResizing = false;
         });
 
         // --- ITEM MANIPULATION ---
-        function changeLayer(id, d) {
-            const i = items.find(x => x.id === id); if (!i) return;
-            let z = parseInt(i.element.style.zIndex) + d; if (z < 0) z = 0;
-            i.element.style.zIndex = z; if (z >= zCounter) zCounter = z + 1;
-            syncUpdate(i);
-        }
-        function deleteItem(id) {
-            const idx = items.findIndex(x => x.id === id);
-            if (idx > -1) { items[idx].element.remove(); items.splice(idx, 1); syncDelete(id); }
-        }
-        function updateCanvasBg(c) { canvas.style.backgroundColor = c; if (p2pHost) broadcast({ type: 'bg_change', color: c }); }
 
-        function applyLayout(t) {
-            if (items.length === 0) return;
-            const c = items.length, cw = canvas.offsetWidth, ch = canvas.offsetHeight;
-            if (t === 'grid') {
-                const cols = Math.ceil(Math.sqrt(c)), rows = Math.ceil(c / cols), cellW = cw / cols, cellH = ch / rows;
-                items.forEach((it, i) => {
-                    it.element.style.width = (cellW - 10) + 'px'; it.element.style.height = (cellH - 10) + 'px';
-                    it.element.style.left = (i % cols * cellW + 5) + 'px'; it.element.style.top = (Math.floor(i / cols) * cellH + 5) + 'px'; syncUpdate(it);
-                });
-            } else if (t === 'columns') {
-                const w = cw / c;
-                items.forEach((it, i) => { it.element.style.width = (w - 10) + 'px'; it.element.style.height = (ch - 20) + 'px'; it.element.style.left = (i * w + 5) + 'px'; it.element.style.top = '10px'; syncUpdate(it); });
-            } else if (t === 'rows') {
-                const h = ch / c;
-                items.forEach((it, i) => { it.element.style.width = (cw - 20) + 'px'; it.element.style.height = (h - 10) + 'px'; it.element.style.left = '10px'; it.element.style.top = (i * h + 5) + 'px'; syncUpdate(it); });
-            } else if (t === 'scatter') {
-                items.forEach(it => { it.element.style.width = '200px'; it.element.style.height = 'auto'; it.element.style.left = (Math.random() * (cw - 200)) + 'px'; it.element.style.top = (Math.random() * (ch - 200)) + 'px'; syncUpdate(it); });
+        function changeLayer(id, direction) {
+            const item = items.find(i => i.id === id);
+            if (!item) return;
+            
+            let currentZ = parseInt(item.element.style.zIndex);
+            let newZ = currentZ + direction;
+            if (newZ < 0) newZ = 0;
+            
+            item.element.style.zIndex = newZ;
+            if (newZ >= zCounter) zCounter = newZ + 1;
+            syncUpdate(item);
+        }
+
+        function deleteItem(id) {
+            const index = items.findIndex(i => i.id === id);
+            if (index > -1) {
+                items[index].element.remove();
+                items.splice(index, 1);
+                selectedItem = null;
+                syncDelete(id);
             }
         }
 
-        // --- OKOS EXPORT (Smart Crop & HD) ---
-        function renderImageCover(ctx, img, x, y, w, h) {
-            ctx.save();
-            ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
-            const imgRatio = img.naturalWidth / img.naturalHeight;
-            const targetRatio = w / h;
-            let renderW, renderH;
-            if (imgRatio > targetRatio) { renderH = h; renderW = img.naturalWidth * (h / img.naturalHeight); }
-            else { renderW = w; renderH = img.naturalHeight * (w / img.naturalWidth); }
-            ctx.drawImage(img, x + (w - renderW) / 2, y + (h - renderH) / 2, renderW, renderH);
-            ctx.restore();
+        function updateCanvasBg(color) {
+            canvas.style.backgroundColor = color;
+            if (p2pHost) broadcast({ type: 'bg_change', color });
         }
 
-        async function createExportBlob() {
+        // --- ASPECT RATIO / CROP LOGIC ---
+        function setAspectRatio(id, type) {
+            const item = items.find(i => i.id === id);
+            if(!item) return;
+
+            if (type === '1:1') {
+                item.ratioLocked = true;
+                // Azonnali átméretezés négyzetre (a rövidebb oldalhoz igazítva vagy átlag)
+                const s = Math.min(item.element.offsetWidth, item.element.offsetHeight);
+                item.element.style.width = s + 'px';
+                item.element.style.height = s + 'px';
+                showToast("1:1 Képarány beállítva (Kocka)");
+            } else {
+                item.ratioLocked = false;
+                showToast("Szabad méretezés bekapcsolva");
+            }
+            syncUpdate(item);
+        }
+
+        // --- LAYOUTS (TEMPLATES) ---
+        function applyLayout(type) {
+            if (items.length === 0) return;
+            
+            const count = items.length;
+            const canvasW = canvas.offsetWidth;
+            const canvasH = canvas.offsetHeight;
+
+            if (type === 'grid') {
+                const cols = Math.ceil(Math.sqrt(count));
+                const rows = Math.ceil(count / cols);
+                const cellW = canvasW / cols;
+                const cellH = canvasH / rows;
+
+                items.forEach((item, i) => {
+                    const row = Math.floor(i / cols);
+                    const col = i % cols;
+                    item.element.style.width = (cellW - 10) + 'px';
+                    item.element.style.height = (cellH - 10) + 'px';
+                    item.element.style.left = (col * cellW + 5) + 'px';
+                    item.element.style.top = (row * cellH + 5) + 'px';
+                    syncUpdate(item);
+                });
+            } else if (type === 'columns') {
+                const w = canvasW / count;
+                items.forEach((item, i) => {
+                    item.element.style.width = (w - 10) + 'px';
+                    item.element.style.height = (canvasH - 20) + 'px';
+                    item.element.style.left = (i * w + 5) + 'px';
+                    item.element.style.top = '10px';
+                    syncUpdate(item);
+                });
+            } else if (type === 'rows') {
+                const h = canvasH / count;
+                items.forEach((item, i) => {
+                    item.element.style.width = (canvasW - 20) + 'px';
+                    item.element.style.height = (h - 10) + 'px';
+                    item.element.style.left = '10px';
+                    item.element.style.top = (i * h + 5) + 'px';
+                    syncUpdate(item);
+                });
+            } else if (type === 'scatter') {
+                items.forEach(item => {
+                    item.element.style.width = '200px';
+                    item.element.style.height = '200px'; // Scatter is mostly random
+                    item.element.style.left = (Math.random() * (canvasW - 200)) + 'px';
+                    item.element.style.top = (Math.random() * (canvasH - 200)) + 'px';
+                    syncUpdate(item);
+                });
+            }
+        }
+
+        // --- EXPORT LOGIC (New HD & Non-Squash) ---
+        function openExportModal() {
+            document.getElementById('exportModal').style.display = 'flex';
+        }
+
+        function setExportQuality(scale, el) {
+            exportScale = scale;
+            document.querySelectorAll('.export-option').forEach(e => e.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        function executeSave() {
+            document.getElementById('exportModal').style.display = 'none';
             document.getElementById('loading-overlay').style.display = 'flex';
-            // Lekérjük a minőséget a listából
-            const scale = parseInt(document.getElementById('export-quality').value) || 1;
+            
+            // Hagyunk időt a UI frissítésre
+            setTimeout(() => {
+                saveCollageHighQuality(exportScale);
+                document.getElementById('loading-overlay').style.display = 'none';
+            }, 100);
+        }
+
+        function saveCollageHighQuality(scale = 1) {
             const exportCanvas = document.createElement('canvas');
+            // A vászon mérete felszorozva a skálával (HD esetén 3x)
             exportCanvas.width = canvas.offsetWidth * scale;
             exportCanvas.height = canvas.offsetHeight * scale;
             const ctx = exportCanvas.getContext('2d');
-            ctx.fillStyle = canvas.style.backgroundColor || '#ffffff'; ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-            
-            [...items].sort((a, b) => parseInt(a.element.style.zIndex) - parseInt(b.element.style.zIndex)).forEach(item => {
-                // Okos kirajzolás a skálázott méretekkel
-                renderImageCover(ctx, item.element.querySelector('img'), 
-                    parseFloat(item.element.style.left) * scale, 
-                    parseFloat(item.element.style.top) * scale, 
-                    parseFloat(item.element.style.width) * scale, 
-                    parseFloat(item.element.style.height) * scale
-                );
-            });
-            return new Promise(r => exportCanvas.toBlob(b => { document.getElementById('loading-overlay').style.display = 'none'; r(b); }, 'image/png'));
-        }
 
-        async function saveCollage() {
-            const blob = await createExportBlob();
+            // Háttér kitöltése
+            ctx.fillStyle = canvas.style.backgroundColor || '#ffffff';
+            ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+            // Rendezés Z-index szerint
+            const sortedItems = [...items].sort((a, b) => {
+                return parseInt(a.element.style.zIndex) - parseInt(b.element.style.zIndex);
+            });
+
+            // Kirajzolás intelligens CROP számítással (object-fit: cover szimuláció)
+            sortedItems.forEach(item => {
+                const img = item.element.querySelector('img');
+                
+                // Cél koordináták (skálázva)
+                const dx = parseFloat(item.element.style.left) * scale;
+                const dy = parseFloat(item.element.style.top) * scale;
+                const dw = parseFloat(item.element.style.width) * scale;
+                const dh = parseFloat(item.element.style.height) * scale;
+
+                // Forrás (kép) adatok
+                const sw = img.naturalWidth;
+                const sh = img.naturalHeight;
+
+                // Object-Fit: Cover Matematika Canvas-ra
+                // 1. Kiszámoljuk az arányokat
+                const sourceRatio = sw / sh;
+                const destRatio = dw / dh;
+
+                let sX, sY, sW, sH;
+
+                if (sourceRatio > destRatio) {
+                    // A forrás szélesebb, mint a cél -> a szélességből vágunk le
+                    sH = sh;
+                    sW = sh * destRatio;
+                    sX = (sw - sW) / 2; // Középre igazítás
+                    sY = 0;
+                } else {
+                    // A forrás magasabb, mint a cél -> a magasságból vágunk le
+                    sW = sw;
+                    sH = sw / destRatio;
+                    sX = 0;
+                    sY = (sh - sH) / 2; // Középre igazítás
+                }
+
+                // Rajzolás: csak a kép kivágott (crop) részét méretezzük át a célterületre.
+                // Így a kép NEM nyomódik össze, megmarad az aránya.
+                ctx.drawImage(img, sX, sY, sW, sH, dx, dy, dw, dh);
+            });
+
+            // Letöltés
             const link = document.createElement('a');
-            link.download = `AeroCollage_HD_${Date.now()}.png`;
-            link.href = URL.createObjectURL(blob);
+            const suffix = scale > 1 ? '_HD' : '';
+            link.download = `AeroCollage${suffix}_${Date.now()}.png`;
+            link.href = exportCanvas.toDataURL('image/png', 1.0); // Max minőség
             link.click();
         }
 
-        function clearCollage() { if (confirm("Biztos törölsz mindent?")) { canvas.innerHTML = ''; items = []; if (p2pHost) broadcast({ type: 'clear' }); } }
+        function clearCollage() {
+            if(confirm("Biztos törölsz mindent?")) {
+                canvas.innerHTML = '';
+                items = [];
+                if(p2pHost) broadcast({type: 'clear'});
+            }
+        }
+
+        // --- UTILS ---
+        function showToast(msg) {
+            const container = document.getElementById('toast-area');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<span class="material-icons">info</span> ${msg}`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
 
         // --- P2P SYNC ---
-        let peer, conn, p2pHost = false, currentUser = null;
-        function login() { currentUser = document.getElementById('username').value; if (currentUser) { document.getElementById('user-btn').innerText = currentUser; document.getElementById('loginModal').style.display = 'none'; } }
-        function openLoginModal() { document.getElementById('loginModal').style.display = 'flex'; }
-        function startHost() { if (!currentUser) { openLoginModal(); return; } p2pHost = true; initPeer(document.getElementById('channel-select').value); }
-        function joinGuest() { if (!currentUser) { openLoginModal(); return; } p2pHost = false; initPeer(null); }
+        let peer, conn, p2pHost = false;
+        let currentUser = null;
+
+        function login() {
+            currentUser = document.getElementById('username').value;
+            if(!currentUser) return;
+            document.getElementById('user-btn').innerText = currentUser;
+            document.getElementById('loginModal').style.display = 'none';
+        }
+        function openLoginModal() { document.getElementById('loginModal').style.display='flex'; }
+
+        function startHost() {
+            if(!currentUser) { openLoginModal(); return; }
+            p2pHost = true;
+            initPeer(document.getElementById('channel-select').value);
+        }
+        function joinGuest() {
+            if(!currentUser) { openLoginModal(); return; }
+            p2pHost = false;
+            initPeer(null);
+        }
+
         function initPeer(id) {
             peer = new Peer(id);
             peer.on('open', () => {
-                document.getElementById('p2p-controls').style.display = 'none';
-                document.getElementById('p2p-status').style.display = 'block';
-                if (!p2pHost) { conn = peer.connect(document.getElementById('channel-select').value); setupConn(conn); }
+                document.getElementById('p2p-controls').style.display='none';
+                document.getElementById('p2p-status').style.display='block';
+                showToast("P2P kapcsolat elindítva");
+                if(!p2pHost) {
+                    conn = peer.connect(document.getElementById('channel-select').value);
+                    setupConn(conn);
+                    // Beköszönés a hostnak
+                    conn.on('open', () => {
+                        conn.send({type: 'hello', username: currentUser});
+                    });
+                }
             });
             peer.on('connection', (c) => {
                 setupConn(c);
+                // Send current state to new guest
                 setTimeout(() => {
-                    items.forEach(i => { c.send({ type: 'create', id: i.id, src: i.src, x: parseFloat(i.element.style.left), y: parseFloat(i.element.style.top), w: parseFloat(i.element.style.width), h: parseFloat(i.element.style.height), z: parseInt(i.element.style.zIndex) }); });
+                    items.forEach(i => {
+                        c.send({
+                            type: 'create',
+                            id: i.id, src: i.src,
+                            x: parseFloat(i.element.style.left),
+                            y: parseFloat(i.element.style.top),
+                            w: parseFloat(i.element.style.width),
+                            h: parseFloat(i.element.style.height),
+                            z: parseInt(i.element.style.zIndex)
+                        });
+                    });
                 }, 1000);
             });
+            peer.on('error', (err) => {
+                alert("Hiba: " + err.type);
+            });
         }
+
         function setupConn(c) {
-            c.on('data', (d) => {
-                if (d.type === 'create') { if (!items.find(i => i.id === d.id)) createCollageItem(d.src, d); }
-                else if (d.type === 'update') { const i = items.find(x => x.id === d.id); if (i) { i.element.style.left = d.x + 'px'; i.element.style.top = d.y + 'px'; i.element.style.width = d.w + 'px'; i.element.style.height = d.h + 'px'; i.element.style.zIndex = d.z; } }
-                else if (d.type === 'delete') { deleteItem(d.id); }
-                else if (d.type === 'bg_change') { canvas.style.backgroundColor = d.color; document.getElementById('canvas-bg').value = d.color; }
-                else if (d.type === 'clear') { canvas.innerHTML = ''; items = []; }
-                // ÚJ: Image Update fogadása (Crop)
-                else if (d.type === 'image_update') {
-                    const i = items.find(x => x.id === d.id);
-                    if (i) {
-                        i.element.querySelector('img').src = d.src;
-                        i.src = d.src;
-                        i.element.style.width = d.w + 'px';
-                        i.element.style.height = d.h + 'px';
+            c.on('data', (data) => {
+                // USER JOIN NOTIFICATION
+                if(data.type === 'hello') {
+                    showToast(`${data.username} csatlakozott a kollázshoz!`);
+                    // Ha host vagyunk, továbbíthatjuk másoknak (basic mesh logic could go here)
+                }
+
+                if(data.type === 'create') {
+                    if(!items.find(i => i.id === data.id)) {
+                        createCollageItem(data.src, data);
                     }
+                } else if(data.type === 'update') {
+                    const item = items.find(i => i.id === data.id);
+                    if(item) {
+                        item.element.style.left = data.x + 'px';
+                        item.element.style.top = data.y + 'px';
+                        item.element.style.width = data.w + 'px';
+                        item.element.style.height = data.h + 'px';
+                        item.element.style.zIndex = data.z;
+                    }
+                } else if(data.type === 'delete') {
+                    const index = items.findIndex(i => i.id === data.id);
+                    if(index > -1) {
+                        items[index].element.remove();
+                        items.splice(index, 1);
+                    }
+                } else if(data.type === 'bg_change') {
+                    canvas.style.backgroundColor = data.color;
+                    document.getElementById('canvas-bg').value = data.color;
+                } else if(data.type === 'clear') {
+                    canvas.innerHTML = '';
+                    items = [];
                 }
             });
         }
-        function syncCreate(id, s, x, y, w, h, z) { if (peer) broadcast({ type: 'create', id, src: s, x, y, w, h, z }); }
-        function syncUpdate(i) { if (peer) broadcast({ type: 'update', id: i.id, x: parseFloat(i.element.style.left), y: parseFloat(i.element.style.top), w: parseFloat(i.element.style.width), h: parseFloat(i.element.style.height), z: parseInt(i.element.style.zIndex) }); }
-        function syncDelete(id) { if (peer) broadcast({ type: 'delete', id }); }
-        function broadcast(m) { if (p2pHost) { for (let k in peer.connections) peer.connections[k].forEach(c => c.send(m)); } else if (conn) { conn.send(m); } }
-        function disconnectP2P() { if (peer) peer.destroy(); location.reload(); }
 
-        // --- DRIVE SAVING (Modified for HD) ---
-        const CLIENT_ID = '138100233309-v575n23j2b6pdek9t9clvkg3immlkrdi.apps.googleusercontent.com';
-        const API_KEY = 'AIzaSyAfC2viqoOsVVjcShnqY2rrRsxdV7WHMEg';
+        function syncCreate(id, src, x, y, w, h, z) {
+            if(peer) broadcast({ type: 'create', id, src, x, y, w, h, z });
+        }
+        function syncUpdate(item) {
+            if(peer) broadcast({
+                type: 'update',
+                id: item.id,
+                x: parseFloat(item.element.style.left),
+                y: parseFloat(item.element.style.top),
+                w: parseFloat(item.element.style.width),
+                h: parseFloat(item.element.style.height),
+                z: parseInt(item.element.style.zIndex)
+            });
+        }
+        function syncDelete(id) {
+            if(peer) broadcast({ type: 'delete', id });
+        }
+        function broadcast(msg) {
+            if(p2pHost) {
+                for(let conId in peer.connections) {
+                    peer.connections[conId].forEach(c => c.send(msg));
+                }
+            } else if(conn) {
+                conn.send(msg);
+            }
+        }
+        function disconnectP2P() {
+            if(peer) peer.destroy();
+            location.reload();
+        }
+
+        // --- DRIVE SAVING (Megtartva) ---
+        const CLIENT_ID = '138100233309-v575n23j2b6pdek9t9clvkg3immlkrdi.apps.googleusercontent.com'; 
+        const API_KEY = 'AIzaSyAfC2viqoOsVVjcShnqY2rrRsxdV7WHMEg'; 
         const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
         const SCOPES = 'https://www.googleapis.com/auth/drive.file';
-        let gapiInited = false, gisInited = false, tokenClient;
-        function gapiLoaded() { gapi.load('client', async () => { await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC] }); gapiInited = true; }); }
-        function gisLoaded() { tokenClient = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPES, callback: (r) => { } }); gisInited = true; }
+        let gapiInited=false, gisInited=false, tokenClient;
+        function gapiLoaded(){gapi.load('client',async()=>{await gapi.client.init({apiKey:API_KEY,discoveryDocs:[DISCOVERY_DOC]});gapiInited=true;});}
+        function gisLoaded(){tokenClient=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPES,callback:(r)=>{}});gisInited=true;}
 
         async function handleDriveSave() {
-            if (!currentUser) { alert("Jelentkezz be!"); return; }
-            if (!gapiInited || !gisInited) return;
+            if(!currentUser) { alert("Jelentkezz be!"); return; }
+            if(!gapiInited || !gisInited) return;
+            
             tokenClient.callback = async (resp) => {
-                if (resp.error) return;
-                const blob = await createExportBlob(); // Use HD blob
-                const meta = { 'name': `AeroCollage_HD_${Date.now()}.png`, 'mimeType': 'image/png' };
-                const form = new FormData();
-                form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
-                form.append('file', blob);
-                await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                    method: 'POST', headers: new Headers({ 'Authorization': 'Bearer ' + gapi.client.getToken().access_token }), body: form
+                if(resp.error) return;
+                
+                // Ugyanazt a logikát használjuk, mint a HD mentésnél, csak blobba
+                const scale = 2; // Drive-ra alapból jobb minőséget küldünk
+                const exportCanvas = document.createElement('canvas');
+                exportCanvas.width = canvas.offsetWidth * scale; exportCanvas.height = canvas.offsetHeight * scale;
+                const ctx = exportCanvas.getContext('2d');
+                ctx.fillStyle = canvas.style.backgroundColor || '#ffffff'; ctx.fillRect(0,0,exportCanvas.width,exportCanvas.height);
+                
+                const sortedItems = [...items].sort((a,b)=>parseInt(a.element.style.zIndex)-parseInt(b.element.style.zIndex));
+                sortedItems.forEach(item=>{
+                    const img = item.element.querySelector('img');
+                    const dx = parseFloat(item.element.style.left)*scale, dy = parseFloat(item.element.style.top)*scale;
+                    const dw = parseFloat(item.element.style.width)*scale, dh = parseFloat(item.element.style.height)*scale;
+                    
+                    // Cover math again
+                    const sw = img.naturalWidth, sh = img.naturalHeight;
+                    const sR = sw/sh, dR = dw/dh;
+                    let sX, sY, sW, sH;
+                    if (sR > dR) { sH=sh; sW=sh*dR; sX=(sw-sW)/2; sY=0; }
+                    else { sW=sw; sH=sw/dR; sX=0; sY=(sh-sH)/2; }
+                    
+                    ctx.drawImage(img, sX, sY, sW, sH, dx, dy, dw, dh);
                 });
-                alert("Mentve Drive-ra!");
+                
+                exportCanvas.toBlob(async blob => {
+                    const meta = {'name':`AeroCollage_${Date.now()}.png`, 'mimeType':'image/png'};
+                    const form = new FormData();
+                    form.append('metadata', new Blob([JSON.stringify(meta)],{type:'application/json'}));
+                    form.append('file', blob);
+                    await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                        method:'POST', headers: new Headers({'Authorization': 'Bearer '+gapi.client.getToken().access_token}), body: form
+                    });
+                    showToast("Sikeres mentés Google Drive-ra!");
+                });
             };
-            tokenClient.requestAccessToken({ prompt: '' });
+            tokenClient.requestAccessToken({prompt: ''});
         }
     </script>
 </body>
