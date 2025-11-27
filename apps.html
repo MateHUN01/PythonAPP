@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AeroSuite - Creative Hub</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --accent-blue: #2196F3;
+            --accent-purple: #9C27B0;
+            --accent-orange: #FF9800;
+            
+            /* Glassmorphism Variables */
+            --glass-bg: rgba(25, 25, 25, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-blur: 20px;
+            --card-hover: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            overflow-x: hidden;
+            /* Ugyanaz a rácsos háttér */
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(33, 150, 243, 0.15) 0%, transparent 50%),
+                radial-gradient(#333 1px, transparent 1px);
+            background-size: 100% 100%, 30px 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* --- DEKORÁCIÓS HÁTTÉR ELEMEK --- */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            z-index: -1;
+            animation: float 10s infinite ease-in-out;
+        }
+        .orb-1 { width: 300px; height: 300px; background: var(--accent-blue); top: -50px; left: -50px; }
+        .orb-2 { width: 400px; height: 400px; background: var(--accent-purple); bottom: -100px; right: -100px; animation-delay: -5s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        /* --- HEADER --- */
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 20px;
+            z-index: 2;
+        }
+
+        .logo {
+            font-weight: 900;
+            font-size: 3rem;
+            background: linear-gradient(135deg, #fff 0%, var(--accent-blue) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -2px;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.7;
+            font-weight: 300;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* --- KÁRTYA KONTÉNER --- */
+        .card-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            width: 100%;
+            max-width: 1200px;
+            padding: 20px;
+            perspective: 1000px;
+            z-index: 2;
+        }
+
+        /* --- KÁRTYA DESIGN --- */
+        .card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px 30px;
+            text-decoration: none;
+            color: white;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            group: hover;
+        }
+
+        /* Glow effect on hover */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+            opacity: 0;
+            transition: 0.4s;
+        }
+
+        .card:hover {
+            transform: translateY(-10px) scale(1.02);
+            border-color: rgba(255,255,255,0.3);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+        .card:hover::before { opacity: 1; }
+
+        /* Icon Container */
+        .icon-box {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 25px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: 0.4s;
+        }
+        .card:hover .icon-box {
+            transform: scale(1.1) rotate(5deg);
+        }
+        .material-icons { font-size: 36px; }
+
+        /* Színes ikonok és keretek */
+        .card.code:hover .icon-box { background: rgba(33, 150, 243, 0.2); border-color: var(--accent-blue); color: var(--accent-blue); box-shadow: 0 0 20px rgba(33, 150, 243, 0.4); }
+        .card.collage:hover .icon-box { background: rgba(156, 39, 176, 0.2); border-color: var(--accent-purple); color: var(--accent-purple); box-shadow: 0 0 20px rgba(156, 39, 176, 0.4); }
+        .card.paint:hover .icon-box { background: rgba(255, 152, 0, 0.2); border-color: var(--accent-orange); color: var(--accent-orange); box-shadow: 0 0 20px rgba(255, 152, 0, 0.4); }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .card-desc {
+            font-size: 0.9rem;
+            opacity: 0.6;
+            line-height: 1.5;
+            margin-bottom: 30px;
+            flex-grow: 1;
+        }
+
+        /* Gomb stílus a kártyán belül */
+        .action-btn {
+            padding: 12px 25px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            transition: 0.3s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        
+        .card.code:hover .action-btn { background: var(--accent-blue); border-color: var(--accent-blue); }
+        .card.collage:hover .action-btn { background: var(--accent-purple); border-color: var(--accent-purple); }
+        .card.paint:hover .action-btn { background: var(--accent-orange); border-color: var(--accent-orange); }
+
+
+        /* --- RESPONSIVE MOBILE --- */
+        @media (max-width: 900px) {
+            .card-container {
+                grid-template-columns: 1fr; /* Egymás alá */
+                max-width: 500px;
+                gap: 20px;
+            }
+            
+            .header { margin-top: 40px; margin-bottom: 30px; }
+            .logo { font-size: 2.5rem; }
+            
+            .card {
+                flex-direction: row; /* Mobilon vízszintes elrendezés */
+                text-align: left;
+                padding: 20px;
+                align-items: center;
+            }
+            
+            .icon-box {
+                width: 60px; height: 60px;
+                margin-bottom: 0;
+                margin-right: 20px;
+                flex-shrink: 0;
+            }
+            .material-icons { font-size: 28px; }
+            
+            .card-content { flex-grow: 1; }
+            .card-title { font-size: 1.2rem; margin-bottom: 5px; }
+            .card-desc { font-size: 0.8rem; margin-bottom: 0; display: block; }
+            .action-btn { display: none; /* Mobilon elég a kártyára kattintani */ }
+            
+            /* Mobilon legyen egy kis nyíl a jobb oldalon */
+            .card::after {
+                content: 'chevron_right';
+                font-family: 'Material Icons';
+                font-size: 24px;
+                opacity: 0.5;
+                margin-left: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <header class="header">
+        <div class="logo">AeroSuite</div>
+        <div class="subtitle">Next-Gen Creative Tools</div>
+    </header>
+
+    <div class="card-container">
+        
+        <a href="https://aerocode.hu" class="card code">
+            <div class="icon-box">
+                <span class="material-icons">code</span>
+            </div>
+            <div class="card-content">
+                <div class="card-title">AeroCode Studio</div>
+                <div class="card-desc">
+                    Professzionális webes fejlesztőkörnyezet. Írj, szerkessz és futtass kódot valós időben.
+                </div>
+            </div>
+            <div class="action-btn">
+                Indítás <span class="material-icons" style="font-size:16px">arrow_forward</span>
+            </div>
+        </a>
+
+        <a href="https://aerocode.hu/kollazs.html" class="card collage">
+            <div class="icon-box">
+                <span class="material-icons">dashboard_customize</span>
+            </div>
+            <div class="card-content">
+                <div class="card-title">AeroCollage Pro</div>
+                <div class="card-desc">
+                    Hozd létre álmaid montázsát. Rétegkezelés, P2P közös munka és intelligens elrendezések.
+                </div>
+            </div>
+            <div class="action-btn">
+                Indítás <span class="material-icons" style="font-size:16px">arrow_forward</span>
+            </div>
+        </a>
+
+        <a href="https://aerocode.hu/paint.html" class="card paint">
+            <div class="icon-box">
+                <span class="material-icons">brush</span>
+            </div>
+            <div class="card-content">
+                <div class="card-title">AeroPaint Canvas</div>
+                <div class="card-desc">
+                    Digitális rajzvászon. Engedd szabadjára a kreativitásod ecsetekkel és színekkel.
+                </div>
+            </div>
+            <div class="action-btn">
+                Indítás <span class="material-icons" style="font-size:16px">arrow_forward</span>
+            </div>
+        </a>
+
+    </div>
+
+    <footer style="margin-top: 50px; opacity: 0.4; font-size: 12px; padding-bottom: 20px;">
+        &copy; 2025 AeroSuite Systems. All rights reserved.
+    </footer>
+
+</body>
+</html>
