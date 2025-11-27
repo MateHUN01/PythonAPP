@@ -231,7 +231,7 @@
         /* P2P UI Elemek */
         .p2p-code-display {
             font-family: 'JetBrains Mono', monospace; 
-            font-size: 20px; letter-spacing: 2px;
+            font-size: 18px; letter-spacing: 2px;
             background: rgba(0,0,0,0.3); 
             padding: 10px; border-radius: 8px; 
             text-align: center; margin-bottom: 15px; 
@@ -271,7 +271,7 @@
                 <div class="dropdown-content">
                     <h4 style="margin:0 0 10px 0; border-bottom:1px solid #444; padding-bottom:5px;">Közös Munka</h4>
                     
-                    <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Saját 4-jegyű kódod:</div>
+                    <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Saját 6-jegyű kódod:</div>
                     <div id="my-peer-id" class="p2p-code-display" onclick="copyToClipboard()" title="Másolás">
                         ...
                     </div>
@@ -279,7 +279,7 @@
                     <div id="connect-ui">
                         <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Partner kódja:</div>
                         <div style="display:flex; gap:5px;">
-                            <input type="text" id="friend-id-input" placeholder="pl. A7X2" maxlength="4"
+                            <input type="text" id="friend-id-input" placeholder="pl. A7X29B" maxlength="6"
                                    style="width:100%; padding:8px; background:var(--input-field-bg); border:1px solid var(--border-color); color:var(--text-color); border-radius:4px; outline:none; font-family:'JetBrains Mono'; text-transform:uppercase;">
                             <button onclick="connectToPeer()" style="padding:0 12px; background:var(--run-color); color:white; border:none; border-radius:4px; cursor:pointer;"><span class="material-icons">login</span></button>
                         </div>
@@ -676,18 +676,18 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             isDark = !isDark; document.body.className = isDark ? "" : "light-mode"; editor.setOption("theme", isDark ? "dracula" : "eclipse");
         }
 
-        // --- P2P IMPLEMENTÁCIÓ (Javított: ID Prefix) ---
+        // --- P2P IMPLEMENTÁCIÓ (Javított: ID Prefix + 6 karakter) ---
         let peer = null;
         let conn = null;
         let isSyncing = false; 
         
-        // Ez a titok: Egyedi előtagot adunk a kódhoz, hogy ne ütközzön másokkal a világban
-        const ID_PREFIX = "AERO_PRO_v11_APP_";
+        // Egyedi előtag + 6 karakter
+        const ID_PREFIX = "AERO_CODE_PRO_v11_";
 
         function generateShortId() {
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             let result = '';
-            for (let i = 0; i < 4; i++) {
+            for (let i = 0; i < 6; i++) { // Most 6 karaktert generálunk
                 result += chars.charAt(Math.floor(Math.random() * chars.length));
             }
             return result;
@@ -696,12 +696,11 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
         function initPeerIfNeeded() {
             if (peer && !peer.destroyed) return; 
 
-            // Vizualizáció: Generálás...
             document.getElementById('my-peer-id').innerText = "...";
             updateP2PLog("Kód generálása...");
 
             const shortId = generateShortId();
-            const fullId = ID_PREFIX + shortId; // Ez lesz az igazi ID a szerver felé
+            const fullId = ID_PREFIX + shortId;
             
             peer = new Peer(fullId, {
                 debug: 1,
@@ -713,7 +712,6 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                 }
             });
             
-            // Timeout kezelés: Ha 5 mp alatt nincs kapcsolat, jelezzük a hibát
             let connectTimeout = setTimeout(() => {
                 if(document.getElementById('my-peer-id').innerText === "...") {
                     document.getElementById('my-peer-id').innerText = "HIBA";
@@ -724,7 +722,6 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
 
             peer.on('open', (id) => {
                 clearTimeout(connectTimeout);
-                // A felhasználónak csak a rövid kódot mutatjuk (levágjuk a prefixet)
                 const displayId = id.replace(ID_PREFIX, "");
                 
                 document.getElementById('my-peer-id').innerText = displayId;
@@ -740,7 +737,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             peer.on('error', (err) => {
                 clearTimeout(connectTimeout);
                 if (err.type === 'unavailable-id') {
-                    // Ha véletlenül pont ugyanez a 4 betű foglalt lenne (az prefixszel együtt), újrapróbáljuk
+                    // Ha a kód foglalt, újragenerálás
                     peer.destroy();
                     peer = null;
                     setTimeout(initPeerIfNeeded, 500);
@@ -750,19 +747,14 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
                 }
             });
             
-            peer.on('disconnected', () => { 
-                 // Ha leszakad a szerverről, próbáljon visszalépni
-                 peer.reconnect(); 
-            });
+            peer.on('disconnected', () => { peer.reconnect(); });
         }
 
         function connectToPeer() {
             let friendShortId = document.getElementById('friend-id-input').value.trim().toUpperCase();
-            if(friendShortId.length !== 4) return alert("A kódnak 4 karakternek kell lennie!");
+            if(friendShortId.length !== 6) return alert("A kódnak 6 karakternek kell lennie!");
             
             updateP2PLog("Csatlakozás: " + friendShortId + "...");
-            
-            // A csatlakozásnál visszarakjuk a prefixet, hogy megtalálja a másikat
             const fullFriendId = ID_PREFIX + friendShortId;
             
             const connection = peer.connect(fullFriendId);
