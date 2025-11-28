@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroDraw PRO v2.1 - Undo/Redo Update</title>
+    <title>AeroDraw PRO v2.2 - Network Fix</title>
     
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
@@ -279,6 +279,20 @@
         const API_KEY = 'AIzaSyAfC2viqoOsVVjcShnqY2rrRsxdV7WHMEg'; 
         const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
         const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
+        // --- PEER CONFIG (Anti-Firewall) ---
+        const peerConfig = {
+            debug: 1,
+            config: {
+                'iceServers': [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
+                    { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
+                    { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" }
+                ]
+            }
+        };
 
         // --- GLOBÁLIS VÁLTOZÓK (Rajz & Rétegek) ---
         const canvasWrapper = document.getElementById('canvas-wrapper');
@@ -580,7 +594,7 @@
             link.click();
         }
 
-        // --- AUTH & P2P ALAPOK (Változatlan) ---
+        // --- AUTH & P2P ALAPOK ---
         let currentUser=null, tokenClient, gapiInited=false, gisInited=false;
         let peer=null, conn=null, isHost=false, connectedUsers=[], maxParticipants=3;
         const ROOM_MAPPING = {"1":"adp_v2_r1","2":"adp_v2_r2","3":"adp_v2_r3"};
@@ -659,9 +673,32 @@
             else if(data.type==='kick') { alert("Kirúgtak."); disconnectPeer(); }
         }
 
-        // --- P2P CORE FUNKCIÓK (Rövidítve, a logika változatlan) ---
-        function startAsHost() { if(!currentUser){openLoginModal();return;} if(peer)return; isHost=true; connectedUsers=[]; maxParticipants=parseInt(document.getElementById('room-size-limit').value)||3; peer=new Peer(ROOM_MAPPING[document.getElementById('channel-select').value],{debug:1,config:{'iceServers':[{url:'stun:stun.l.google.com:19302'}]}}); peer.on('open',id=>{document.getElementById('live-indicator').style.display='block';updateP2PUI(true);}); peer.on('connection',c=>{if(connectedUsers.length+1>=maxParticipants){c.on('open',()=>{c.send({type:'error',message:'Tele'});setTimeout(()=>c.close(),500);});return;} c.on('data',d=>{if(d.type==='handshake'){connectedUsers.push({id:c.peer,conn:c,username:d.username}); broadcastUserList(); sendFullSnapshot(c); } else handleP2PData(d);}); c.on('close',()=>{connectedUsers=connectedUsers.filter(u=>u.id!==c.peer);broadcastUserList();updateActiveUsersUI();});}); }
-        function joinAsGuest() { if(!currentUser){openLoginModal();return;} if(peer)return; isHost=false; peer=new Peer(null,{debug:1,config:{'iceServers':[{url:'stun:stun.l.google.com:19302'}]}}); peer.on('open',()=>{conn=peer.connect(ROOM_MAPPING[document.getElementById('channel-select').value]); conn.on('open',()=>{conn.send({type:'handshake',username:currentUser}); document.getElementById('live-indicator').style.display='block';updateP2PUI(true);}); conn.on('data',handleP2PData); conn.on('close',resetP2PUI);}); }
+        // --- P2P CORE FUNKCIÓK ---
+        function startAsHost() { 
+            if(!currentUser){openLoginModal();return;} 
+            if(peer)return; 
+            isHost=true; 
+            connectedUsers=[]; 
+            maxParticipants=parseInt(document.getElementById('room-size-limit').value)||3; 
+            
+            // --- UPDATED CONFIG ---
+            peer=new Peer(ROOM_MAPPING[document.getElementById('channel-select').value], peerConfig); 
+            
+            peer.on('open',id=>{document.getElementById('live-indicator').style.display='block';updateP2PUI(true);}); 
+            peer.on('connection',c=>{if(connectedUsers.length+1>=maxParticipants){c.on('open',()=>{c.send({type:'error',message:'Tele'});setTimeout(()=>c.close(),500);});return;} c.on('data',d=>{if(d.type==='handshake'){connectedUsers.push({id:c.peer,conn:c,username:d.username}); broadcastUserList(); sendFullSnapshot(c); } else handleP2PData(d);}); c.on('close',()=>{connectedUsers=connectedUsers.filter(u=>u.id!==c.peer);broadcastUserList();updateActiveUsersUI();});}); 
+        }
+
+        function joinAsGuest() { 
+            if(!currentUser){openLoginModal();return;} 
+            if(peer)return; 
+            isHost=false; 
+            
+            // --- UPDATED CONFIG ---
+            peer=new Peer(null, peerConfig); 
+            
+            peer.on('open',()=>{conn=peer.connect(ROOM_MAPPING[document.getElementById('channel-select').value]); conn.on('open',()=>{conn.send({type:'handshake',username:currentUser}); document.getElementById('live-indicator').style.display='block';updateP2PUI(true);}); conn.on('data',handleP2PData); conn.on('close',resetP2PUI);}); 
+        }
+
         function broadcastUserList(){if(!isHost)return; const list=connectedUsers.map(u=>({id:u.id,username:u.username})); list.unshift({id:'HOST',username:currentUser+' (HOST)'}); connectedUsers.forEach(u=>u.conn.send({type:'user_list',users:list})); updateActiveUsersUI();}
         function updateActiveUsersUI(){const c=document.getElementById('active-users-list'); c.innerHTML=`<div class="user-chip self"><span class="username">${currentUser}</span></div>`; connectedUsers.forEach(u=>{c.innerHTML+=`<div class="user-chip"><span class="username">${u.username}</span>${isHost?`<button class="kick-btn" onclick="kickUser('${u.id}')">x</button>`:''}</div>`});}
         function kickUser(id){const u=connectedUsers.find(x=>x.id===id);if(u){u.conn.send({type:'kick'});setTimeout(()=>u.conn.close(),100);}}
