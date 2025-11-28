@@ -3,13 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroCode PRO v16.0 - Knowledge Base Edition</title>
+    <title>AeroCode PRO v16.1 - External Data Edition</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/eclipse.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/material.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldgutter.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/dialog/dialog.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/search/matchesonscrollbar.css">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
@@ -19,6 +23,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldgutter.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/indent-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/search/searchcursor.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/search/search.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/dialog/dialog.js"></script>
 
     <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
@@ -415,12 +422,13 @@
     <div class="main-container">
         <div class="editor-container">
             <textarea id="code-editor">
-# AeroCode PRO v16.0
-# Tudásbázis Edition
+# AeroCode PRO v16.1
+# Tudásbázis Edition (External File Support)
 #
-# Kattints a 🎓 (Sapka) ikonra a jobb felső sarokban!
-# Ott találod az új keresőt, ahol beírhatsz bármit,
-# például: "szöveg megfordítása" vagy "karakter csere".
+# A "Puska" gombra kattintva betöltődik a documents.txt
+#
+# Próbáld ki: írd be, hogy "lista = []"
+# majd a következő sorba: "lista.a" -> és nyomj Ctrl+Space-t!
 
 def udvozles(nev):
     print(f"Szia, {nev}!")
@@ -464,13 +472,15 @@ udvozles("Felhasználó")
                 <button onclick="document.getElementById('docsModal').style.display='none'" style="background:transparent; border:none; color:#666; cursor:pointer;"><span class="material-icons">close</span></button>
             </div>
             <div class="modal-body" style="background: #0e0e0e;">
+                <div style="margin-bottom:10px; font-size:11px; color:#666;">
+                    Forrás: <span id="doc-source-indicator" style="color:var(--accent-color)">Inicializálás...</span>
+                </div>
                 <input type="text" id="docSearch" placeholder="Keresés... (Pl.: 'szöveg megfordítása', 'ciklus', 'fájl olvasás')" onkeyup="searchDocs()">
                 
                 <div id="docResults">
                     <div style="text-align:center; color:#666; margin-top:50px;">
                         <span class="material-icons" style="font-size:48px; opacity:0.2">search</span><br>
                         Írj be valamit a keresőbe a találatokhoz!<br>
-                        <span style="font-size:12px; opacity:0.5">Próbáld: "lista", "reverse", "replace", "if"</span>
                     </div>
                 </div>
             </div>
@@ -584,7 +594,61 @@ udvozles("Felhasználó")
         let isSuperUser = false;
         
         // --- 2. EDITOR SETUP ---
-        // Custom Autocomplete keywords defined later in DOC_DATABASE logic
+        // Ez a lista tartalmazza az autocomplete javaslatokat
+        const PYTHON_KEYWORDS_AND_BUILTINS = [
+            "and", "as", "assert", "break", "class", "continue", "def", "del", "elif", "else", 
+            "except", "finally", "for", "from", "global", "if", "import", "in", "is", "lambda", 
+            "nonlocal", "not", "or", "pass", "raise", "return", "try", "while", "with", "yield",
+            "True", "False", "None", "abs", "all", "any", "ascii", "bin", "bool", "breakpoint", 
+            "bytearray", "bytes", "callable", "chr", "classmethod", "compile", "complex", "delattr", 
+            "dict", "dir", "divmod", "enumerate", "eval", "exec", "filter", "float", "format", 
+            "frozenset", "getattr", "globals", "hasattr", "hash", "help", "hex", "id", "input", 
+            "int", "isinstance", "issubclass", "iter", "len", "list", "locals", "map", "max", 
+            "memoryview", "min", "next", "object", "oct", "open", "ord", "pow", "print", "property", 
+            "range", "repr", "reversed", "round", "set", "setattr", "slice", "sorted", "staticmethod", 
+            "str", "sum", "super", "tuple", "type", "vars", "zip", "__import__", "append", "clear", 
+            "copy", "count", "extend", "index", "insert", "pop", "remove", "reverse", "sort", 
+            "fromkeys", "get", "items", "keys", "popitem", "setdefault", "update", "values", 
+            "capitalize", "casefold", "center", "encode", "endswith", "expandtabs", "find", "format_map", 
+            "isalnum", "isalpha", "isascii", "isdecimal", "isdigit", "isidentifier", "islower", 
+            "isnumeric", "isprintable", "isspace", "istitle", "isupper", "join", "ljust", "lower", 
+            "lstrip", "maketrans", "partition", "replace", "rfind", "rindex", "rjust", "rpartition", 
+            "rsplit", "rstrip", "split", "splitlines", "startswith", "strip", "swapcase", "title", 
+            "translate", "upper", "zfill", "add", "difference", "difference_update", "discard", 
+            "intersection", "intersection_update", "isdisjoint", "issubset", "issuperset", 
+            "symmetric_difference", "symmetric_difference_update", "union", "pi", "e", "tau", 
+            "inf", "nan", "sin", "cos", "tan", "sqrt", "log", "exp", "ceil", "floor"
+        ];
+        
+        // Remove duplicates and sort
+        const UNIQUE_PYTHON_HINTS = [...new Set(PYTHON_KEYWORDS_AND_BUILTINS)].sort();
+
+        // Custom Hint Helper for CodeMirror
+        CodeMirror.registerHelper("hint", "python", function(editor) {
+            var cur = editor.getCursor();
+            var token = editor.getTokenAt(cur);
+            var start = token.start;
+            var end = cur.ch;
+            var currentWord = token.string;
+            
+            if (token.string === ".") {
+                start = end;
+                currentWord = "";
+            } else if (token.type === "property") {
+                 // Ha már metódust írunk (pl. .app)
+            }
+            
+            var list = UNIQUE_PYTHON_HINTS.filter(function(item) {
+                return item.startsWith(currentWord);
+            });
+
+            return {
+                list: list.length ? list : [],
+                from: CodeMirror.Pos(cur.line, start),
+                to: CodeMirror.Pos(cur.line, end)
+            };
+        });
+
         let editor = CodeMirror.fromTextArea(document.getElementById("code-editor"), {
             mode: {name: "python", version: 3}, 
             theme: "dracula",
@@ -597,94 +661,83 @@ udvozles("Felhasználó")
                 "Ctrl-Space": "autocomplete", 
                 "Ctrl-Enter": function() { runPython(); } 
             },
-            hintOptions: { completeSingle: false }, 
+            hintOptions: { completeSingle: false, hint: CodeMirror.hint.python }, 
             lineWrapping: false,
             foldGutter: true,
             gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"]
         });
 
-        // --- 3. DOCUMENTATION DATABASE (THE BRAIN) ---
-        // This is a large database for the search engine.
-        const DOC_DATABASE = [
+        // --- 3. DOCUMENTATION DATABASE (EXTERNAL + FALLBACK) ---
+        let DOC_DATABASE = [];
+
+        // Biztonsági tartalék (Fallback), ha a documents.txt nem tölthető be
+        const FALLBACK_DB = [
             {
-                title: "Szöveg Megfordítása (Reverse)",
-                keywords: "string fordítás visszafelé reverse megfordít betűk tükrözés slice szeletelés",
-                code: `szoveg = "Almafa"\n\n# Slicing módszer [kezd:vég:lépés]\n# A -1 lépés visszafelé halad\nforditott = szoveg[::-1]\n\nprint(forditott) # afamlA`,
-                desc: "Pythonban a legegyszerűbb módja egy string megfordításának a slicing (szeletelés). Nem kell hozzá külön függvény."
-            },
-            {
-                title: "Karakterek Cseréje (Replace)",
-                keywords: "string csere replace betű karakter módosítás kicserél",
-                code: `szoveg = "Szeretem a tejet."\n\n# replace(mit, mire)\nuj_szoveg = szoveg.replace("tejet", "kávét")\n\nprint(uj_szoveg)\n# Kicseréli az ÖSSZES előfordulást!`,
-                desc: "A stringek Pythonban megváltoztathatatlanok (immutable). A replace() egy ÚJ stringet ad vissza."
-            },
-            {
-                title: "Karakter Csere (Manuális / Index)",
-                keywords: "csere index szerint manuális betű csere adott pozíció",
-                code: `szo = "Körte"\n\n# A 2. karakter (r) cseréje 'l'-re\n# Mivel string nem módosítható, újat rakunk össze:\n\nuj_szo = szo[:2] + 'l' + szo[3:]\nprint(uj_szo) # Költe`,
-                desc: "Ha index alapján akarsz cserélni, szét kell vágni a stringet az index előtt és után, majd összefűzni az új karakterrel."
-            },
-            {
-                title: "Lista Elemek Hozzáadása (Append)",
-                keywords: "lista list append hozzáad elem beszúr végére",
-                code: `gyumolcsok = ["alma", "körte"]\n\ngyumolcsok.append("szilva")\nprint(gyumolcsok)`,
-                desc: "Az append() metódus mindig a lista VÉGÉRE teszi az új elemet."
-            },
-            {
-                title: "Lista Elem Törlése (Pop, Remove)",
-                keywords: "lista törlés remove pop elem kivétel delete",
-                code: `szamok = [10, 20, 30, 40]\n\n# Index alapján (kiveszi és visszaadja)\nkivett = szamok.pop(1) # 20-at veszi ki\n\n# Érték alapján (csak az elsőt törli)\nszamok.remove(40)\n\nprint(szamok)`,
-                desc: "A pop() indexet vár (ha üres, az utolsót veszi el), a remove() pedig konkrét értéket keres."
+                title: "Biztonsági Tartalék Adatbázis",
+                keywords: "hiba fallback error dokumentáció nem található",
+                code: "# A documents.txt nem tölthető be.\n# Ellenőrizd, hogy fut-e a szerver (file:// protokoll korlát).",
+                desc: "Ez az alapértelmezett adatbázis, ami akkor jelenik meg, ha a külső fájl nem elérhető a böngésző biztonsági beállításai miatt."
             },
             {
                 title: "Ciklus (For Loop)",
-                keywords: "for ciklus loop iteráció bejárás range",
-                code: `nev = "Bela"\n\n# Betűkön végigmenni\nfor betu in nev:\n    print(betu)\n\n# Számsor (0-tól 4-ig)\nfor i in range(5):\n    print(i)`,
-                desc: "A for ciklus előre meghatározott elemeken (vagy tartományon) megy végig."
-            },
-            {
-                title: "Feltétel (If Else)",
-                keywords: "if else elif feltétel elágazás kondíció ha",
-                code: `kor = 18\n\nif kor >= 18:\n    print("Felnőtt")\nelif kor >= 14:\n    print("Tinédzser")\nelse:\n    print("Gyerek")`,
-                desc: "Figyelj a behúzásokra (indentation)! A Pythonban ez jelzi a blokkokat."
-            },
-            {
-                title: "Szöveg Darabolás (Split)",
-                keywords: "split darabolás vágás lista stringből szóköz",
-                code: `mondat = "Ez egy példa mondat"\n\n# Szóközök mentén darabol\nszavak = mondat.split()\nprint(szavak)\n# ['Ez', 'egy', 'példa', 'mondat']\n\n# Vessző mentén\nadat = "alma,körte,barack"\nlista = adat.split(",")`,
-                desc: "A split() egy listát ad vissza. Ha nem adsz meg paramétert, a szóközöknél vág."
-            },
-            {
-                title: "Lista Szöveggé (Join)",
-                keywords: "join összefűzés lista stringgé egyesítés",
-                code: `szavak = ['Szeretem', 'a', 'programozást']\n\n# Szóköz legyen köztük\nmondat = " ".join(szavak)\nprint(mondat)`,
-                desc: "A join() a split() ellentéte. A string, amin hívod, lesz az elválasztó."
-            },
-            {
-                title: "Függvények (Def)",
-                keywords: "def függvény function eljárás return visszatérés",
-                code: `def osszead(a, b):\n    return a + b\n\neredmeny = osszead(5, 3)\nprint(eredmeny)`,
-                desc: "A függvények újrafelhasználható kódrészletek. A return kulcsszó adja vissza az értéket."
-            },
-            {
-                title: "Try-Except (Hibakezelés)",
-                keywords: "hiba try except error catch kivétel hibakezelés",
-                code: `try:\n    szam = int(input("Adj meg egy számot: "))\n    print(10 / szam)\nexcept ValueError:\n    print("Ez nem szám!")\nexcept ZeroDivisionError:\n    print("Nullával nem osztunk!")`,
-                desc: "A program nem áll le hiba esetén, ha try-except blokkba teszed a veszélyes kódot."
-            },
-            {
-                title: "Véletlenszám (Random)",
-                keywords: "random véletlen sorsolás choice randint shuffle",
-                code: `import random\n\n# Véletlen egész 1 és 10 között\nprint(random.randint(1, 10))\n\n# Véletlen választás listából\nlista = ["kő", "papír", "olló"]\nprint(random.choice(lista))`,
-                desc: "Használat előtt importálni kell a random modult!"
-            },
-            {
-                title: "Fájl írása",
-                keywords: "fájl file write írás open with",
-                code: `with open("adat.txt", "w", encoding="utf-8") as f:\n    f.write("Ez egy sor.\\n")\n    f.write("Ez a második sor.")`,
-                desc: "A 'w' mód felülírja a fájlt. Használj 'a' módot a hozzáfűzéshez (append). A 'with' gondoskodik a bezárásról."
+                keywords: "for ciklus loop iteráció",
+                code: "for i in range(5):\n    print(i)",
+                desc: "Fallback példa ciklusra."
             }
         ];
+
+        async function loadDocsDatabase() {
+            const indicator = document.getElementById('doc-source-indicator');
+            try {
+                // Megpróbáljuk betölteni a documents.txt-t
+                const response = await fetch('documents.txt');
+                if (!response.ok) throw new Error("Fájl nem található");
+                
+                const text = await response.text();
+                parseExternalDocs(text);
+                
+                indicator.textContent = "documents.txt (Külső fájl)";
+                indicator.style.color = "#00E676";
+                logSystem("Tudásbázis betöltve a documents.txt-ből.");
+            } catch (e) {
+                console.warn("Docs betöltési hiba (CORS vagy hiányzó fájl):", e);
+                DOC_DATABASE = FALLBACK_DB;
+                indicator.textContent = "Belső Tartalék (Fallback)";
+                indicator.style.color = "#ffab40";
+                logSystem("Figyelem: A documents.txt nem elérhető. Belső adatbázis aktív.");
+            }
+        }
+
+        // PARSER: Ez alakítja át a szöveges fájlt objektumokká
+        function parseExternalDocs(text) {
+            DOC_DATABASE = [];
+            // Szétvágjuk a bejegyzéseket a ===ENTRY=== mentén
+            const rawEntries = text.split("===ENTRY===");
+            
+            rawEntries.forEach(entry => {
+                if(!entry.trim()) return; // Üres részek kihagyása
+
+                const docObj = { title: "", keywords: "", desc: "", code: "" };
+                
+                // Regex-szerű keresés a blokkokra
+                const titleMatch = entry.match(/\[TITLE\]([\s\S]*?)(\[|$)/);
+                const keysMatch = entry.match(/\[KEYWORDS\]([\s\S]*?)(\[|$)/);
+                const descMatch = entry.match(/\[DESC\]([\s\S]*?)(\[|$)/);
+                const codeMatch = entry.match(/\[CODE\]([\s\S]*?)(\[|$)/);
+
+                if(titleMatch) docObj.title = titleMatch[1].trim();
+                if(keysMatch) docObj.keywords = keysMatch[1].trim();
+                if(descMatch) docObj.desc = descMatch[1].trim();
+                if(codeMatch) docObj.code = codeMatch[1].trim();
+
+                if(docObj.title) {
+                    DOC_DATABASE.push(docObj);
+                }
+            });
+        }
+
+        // Initialize Docs loading on startup
+        loadDocsDatabase();
 
         // --- 4. SMART SEARCH LOGIC ---
         function openDocs() {
@@ -699,8 +752,8 @@ udvozles("Felhasználó")
             resultsContainer.innerHTML = "";
 
             if (input.length === 0) {
-                // Show some defaults if empty
-                renderResults(DOC_DATABASE.slice(0, 5), resultsContainer); // Show first few as featured
+                // Ha üres, mutassuk az első 5 elemet
+                renderResults(DOC_DATABASE.slice(0, 5), resultsContainer);
                 return;
             }
 
@@ -712,9 +765,9 @@ udvozles("Felhasználó")
                 const content = (entry.title + " " + entry.keywords + " " + entry.desc).toLowerCase();
                 
                 searchTokens.forEach(token => {
-                    if (entry.title.toLowerCase().includes(token)) score += 10; // Title match high value
-                    else if (entry.keywords.includes(token)) score += 5;       // Keyword match medium
-                    else if (entry.desc.toLowerCase().includes(token)) score += 1; // Desc match low
+                    if (entry.title.toLowerCase().includes(token)) score += 10;
+                    else if (entry.keywords.toLowerCase().includes(token)) score += 5;
+                    else if (entry.desc.toLowerCase().includes(token)) score += 1;
                 });
 
                 return { ...entry, score: score };
@@ -735,7 +788,7 @@ udvozles("Felhasználó")
                 const card = document.createElement('div');
                 card.className = "doc-card";
                 
-                // Syntax Highlight Simulation
+                // Syntax Highlight Simulation (Simple regex based)
                 let formattedCode = item.code
                     .replace(/#.*/g, match => `<span class="cmt">${match}</span>`)
                     .replace(/\b(def|class|return|if|else|elif|for|while|try|except|import|from|with|as)\b/g, '<span class="kw">$1</span>')
@@ -764,9 +817,6 @@ udvozles("Felhasználó")
             const originalText = btn.innerText;
             btn.innerText = "Másolva!";
             setTimeout(() => btn.innerText = originalText, 1500);
-            
-            // Auto insert into editor if wanted?
-            // editor.replaceSelection(codeBlock);
         }
 
         // --- 5. LOGGING & UTILS ---
@@ -899,7 +949,6 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             const fs = document.getElementById('fontSizeInput').value;
             document.querySelector('.CodeMirror').style.fontSize = fs + 'px';
             document.getElementById('settingsModal').style.display='none';
-            // Also update matrix
             toggleMatrix();
         }
 
@@ -927,7 +976,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             } catch(e) { logSystem("AI Hiba."); }
         }
 
-        // --- 12. P2P LOGIC (SIMPLIFIED FOR LENGTH) ---
+        // --- 12. P2P LOGIC (SIMPLIFIED) ---
         let peer = null;
         let conn = null;
         let isHost = false;
