@@ -264,7 +264,7 @@
         #loading-progress { width: 0%; height: 100%; background: var(--accent-color); transition: width 0.3s ease; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* --- GIF MAKER STYLES --- */
+        /* --- GIF MAKER STYLES (JAVÍTOTT RÉTEGREND) --- */
         #gif-studio {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: #121212; z-index: 5000; display: none;
@@ -279,12 +279,14 @@
             position: relative; width: 500px; height: 500px;
             background: #fff; box-shadow: 0 0 50px rgba(0,0,0,0.5);
         }
+        /* JAVÍTÁS: A vászon kerül alulra (z-index: 5) */
         #gif-drawing-canvas {
-            position: absolute; top: 0; left: 0; z-index: 10; cursor: crosshair;
+            position: absolute; top: 0; left: 0; z-index: 5; cursor: crosshair;
         }
+        /* JAVÍTÁS: A hagymahéj (onion skin) kerül felülre (z-index: 10), de áttetsző és átengedi a kattintást */
         #gif-onion-skin {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 5; opacity: 0.3; pointer-events: none;
+            z-index: 10; opacity: 0.3; pointer-events: none;
         }
         .gif-controls {
             margin-top: 20px; display: flex; gap: 10px;
@@ -1065,7 +1067,7 @@
                 }
                 else if(data.type === 'draw_move') { gifCtx.lineTo(data.x, data.y); gifCtx.stroke(); }
                 else if(data.type === 'gif_next_frame') { executeNextFrame(); }
-                else if(data.type === 'gif_clear') { gifCtx.clearRect(0, 0, 500, 500); }
+                else if(data.type === 'gif_clear') { gifCtx.clearRect(0, 0, 500, 500); gifCtx.fillStyle = 'white'; gifCtx.fillRect(0,0,500,500); }
             });
         }
         function syncCreate(id, src, x, y, w, h, z, rotation, originalSrc) { if(peer) broadcast({ type: 'create', id, src, x, y, w, h, z, rotation, originalSrc }); }
