@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroCode PRO v12.5 - P2P Notepad Edition</title>
+    <title>AeroCode PRO v14.9 - Button Fix</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
@@ -28,18 +28,18 @@
     <style>
         :root {
             /* --- SÖTÉT TÉMA SZÍNEK (Default) --- */
-            --bg-color: #000000; /* Teljes fekete */
-            --side-panel-bg: #111111; /* Majdnem fekete szürke */
+            --bg-color: #000000;
+            --side-panel-bg: #111111;
             --text-color: #e0e0e0;
             --border-color: #333333;
             --accent-color: #2196F3;
             --output-bg: #161616;
             
-            /* --- ÜVEG HATÁS (GLASS) --- */
-            --glass-bg: rgba(10, 10, 10, 0.6);
+            /* --- ÜVEG HATÁS --- */
+            --glass-bg: rgba(10, 10, 10, 0.95);
             --glass-border: rgba(255, 255, 255, 0.08);
             --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.7);
-            --glass-blur: 15px;
+            --glass-blur: 20px;
             
             --modal-bg: #1a1a1a;
             --input-field-bg: #252525;
@@ -55,6 +55,8 @@
             
             --system-msg-color: #888;
             --p2p-msg-color: #d19a66;
+            
+            --panel-width: 350px;
         }
 
         body.light-mode {
@@ -64,7 +66,7 @@
             --border-color: #d1d1d1;
             --output-bg: #ffffff;
             
-            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-bg: rgba(255, 255, 255, 0.95);
             --glass-border: rgba(0, 0, 0, 0.05);
             --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
             --glass-blur: 15px;
@@ -92,20 +94,23 @@
             overflow: hidden;
             position: relative;
             transition: background 0.3s ease;
+            user-select: none;
         }
 
-        /* --- CODE MIRROR FEKETE HÁTTÉR KÉNYSZERÍTÉSE --- */
+        /* --- CODE MIRROR --- */
         .CodeMirror { 
             flex: 1; 
             font-family: 'JetBrains Mono', monospace; 
             font-size: 14px; 
-            background-color: #000000 !important; /* KÉNYSZERÍTETT FEKETE */
+            background-color: #000000 !important; 
             height: 100%; 
             position: relative;
             color: #f8f8f2;
+            z-index: 1; 
+            user-select: text; 
         }
         .CodeMirror-gutters { 
-            background-color: #000000 !important; /* KÉNYSZERÍTETT FEKETE */
+            background-color: #000000 !important;
             border-right: 1px solid #222; 
         }
         
@@ -117,21 +122,12 @@
         .CodeMirror-hint { margin: 0; padding: 4px 8px; border-radius: 3px; white-space: pre; color: var(--hint-text); cursor: pointer; }
         li.CodeMirror-hint-active { background: var(--hint-select-bg); color: var(--hint-select-text); }
 
-        /* LIVE jelző */
+        /* --- UI ELEMENTS --- */
         #live-indicator {
-            position: absolute;
-            top: 10px; right: 20px;
-            background: rgba(80, 250, 123, 0.1);
-            color: #50fa7b;
-            border: 1px solid #50fa7b;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: bold;
-            pointer-events: none;
-            z-index: 50;
-            display: none;
-            animation: pulse 2s infinite;
+            position: absolute; top: 10px; right: 20px;
+            background: rgba(80, 250, 123, 0.1); color: #50fa7b; border: 1px solid #50fa7b;
+            padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: bold;
+            pointer-events: none; z-index: 100; display: none; animation: pulse 2s infinite;
         }
         @keyframes pulse { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
 
@@ -139,7 +135,7 @@
         .header-wrapper {
             position: fixed; top: 25px; left: 0; width: 100%;
             display: flex; justify-content: space-between; padding: 0 40px;
-            z-index: 1000; pointer-events: none;
+            z-index: 2000; pointer-events: none; 
         }
 
         .glass-bubble {
@@ -168,36 +164,18 @@
         #user-btn { cursor: pointer; font-size:12px; opacity:0.8; margin-right:5px; padding: 6px 12px; border-radius: 20px; transition: background 0.2s; font-weight:600; letter-spacing:0.5px; }
         #user-btn:hover { background: var(--btn-hover); opacity: 1; }
 
-        /* --- FLUID DROPDOWN MENU --- */
+        /* --- DROPDOWN --- */
         .dropdown { position: relative; display: inline-block; }
-        
         .dropdown-content {
-            opacity: 0; 
-            visibility: hidden; 
-            position: absolute; 
-            right: 0; 
-            top: 50px;
-            background-color: var(--glass-bg); 
-            backdrop-filter: blur(var(--glass-blur));
-            min-width: 280px; 
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.6);
-            border-radius: 12px; 
-            border: 1px solid var(--glass-border);
-            z-index: 2000; 
-            overflow: hidden;
-            transition: all 0.2s ease-in-out;
-            transform: translateY(-10px) scale(0.98);
-            padding: 10px;
-            cursor: default;
+            opacity: 0; visibility: hidden; position: absolute; right: 0; top: 50px;
+            background-color: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
+            min-width: 280px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.6);
+            border-radius: 12px; border: 1px solid var(--glass-border);
+            z-index: 3000; overflow: hidden;
+            transition: all 0.2s ease-in-out; transform: translateY(-10px) scale(0.98);
+            padding: 10px; cursor: default;
         }
-
-        .dropdown:hover .dropdown-content { 
-            opacity: 1; 
-            visibility: visible; 
-            transform: translateY(0) scale(1); 
-        }
-        
-        /* Dropdown elemek */
+        .dropdown:hover .dropdown-content { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
         .menu-item {
             color: var(--text-color); padding: 12px 16px; text-decoration: none;
             display: flex; align-items: center; gap: 10px; font-size: 13px;
@@ -205,100 +183,214 @@
         }
         .menu-item:hover { background-color: var(--accent-color); color: white; }
 
-        /* P2P USER LIST STYLES */
-        .user-chip-container {
-            display: flex; flex-direction: column; gap: 5px; margin-top: 10px; margin-bottom: 10px;
-        }
+        /* P2P User Chips */
+        .user-chip-container { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; margin-bottom: 10px; }
         .user-chip {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 6px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border: 1px solid transparent;
+            background: rgba(255, 255, 255, 0.1); padding: 6px 10px;
+            border-radius: 20px; font-size: 12px; display: flex; align-items: center;
+            justify-content: space-between; border: 1px solid transparent;
         }
         .user-chip.self { border-color: var(--accent-color); }
         .user-chip .username { font-weight: 600; }
         .user-chip .kick-btn {
             background: transparent; border: none; color: #ff5555; 
-            cursor: pointer; display: flex; align-items: center; 
-            padding: 2px; border-radius: 50%;
+            cursor: pointer; display: flex; align-items: center; padding: 2px; border-radius: 50%;
         }
         .user-chip .kick-btn:hover { background: rgba(255, 85, 85, 0.2); }
 
-        /* --- LAYOUT --- */
-        .main-container { display: flex; height: 100vh; width: 100%; }
+        /* --- LAYOUT & SLIDING PANEL --- */
+        .main-container { display: flex; height: 100vh; width: 100%; position: relative; overflow: hidden; }
         
         .editor-container { 
-            flex: 6; display: flex; flex-direction: column; 
-            background: #000000; 
-            min-width: 0; 
-            position: relative;
+            flex: 1; display: flex; flex-direction: column; 
+            background: #000000; min-width: 0; position: relative; z-index: 1;
         }
         
         .CodeMirror-scroll { padding-top: 100px; padding-bottom: 50px; }
         
         .side-panel { 
-            flex: 4; display: flex; flex-direction: column; 
+            position: fixed;
+            top: 0; right: 0; bottom: 0;
+            width: var(--panel-width);
             background-color: var(--side-panel-bg); 
-            border-left: 1px solid #1f1f1f;
-            min-width: 300px; padding-top: 100px;
-            flex-shrink: 0;
-            background-repeat: repeat;
-            background-size: 150px 100px;
-            background-blend-mode: overlay;
+            border-left: 1px solid var(--border-color);
+            padding-top: 100px; 
+            display: flex; flex-direction: column;
+            background-repeat: repeat; background-size: 150px 100px; background-blend-mode: overlay;
+            z-index: 1500;
+            
+            transform: translateX(100%); 
+            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+        }
+
+        .side-panel.open {
+            transform: translateX(0); 
         }
         
-        .layout-left { flex-direction: row-reverse; }
-        .layout-left .side-panel { border-left: none; border-right: 1px solid #1f1f1f; }
-        
-        .layout-bottom { flex-direction: column; }
-        .layout-bottom .editor-container { border-right: none; flex: 1; border-bottom: 1px solid var(--border-color); }
-        .layout-bottom .side-panel { 
-            flex: none; height: 35vh; min-height: 200px; min-width: 100%; 
-            padding-top: 10px; border-left: none;
+        /* Manual Close Button */
+        #panel-close-btn {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%) translateX(-100%); 
+            width: 24px;
+            height: 60px;
+            background: var(--side-panel-bg);
+            border: 1px solid var(--border-color);
+            border-right: none;
+            border-radius: 8px 0 0 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-color);
+            z-index: 1501;
+            box-shadow: -4px 0 10px rgba(0,0,0,0.3);
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .side-panel.open #panel-close-btn {
+            opacity: 1; pointer-events: auto;
+        }
+        #panel-close-btn:hover { background: var(--btn-hover); color: var(--accent-color); }
+
+        #panel-trigger {
+            position: fixed;
+            top: 0; right: 0; bottom: 0;
+            width: 20px;
+            z-index: 1400;
+        }
+
+        /* TUTORIAL TOAST */
+        #tutorial-toast {
+            position: fixed;
+            top: 100px;
+            right: 30px;
+            background: var(--accent-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 2500;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateX(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        #tutorial-toast.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        #tutorial-toast .arrow {
+            position: absolute; right: -5px; top: 50%; transform: translateY(-50%);
+            width: 0; height: 0; 
+            border-top: 6px solid transparent; border-bottom: 6px solid transparent;
+            border-left: 6px solid var(--accent-color);
         }
 
         .panel-header { padding: 8px 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; opacity: 0.6; margin-bottom: 5px; }
+        
         .terminal-wrapper { 
-            flex: 2; /* Több helyet kap a terminal */
-            display: flex; flex-direction: column; 
-            background-color: var(--output-bg); 
-            border-radius: 16px; 
-            margin: 0 20px 20px 20px; 
-            overflow: hidden; 
-            border: 1px solid var(--border-color); 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3); 
+            flex: 2; display: flex; flex-direction: column; 
+            background-color: var(--output-bg); border-radius: 16px; 
+            margin: 0 20px 20px 20px; overflow: hidden; 
+            border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0,0,0,0.3); 
         }
 
-        .notepad-wrapper {
-            flex: 1; /* Kevesebb helyet kap a jegyzettömb, de rugalmas */
-            display: flex; flex-direction: column;
-            background-color: var(--output-bg);
-            border-radius: 16px;
+        /* --- AVATAR PANEL --- */
+        .avatar-panel-wrapper {
+            flex: 0 0 auto;
+            min-height: 100px;
+            background-color: var(--output-bg); border-radius: 16px;
             margin: 0 20px 20px 20px;
-            overflow: hidden;
             border: 1px solid var(--border-color);
-            position: relative;
-            min-height: 120px;
+            padding: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
         }
 
-        #shared-notepad {
-            width: 100%;
-            height: 100%;
-            background: transparent;
-            color: var(--text-color);
-            border: none;
-            padding: 15px;
-            resize: none;
-            font-family: 'Inter', sans-serif;
-            font-size: 13px;
-            outline: none;
-            line-height: 1.5;
+        .avatar-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            position: relative; 
         }
-        #shared-notepad::placeholder { opacity: 0.5; font-style: italic; }
+        .avatar-item:hover { transform: scale(1.1); }
+        
+        .avatar-circle {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            display: flex; justify-content: center; align-items: center;
+            font-weight: bold; color: #000;
+            font-size: 14px;
+        }
+        .avatar-item.self .avatar-circle { border-color: white; }
+        .avatar-item.admin .avatar-circle { border: 2px solid #ffcc00; box-shadow: 0 0 10px #ffcc00; }
+        
+        .avatar-name {
+            font-size: 10px; opacity: 0.8; max-width: 60px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+
+        /* --- POPUP MENU STYLE --- */
+        .avatar-popup-menu {
+            position: fixed; 
+            display: none;
+            flex-direction: column;
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--accent-color);
+            padding: 8px;
+            border-radius: 8px;
+            z-index: 5000;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.8);
+            min-width: 140px;
+            gap: 5px;
+        }
+        .avatar-popup-header {
+            font-size: 10px; opacity: 0.6; padding: 0 5px 5px 5px; 
+            border-bottom: 1px solid rgba(255,255,255,0.1); 
+            margin-bottom: 2px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .avatar-popup-btn {
+            background: transparent; border: none; color: var(--text-color);
+            padding: 6px 8px; text-align: left; cursor: pointer;
+            border-radius: 4px; font-size: 12px; display: flex; align-items: center; gap: 8px;
+            transition: background 0.1s;
+        }
+        .avatar-popup-btn:hover { background: var(--accent-color); color: white; }
+
+
+        /* --- CHAT STYLES --- */
+        .chat-wrapper {
+            flex: 2; display: flex; flex-direction: column;
+            background-color: var(--output-bg); border-radius: 16px;
+            margin: 0 20px 20px 20px; overflow: hidden;
+            border: 1px solid var(--border-color); position: relative; min-height: 120px;
+        }
+        #chat-history {
+            flex: 1; padding: 10px; overflow-y: auto; font-size: 12px; font-family: 'Inter'; color: #ccc; user-select: text;
+        }
+        .chat-msg { margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 2px; }
+        .chat-msg strong { color: var(--accent-color); }
+        
+        #chat-input-bar {
+            display: flex; padding: 8px; border-top: 1px solid var(--border-color); background: rgba(0,0,0,0.2);
+        }
+        #chat-input {
+            flex: 1; background: transparent; border: none; color: white; outline: none; font-size: 12px; user-select: text;
+        }
         
         #output { flex: 1; padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; white-space: pre-wrap; overflow-y: auto; color: var(--text-color); }
         
@@ -310,6 +402,7 @@
         #terminal-input-bar.visible { display: flex; }
         #term-input { flex: 1; background: transparent; border: none; color: var(--text-color); outline: none; font-family: 'JetBrains Mono'; font-size: 13px;}
         
+        /* Modals */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10001; backdrop-filter: blur(8px); justify-content: center; align-items: center; }
         .modal { background: var(--modal-bg); width: 350px; padding: 25px; border-radius: 24px; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.7); }
         .modal button { background: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; float: right; margin-top: 15px; font-weight: 600; }
@@ -325,9 +418,23 @@
         .system-msg { color: var(--system-msg-color); font-style: italic; }
         .p2p-msg { color: var(--p2p-msg-color); font-weight: bold; }
         
+        /* New: Dynamic Room controls */
+        .dynamic-room-controls {
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin-top: 10px;
+            padding-top: 10px;
+            display: none; 
+        }
     </style>
 </head>
 <body>
+
+    <div id="panel-trigger"></div>
+    <div id="tutorial-toast">
+        Panel megjelenítése <span class="material-icons" style="font-size:12px; vertical-align:middle;">arrow_forward</span>
+        <div class="arrow"></div>
+    </div>
+    <div id="avatar-popup" class="avatar-popup-menu"></div>
 
     <div id="loading-overlay">
         <svg class="gear" viewBox="0 0 512 512"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>
@@ -348,12 +455,11 @@
             <div id="user-btn" onclick="openLoginModal()">Log in</div>
             
             <div class="dropdown">
-                <button class="icon-btn" title="Közös Munka (P2P)" onclick="resetP2PUI()">
+                <button class="icon-btn" title="Közös Munka (P2P)">
                     <span class="material-icons">group</span>
                 </button>
                 <div class="dropdown-content">
                     <h4 style="margin:0 0 10px 0; border-bottom:1px solid #444; padding-bottom:5px;">Közös Munka</h4>
-                    
                     <div id="connect-ui">
                         <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Válassz egy csatornát:</div>
                         <select id="channel-select" style="width:100%; padding:8px; background:var(--input-field-bg); border:1px solid var(--border-color); color:var(--text-color); border-radius:4px; margin-bottom:10px; font-family:'Inter'">
@@ -363,34 +469,45 @@
                             <option value="4">4. Csatorna (Delta)</option>
                             <option value="5">5. Csatorna (Omega)</option>
                             <option value="6">6. Csatorna (Zeta)</option>
+                            <option value="random">Egyedi Kód (Random)</option>
                         </select>
                         
+                        <div id="custom-code-display" style="display:none; margin-bottom:10px;">
+                             <div style="font-size:10px; color:#888;">Generált Kód (Oszd meg a társaddal):</div>
+                             <input type="text" id="generated-room-id" readonly style="width:100%; color:var(--accent-color); font-weight:bold; text-align:center;">
+                        </div>
+                        <div id="custom-code-input" style="display:none; margin-bottom:10px;">
+                             <div style="font-size:10px; color:#888;">Írd be a kapott kódot:</div>
+                             <input type="text" id="input-room-id" placeholder="Pl. a1b2c3" style="width:100%;">
+                        </div>
+
                         <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:10px;">
-                            <span style="font-size:11px; opacity:0.7;">Max létszám:</span>
+                            <span style="font-size:11px; opacity:0.7;">Kezdő létszám:</span>
                             <input type="number" id="room-size-limit" min="2" max="10" value="3" style="width:60px; padding:4px; font-size:11px; margin-bottom:0;">
                         </div>
-                        
                         <div style="font-size:10px; color:#888; margin-bottom:5px;">EGYIKŐTÖK legyen HOST, a MÁSIK JOIN!</div>
                         <div style="font-size:10px; color:#ff5555; margin-bottom:10px; display:none;" id="login-warning">Jelentkezz be a csatlakozáshoz!</div>
-
                         <div style="display:flex; gap:5px;">
                             <button onclick="startAsHost()" style="flex:1; padding:8px; background:var(--run-color); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">HOST</button>
                             <button onclick="joinAsGuest()" style="flex:1; padding:8px; background:#50fa7b; color:#222; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">JOIN</button>
                         </div>
                     </div>
-
                     <div id="disconnect-ui" style="display:none;">
                         <div style="background:rgba(80, 250, 123, 0.1); color:#50fa7b; padding:8px; border-radius:4px; margin-bottom:10px; text-align:center; font-size:12px;">
                             <span class="material-icons" style="font-size:12px; vertical-align:middle;">link</span> Kapcsolódva
                         </div>
-                        
                         <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Jelenlévők:</div>
-                        <div id="active-users-list" class="user-chip-container">
+                        <div id="active-users-list" class="user-chip-container"></div>
+                        
+                        <div id="dynamic-room-controls" class="dynamic-room-controls">
+                            <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:5px;">
+                                <span style="font-size:11px; opacity:0.7;">Létszámkorlát:</span>
+                                <input type="number" id="dynamic-room-size" min="2" max="15" style="width:60px; padding:4px; font-size:11px; margin-bottom:0;">
                             </div>
+                        </div>
 
-                        <button onclick="disconnectPeer()" style="width:100%; padding:8px; background:#ff5555; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Szétkapcsolás</button>
+                        <button onclick="disconnectPeer()" style="width:100%; padding:8px; background:#ff5555; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold; margin-top:10px;">Szétkapcsolás</button>
                     </div>
-                    
                     <div id="p2p-log" style="font-size:10px; color:#888; margin-top:10px; font-style:italic;">Offline</div>
                 </div>
             </div>
@@ -416,13 +533,22 @@
         <div class="editor-container">
             <div id="live-indicator">● LIVE</div>
             <textarea id="code-editor">
-#AeroCode PRO
-#V12.5 Notepad Edition
-print("Hello WRLD")
+# AeroCode PRO v14.9
+# Button Fix & UI Polish
+#
+# A felső menü "Közös Munka" gombja mostantól biztonságos.
+# Már nem dob ki a szobából, ha véletlenül rákattintasz.
+# Kilépni csak a piros "Szétkapcsolás" gombbal lehet.
+
+print("Hello AeroCode!")
             </textarea>
         </div>
 
-        <div class="side-panel">
+        <div class="side-panel" id="sidePanel">
+            <div id="panel-close-btn" onclick="closeSidePanel()" title="Panel bezárása">
+                <span class="material-icons">chevron_right</span>
+            </div>
+
             <div class="panel-header">TERMINAL</div>
             <div class="terminal-wrapper">
                 <div id="output"></div>
@@ -432,9 +558,20 @@ print("Hello WRLD")
                 </div>
             </div>
             
-            <div class="panel-header">KÖZÖS JEGYZET</div>
-            <div class="notepad-wrapper">
-                <textarea id="shared-notepad" placeholder="Ide írhattok közös jegyzeteket... P2P szinkronizálva."></textarea>
+            <div class="panel-header">PARTNEREK</div>
+            <div id="avatar-panel" class="avatar-panel-wrapper">
+                <div style="font-size:12px; color:#666; width:100%; text-align:center;">Offline</div>
+            </div>
+
+            <div class="panel-header">CHAT</div>
+            <div class="chat-wrapper">
+                <div id="chat-history">
+                    <div style="font-style:italic; opacity:0.5; text-align:center; padding-top:20px;">Írj be valamit és nyomj ENTER-t!</div>
+                </div>
+                <div id="chat-input-bar">
+                    <input type="text" id="chat-input" placeholder="Üzenet..." autocomplete="off">
+                    <button onclick="sendChatMessage()" style="background:transparent; border:none; color:var(--accent-color); cursor:pointer;"><span class="material-icons" style="font-size:16px;">send</span></button>
+                </div>
             </div>
         </div>
     </div>
@@ -442,37 +579,29 @@ print("Hello WRLD")
     <div id="settingsModal" class="modal-overlay">
         <div class="modal">
             <h3 style="margin-top:0; color:var(--text-color)">Beállítások</h3>
-            
             <label style="font-size:12px; opacity:0.7">Gemini API Kulcs</label>
             <input type="password" id="apiKeyInput" placeholder="Illeszd be a kulcsot...">
-            
             <label style="font-size:12px; opacity:0.7">Elrendezés (Layout)</label>
             <select id="layoutInput">
                 <option value="right">Jobb oldalt (Alapértelmezett)</option>
                 <option value="left">Bal oldalt</option>
                 <option value="bottom">Lent (Vízszintes)</option>
             </select>
-            
             <label style="font-size:12px; opacity:0.7">Alkalmazás Háttérszín (Global)</label>
             <input type="color" id="bgColorInput" value="#000000">
-
             <div class="checkbox-container">
                 <input type="checkbox" id="bgPatternInput" checked>
                 <label for="bgPatternInput">Háttérmintázat (Aero LOGO) megjelenítése</label>
             </div>
-
             <label style="font-size:12px; opacity:0.7">Szerkesztő Háttérszín</label>
             <input type="color" id="editorBgColorInput" value="#000000">
-
             <label style="font-size:12px; opacity:0.7">Betűméret (px)</label>
             <input type="number" id="fontSizeInput" value="14" min="10" max="30">
-            
             <label style="font-size:12px; opacity:0.7">Mentés formátum</label>
             <select id="exportFormatInput">
                 <option value="txt">.txt (Szöveges)</option>
                 <option value="py">.py (Python fájl)</option>
             </select>
-
             <button onclick="saveSettings()">Mentés</button>
             <button onclick="document.getElementById('settingsModal').style.display='none'" style="background:transparent; margin-right:10px; color:var(--text-color)">Mégse</button>
         </div>
@@ -498,51 +627,159 @@ print("Hello WRLD")
     </div>
 
     <script>
-        // --- KONFIGURÁCIÓ ---
-        const CLIENT_ID = '138100233309-v575n23j2b6pdek9t9clvkg3immlkrdi.apps.googleusercontent.com'; 
-        const API_KEY = 'AIzaSyAfC2viqoOsVVjcShnqY2rrRsxdV7WHMEg'; 
-        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
-        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
-
-        // --- AUTH & USER LOGIKA ---
+        // --- 1. GLOBAL VARIABLES & INIT ---
+        const outputElement = document.getElementById("output");
+        
         let currentUser = null;
+        let isSuperUser = false; 
         let tokenClient;
         let gapiInited = false;
         let gisInited = false;
 
+        const AVATAR_COLORS_POOL = ['#ff0055', '#00f2ff', '#00ff44', '#ffcc00', '#aa00ff', '#ffffff'];
+        let avatars = {}; 
+        let myAvatar = { color: '#00f2ff', name: 'User' };
+        
+        // --- 2. LOGGING HELPER ---
+        function addToOutput(text, cls="") {
+            const span = document.createElement("span"); span.textContent = text;
+            if(cls) span.className = cls; outputElement.appendChild(span);
+            outputElement.scrollTop = outputElement.scrollHeight;
+        }
+        function logSystem(msg) { addToOutput("> " + msg + "\n", "system-msg"); }
+        function logP2P(msg) { addToOutput("[P2P] " + msg + "\n", "p2p-msg"); }
+
+        // --- 3. AUTO HIDE PANEL LOGIC ---
+        const sidePanel = document.getElementById('sidePanel');
+        const panelTrigger = document.getElementById('panel-trigger');
+        const tutorialToast = document.getElementById('tutorial-toast');
+        let initialTimer = null;
+
+        function initPanelBehavior() {
+            sidePanel.classList.add('open');
+            initialTimer = setTimeout(() => { sidePanel.classList.remove('open'); showTutorialToast(); }, 5000);
+            panelTrigger.addEventListener('mouseenter', () => { sidePanel.classList.add('open'); clearTimeout(initialTimer); });
+            sidePanel.addEventListener('mouseleave', () => { sidePanel.classList.remove('open'); });
+            sidePanel.addEventListener('mouseenter', () => { sidePanel.classList.add('open'); });
+        }
+        function closeSidePanel() { sidePanel.classList.remove('open'); }
+        function showTutorialToast() { tutorialToast.classList.add('visible'); setTimeout(() => { tutorialToast.classList.remove('visible'); }, 4000); }
+        initPanelBehavior();
+
+        // --- 4. LOGIN LOGIC ---
         function openLoginModal() {
             if(currentUser) {
                 if(confirm("Kijelentkezel?")) {
-                    currentUser = null;
+                    // MÓDOSÍTÁS: Előbb bontsuk a kapcsolatot, hogy a többiek lássák
+                    if(peer) disconnectPeer(); 
+                    
+                    currentUser = null; isSuperUser = false;
                     localStorage.removeItem('saved_username'); 
                     document.getElementById('user-btn').innerText = "Log in";
                     addToOutput("Kijelentkezve.", "system-msg");
-                    if(peer) disconnectPeer(); 
+                    renderAvatarPanel();
                 }
             } else {
                 document.getElementById('loginModal').style.display = 'flex';
+                document.getElementById('loginNameInput').value = ""; 
                 document.getElementById('loginNameInput').focus();
             }
         }
 
         function performLogin() {
-            const name = document.getElementById('loginNameInput').value.trim();
-            if(!name) return;
-            localStorage.setItem('saved_username', name);
-            const userKey = 'user_data_' + name;
-            let msg = localStorage.getItem(userKey) ? `Üdvözöllek újra, ${name}!` : `Sikeres bejelentkezés: ${name}!`;
-            if(!localStorage.getItem(userKey)) localStorage.setItem(userKey, Date.now());
-            
-            currentUser = name;
-            document.getElementById('user-btn').innerText = name;
+            const nameInput = document.getElementById('loginNameInput');
+            const name = nameInput.value.trim();
+            if(!name) { alert("Kérlek írj be egy nevet!"); return; }
             document.getElementById('loginModal').style.display = 'none';
             document.getElementById('login-warning').style.display = 'none';
-            logSystem(msg);
-            
-            if(gapiInited && gisInited && !gapi.client.getToken()) tokenClient.requestAccessToken({prompt: ''}); 
+            document.getElementById('user-btn').innerText = name;
+            currentUser = name;
+            isSuperUser = (name === 'tuba.mate');
+            if(isSuperUser) logSystem("Adminisztrátori jogosultságok aktívak.");
+            localStorage.setItem('saved_username', name);
+            myAvatar.name = name;
+            myAvatar.color = AVATAR_COLORS_POOL[Math.floor(Math.random()*AVATAR_COLORS_POOL.length)];
+            logSystem(`Sikeres bejelentkezés: ${name}!`);
+            renderAvatarPanel();
+            try { if(gapiInited && gisInited && tokenClient) { if(!gapi.client.getToken()) tokenClient.requestAccessToken({prompt: ''}); } } catch(e) {}
+        }
+        
+        // --- 5. AVATAR PANEL ---
+        const avatarPanel = document.getElementById('avatar-panel');
+        function renderAvatarPanel() {
+            avatarPanel.innerHTML = "";
+            if(!currentUser && connectedUsers.length === 0) {
+                avatarPanel.innerHTML = '<div style="font-size:12px; color:#666; width:100%; text-align:center;">Offline (Lépj be)</div>';
+                return;
+            }
+            const selfDiv = document.createElement('div');
+            selfDiv.className = 'avatar-item self' + (isSuperUser ? ' admin' : '');
+            selfDiv.innerHTML = `<div class="avatar-circle" style="background-color:${myAvatar.color};">${myAvatar.name.substring(0,2).toUpperCase()}</div><div class="avatar-name">${myAvatar.name}</div>`;
+            avatarPanel.appendChild(selfDiv);
+
+            if(isHost || (conn && conn.open)) {
+                let usersToShow = [];
+                if(isHost) {
+                     connectedUsers.forEach(u => { usersToShow.push({ id: u.id, name: u.username, color: avatars[u.id]?.color || '#ccc' }); });
+                } else {
+                    Object.keys(avatars).forEach(id => {
+                        if(id !== peer.id && id !== 'HOST') { usersToShow.push({ id: id, name: avatars[id].name, color: avatars[id].color }); }
+                    });
+                    if(avatars['HOST']) { usersToShow.push({ id: 'HOST', name: avatars['HOST'].name, color: avatars['HOST'].color }); }
+                }
+                usersToShow.forEach(user => {
+                    const uDiv = document.createElement('div');
+                    uDiv.className = 'avatar-item';
+                    if(user.name === 'tuba.mate' || user.name.includes('tuba.mate')) uDiv.classList.add('admin');
+                    uDiv.onclick = (e) => openAvatarMenu(e, user.id, user.name); 
+                    uDiv.innerHTML = `<div class="avatar-circle" style="background-color:${user.color};">${user.name.substring(0,2).toUpperCase()}</div><div class="avatar-name">${user.name}</div>`;
+                    avatarPanel.appendChild(uDiv);
+                });
+            }
         }
 
-        // --- GOOGLE DRIVE INTEGRÁCIÓ ---
+        const popupMenu = document.getElementById('avatar-popup');
+        function openAvatarMenu(e, userId, userName) {
+            e.stopPropagation(); 
+            popupMenu.innerHTML = `<div class="avatar-popup-header">${userName}</div><button class="avatar-popup-btn" onclick="triggerCodeRequest('${userId}', '${userName}')"><span class="material-icons" style="font-size:14px">download</span> Kód elkérése</button>`;
+            const rect = e.currentTarget.getBoundingClientRect();
+            popupMenu.style.left = (rect.left + (rect.width / 2) - 70) + 'px'; popupMenu.style.top = (rect.top - 70) + 'px';
+            popupMenu.style.display = 'flex';
+        }
+        window.addEventListener('click', () => { popupMenu.style.display = 'none'; });
+        function triggerCodeRequest(targetId, targetName) { popupMenu.style.display = 'none'; requestRemoteCode(targetId, targetName); }
+
+        function requestRemoteCode(targetId, targetName) {
+            logSystem(`${targetName} kódjának lekérése...`);
+            if(isHost) {
+               const target = connectedUsers.find(u => u.id === targetId);
+               if(target && target.conn.open) target.conn.send({ type: 'request_code_snapshot', requesterId: 'HOST' });
+            } else {
+               if(targetId === 'HOST') { if(conn && conn.open) conn.send({ type: 'request_code_snapshot', requesterId: peer.id }); } 
+               else { if(conn && conn.open) conn.send({ type: 'relay_request_code', targetId: targetId }); }
+            }
+        }
+
+        // --- 6. CHAT ---
+        const chatInput = document.getElementById('chat-input');
+        const chatHistory = document.getElementById('chat-history');
+        chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); });
+        function sendChatMessage() {
+            const text = chatInput.value.trim();
+            if(!text || !currentUser) return;
+            addChatLog(currentUser, text);
+            broadcastChatMessage(text);
+            chatInput.value = "";
+        }
+        function addChatLog(sender, text) {
+            const div = document.createElement('div'); div.className = 'chat-msg'; div.innerHTML = `<strong>${sender}:</strong> ${text}`; chatHistory.appendChild(div); chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        // --- 7. CONFIG ---
+        const CLIENT_ID = '138100233309-v575n23j2b6pdek9t9clvkg3immlkrdi.apps.googleusercontent.com'; 
+        const API_KEY = 'AIzaSyAfC2viqoOsVVjcShnqY2rrRsxdV7WHMEg'; 
+        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
         function gapiLoaded() { gapi.load('client', async () => { await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC], }); gapiInited = true; }); }
         function gisLoaded() { tokenClient = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPES, callback: (resp) => { if (resp.error) logSystem("Google hiba: " + resp.error); else logSystem("Google Fiók csatlakoztatva."); }, }); gisInited = true; }
 
@@ -562,9 +799,9 @@ print("Hello WRLD")
         }
 
         async function handleDriveSave() {
-            showLoading(true);
+            document.getElementById('loading-overlay').style.display='flex';
             const folderId = await getFolderId();
-            if(!folderId) { showLoading(false); return; }
+            if(!folderId) { document.getElementById('loading-overlay').style.display='none'; return; }
             const content = editor.getValue();
             const dateStr = new Date().toISOString().slice(0,10);
             const filename = `${currentUser}_${dateStr}.py`;
@@ -573,13 +810,13 @@ print("Hello WRLD")
             const form = new FormData();
             form.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
             form.append('file', file);
-            fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: new Headers({'Authorization': 'Bearer ' + gapi.client.getToken().access_token}), body: form }).then(res => res.json()).then(val => { logSystem(`Sikeres mentés: ${filename}`); showLoading(false); }).catch(err => { logSystem("Mentési hiba!"); showLoading(false); });
+            fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: new Headers({'Authorization': 'Bearer ' + gapi.client.getToken().access_token}), body: form }).then(res => res.json()).then(val => { logSystem(`Sikeres mentés: ${filename}`); document.getElementById('loading-overlay').style.display='none'; }).catch(err => { logSystem("Mentési hiba!"); document.getElementById('loading-overlay').style.display='none'; });
         }
 
         async function handleDriveLoad() {
-            showLoading(true);
+            document.getElementById('loading-overlay').style.display='flex';
             const folderId = await getFolderId();
-            if(!folderId) { showLoading(false); return; }
+            if(!folderId) { document.getElementById('loading-overlay').style.display='none'; return; }
             const response = await gapi.client.drive.files.list({ q: `'${folderId}' in parents and trashed=false`, fields: 'files(id, name)', });
             const files = response.result.files;
             const listDiv = document.getElementById('file-list');
@@ -595,38 +832,29 @@ print("Hello WRLD")
                 });
                 document.getElementById('loadModal').style.display = 'flex';
             } else { alert("Nincs fájl a mappában."); }
-            showLoading(false);
+            document.getElementById('loading-overlay').style.display='none';
         }
 
         async function loadFileContent(fileId) {
             document.getElementById('loadModal').style.display = 'none';
-            showLoading(true);
+            document.getElementById('loading-overlay').style.display='flex';
             try { const response = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' }); editor.setValue(response.body); logSystem("Fájl betöltve"); } catch(e) { logSystem("Hiba betöltéskor."); }
-            showLoading(false);
+            document.getElementById('loading-overlay').style.display='none';
         }
 
-        // --- EDITOR & SETUP ---
+        // --- 8. EDITOR & SETTINGS ---
         let editor = CodeMirror.fromTextArea(document.getElementById("code-editor"), {
             mode: {name: "python", version: 3}, theme: "dracula",
             lineNumbers: true, indentUnit: 4, smartIndent: true, matchBrackets: true, autoCloseBrackets: true,
             extraKeys: { "Ctrl-Space": "autocomplete", "Ctrl-Enter": function() { runPython(); } },
-            hintOptions: { completeSingle: false },
-            lineWrapping: false 
+            hintOptions: { completeSingle: false }, lineWrapping: false 
         });
-
-        const notepad = document.getElementById('shared-notepad'); // Notepad változó
 
         if(localStorage.getItem('ide_fontsize')) { document.querySelector('.CodeMirror').style.fontSize = localStorage.getItem('ide_fontsize') + 'px'; document.getElementById('fontSizeInput').value = localStorage.getItem('ide_fontsize'); }
         let exportExt = localStorage.getItem('ide_export_ext') || 'txt'; document.getElementById('exportFormatInput').value = exportExt;
-        
-        let savedBgColor = localStorage.getItem('ide_custom_bg') || '#000000'; 
-        document.getElementById('bgColorInput').value = savedBgColor;
-        
-        let savedPattern = localStorage.getItem('ide_pattern_on'); if(savedPattern === null) savedPattern = 'true'; 
-        document.getElementById('bgPatternInput').checked = (savedPattern === 'true');
-        
-        let savedEditorBg = localStorage.getItem('ide_editor_bg') || '#000000'; 
-        document.getElementById('editorBgColorInput').value = savedEditorBg;
+        let savedBgColor = localStorage.getItem('ide_custom_bg') || '#000000'; document.getElementById('bgColorInput').value = savedBgColor;
+        let savedPattern = localStorage.getItem('ide_pattern_on'); if(savedPattern === null) savedPattern = 'true'; document.getElementById('bgPatternInput').checked = (savedPattern === 'true');
+        let savedEditorBg = localStorage.getItem('ide_editor_bg') || '#000000'; document.getElementById('editorBgColorInput').value = savedEditorBg;
         
         applyThemeSettings(savedBgColor, savedPattern === 'true', savedEditorBg);
         let savedLayout = localStorage.getItem('ide_layout') || 'right'; document.getElementById('layoutInput').value = savedLayout; applyLayout(savedLayout);
@@ -638,21 +866,16 @@ print("Hello WRLD")
             }
         });
 
-        // --- PYTHON ENGINE (PYODIDE) ---
+        // --- 9. PYTHON (PYODIDE) ---
         let pyodide = null;
         let pyodideReady = false;
         let inputResolver = null;
-        const outputElement = document.getElementById("output");
-
-        function showLoading(show) { document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none'; }
 
         async function initPyodide() {
             try {
                 pyodide = await loadPyodide();
                 await pyodide.runPythonAsync(`
-                    import sys
-                    import js
-                    import asyncio
+                    import sys, js, asyncio
                     class JSWriter:
                         def write(self, text): js.printToTerminal(text)
                         def flush(self): pass
@@ -664,8 +887,16 @@ print("Hello WRLD")
                 `);
                 pyodideReady = true;
                 logSystem("Rendszer kész.");
+                
                 const savedUser = localStorage.getItem('saved_username');
-                if(savedUser) { currentUser = savedUser; document.getElementById('user-btn').innerText = savedUser; logSystem(`Üdvözöllek újra, ${savedUser}!`); }
+                if(savedUser) { 
+                    currentUser = savedUser; 
+                    isSuperUser = (savedUser === 'tuba.mate');
+                    myAvatar.name = savedUser; 
+                    document.getElementById('user-btn').innerText = savedUser; 
+                    logSystem(`Üdvözöllek újra, ${savedUser}!`);
+                    renderAvatarPanel();
+                }
             } catch (e) { console.error(e); logSystem("Rendszer hiba: " + e); }
         }
         initPyodide();
@@ -691,15 +922,8 @@ print("Hello WRLD")
             }
         });
 
-        function addToOutput(text, cls="") {
-            const span = document.createElement("span"); span.textContent = text;
-            if(cls) span.className = cls; outputElement.appendChild(span);
-            outputElement.scrollTop = outputElement.scrollHeight;
-        }
-        function logSystem(msg) { addToOutput("> " + msg + "\n", "system-msg"); }
-        function logP2P(msg) { addToOutput("[P2P] " + msg + "\n", "p2p-msg"); }
-
         async function runPython() {
+            sidePanel.classList.add('open');
             if(!pyodideReady) return;
             outputElement.innerHTML = ""; 
             let code = editor.getValue();
@@ -732,11 +956,7 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
 
         function openSettings() { document.getElementById("settingsModal").style.display = "flex"; }
         
-        function applyLayout(layout) {
-            const container = document.querySelector('.main-container'); container.classList.remove('layout-left', 'layout-bottom');
-            if (layout === 'left') container.classList.add('layout-left'); else if (layout === 'bottom') container.classList.add('layout-bottom');
-            setTimeout(() => editor.refresh(), 100);
-        }
+        function applyLayout(layout) { setTimeout(() => editor.refresh(), 100); }
 
         function applyThemeSettings(color, patternOn, editorColor) {
             document.documentElement.style.setProperty('--bg-color', color);
@@ -769,7 +989,6 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
 
         async function askGemini() {
             const key = localStorage.getItem("gemini_api_key"); if(!key) { openSettings(); return; }
-            const div = document.getElementById("gemini-response"); if(div) div.innerHTML = "Elemzés...";
             try {
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${key}`, {
                     method:"POST", headers:{"Content-Type":"application/json"},
@@ -785,15 +1004,16 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             isDark = !isDark; document.body.className = isDark ? "" : "light-mode"; editor.setOption("theme", isDark ? "dracula" : "eclipse");
         }
 
-        // --- P2P IMPLEMENTÁCIÓ (Bővített - Notepad Sync) ---
+        // --- 10. P2P & SYNC ---
         let peer = null;
         let conn = null; 
         let isSyncing = false; 
-        let isNotepadSyncing = false; // Notepad szinkron flag
         let isHost = false;
-        
         let connectedUsers = []; 
         let maxParticipants = 3;
+        let heartbeatInterval = null; // ÚJ: Heartbeat timer
+        
+        const usedColors = new Set(); 
 
         const ROOM_MAPPING = {
             "1": "aerocode_pro_v11_secure_channel_alpha_92837465_student_access_key_x99_unique_hash_a1",
@@ -804,32 +1024,112 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             "6": "aerocode_pro_v11_secure_channel_zeta_99887766_student_access_key_h44_unique_hash_f6"
         };
         
-        window.addEventListener('beforeunload', () => {
-            if (peer) peer.destroy();
+        // Random ID Logic
+        document.getElementById('channel-select').addEventListener('change', function() {
+            const val = this.value;
+            if(val === 'random') {
+                document.getElementById('custom-code-display').style.display = 'block';
+                document.getElementById('custom-code-input').style.display = 'block';
+                const randomId = Math.random().toString(36).substring(2, 8);
+                document.getElementById('generated-room-id').value = randomId;
+            } else {
+                document.getElementById('custom-code-display').style.display = 'none';
+                document.getElementById('custom-code-input').style.display = 'none';
+            }
+        });
+        
+        window.addEventListener('beforeunload', () => { if (peer) disconnectPeer(); });
+
+        const dynamicRoomControls = document.getElementById('dynamic-room-controls');
+        const dynamicRoomSizeInput = document.getElementById('dynamic-room-size');
+
+        dynamicRoomSizeInput.addEventListener('change', () => {
+            const newSize = parseInt(dynamicRoomSizeInput.value);
+            if(newSize < connectedUsers.length + 1) {
+                alert("A létszám nem lehet kisebb a jelenlegi résztvevőknél!");
+                dynamicRoomSizeInput.value = maxParticipants;
+                return;
+            }
+            maxParticipants = newSize;
+            logSystem(`Új létszámkorlát: ${maxParticipants} fő.`);
         });
 
         function updateActiveUsersUI() {
             const container = document.getElementById('active-users-list');
             container.innerHTML = "";
-
             const selfChip = document.createElement('div');
             selfChip.className = "user-chip self";
-            selfChip.innerHTML = `<span class="username">${currentUser} (Én)</span>`;
+            selfChip.innerHTML = `<span class="username">${currentUser || 'Vendég'} (Én)</span>`;
             container.appendChild(selfChip);
 
             connectedUsers.forEach(u => {
                 const chip = document.createElement('div');
                 chip.className = "user-chip";
-                
                 let html = `<span class="username">${u.username || 'Ismeretlen'}</span>`;
-                
-                if (isHost) {
-                    html += `<button class="kick-btn" onclick="kickUser('${u.id}')" title="Kirúgás"><span class="material-icons" style="font-size:14px;">close</span></button>`;
+                if (isHost || isSuperUser) { 
+                    html += `<button class="kick-btn" onclick="kickUser('${u.id}')" title="Kirúgás"><span class="material-icons" style="font-size:14px;">close</span></button>`; 
                 }
-                
                 chip.innerHTML = html;
                 container.appendChild(chip);
             });
+            renderAvatarPanel();
+            
+            if(isHost || isSuperUser) {
+                dynamicRoomControls.style.display = 'block';
+                dynamicRoomSizeInput.value = maxParticipants;
+            } else {
+                dynamicRoomControls.style.display = 'none';
+            }
+        }
+
+        function getRoomIdFromUI() {
+            const val = document.getElementById('channel-select').value;
+            if (val === 'random') {
+                 if (isHost) return document.getElementById('generated-room-id').value;
+                 return document.getElementById('input-room-id').value;
+            }
+            return ROOM_MAPPING[val];
+        }
+
+        // --- HEARTBEAT SYSTEM (ÚJ) ---
+        function startHeartbeat() {
+            if(heartbeatInterval) clearInterval(heartbeatInterval);
+            heartbeatInterval = setInterval(() => {
+                // 1. Kiszűrjük a "halott" kapcsolatokat
+                const now = Date.now();
+                const timeout = 10000; // 10 másodperc türelem
+                
+                // HOST: Ellenőrzi a vendégeket
+                if (isHost) {
+                    let changed = false;
+                    connectedUsers = connectedUsers.filter(u => {
+                        if (now - u.lastHeartbeat > timeout) {
+                            logP2P(`${u.username} időtúllépés (kapcsolat megszakadt).`);
+                            if(avatars[u.id]) usedColors.delete(avatars[u.id].color);
+                            delete avatars[u.id];
+                            if(u.conn.open) u.conn.close();
+                            changed = true;
+                            return false; 
+                        }
+                        return true;
+                    });
+                    if(changed) {
+                        broadcastUserList(); updateActiveUsersUI(); broadcastAvatarList();
+                    }
+                } 
+                // VENDÉG: Ellenőrzi a Hostot (csak saját magának)
+                else if (conn && conn.open) {
+                    // Ha a host nem küldött jelet, azt a conn.close event majd kezeli
+                }
+
+                // 2. Küldünk Heartbeat jelet
+                if(isHost) {
+                    connectedUsers.forEach(u => { if(u.conn.open) u.conn.send({type: 'heartbeat'}); });
+                } else if(conn && conn.open) {
+                    conn.send({type: 'heartbeat'});
+                }
+
+            }, 2000); // 2 másodpercenként dobog
         }
 
         function startAsHost() {
@@ -838,90 +1138,155 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             
             isHost = true;
             connectedUsers = [];
+            avatars = {}; 
+            usedColors.clear();
+            myAvatar.name = currentUser;
+            myAvatar.color = AVATAR_COLORS_POOL[0];
+            usedColors.add(myAvatar.color);
+            
             maxParticipants = parseInt(document.getElementById('room-size-limit').value) || 3;
+            const roomId = getRoomIdFromUI();
+            if(!roomId) { alert("Nincs érvényes szobaazonosító!"); return; }
 
-            const selectedVal = document.getElementById('channel-select').value;
-            const roomId = ROOM_MAPPING[selectedVal];
+            updateP2PLog("Kapcsolódás szerverhez...");
+            logSystem(`Szoba nyitása (${roomId})...`);
             
-            updateP2PLog("Szoba nyitása...");
-            
-            peer = new Peer(roomId, {
-                debug: 1,
-                config: { 'iceServers': [ { url: 'stun:stun.l.google.com:19302' } ] }
-            });
+            const peerConfig = { 
+                debug: 1, 
+                config: { 
+                    'iceServers': [ 
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' },
+                        {
+                            urls: "turn:openrelay.metered.ca:80",
+                            username: "openrelayproject",
+                            credential: "openrelayproject"
+                        },
+                        {
+                            urls: "turn:openrelay.metered.ca:443",
+                            username: "openrelayproject",
+                            credential: "openrelayproject"
+                        },
+                        {
+                            urls: "turn:openrelay.metered.ca:443?transport=tcp",
+                            username: "openrelayproject",
+                            credential: "openrelayproject"
+                        }
+                    ] 
+                } 
+            };
+
+            peer = new Peer(roomId, peerConfig);
 
             peer.on('open', (id) => {
-                updateP2PLog("SZOBA NYITVA! (Host)");
+                updateP2PLog("ONLINE (Host)");
                 document.getElementById('p2p-log').style.color = "#50fa7b";
                 document.getElementById('connect-ui').style.display = 'none';
                 document.getElementById('disconnect-ui').style.display = 'block';
                 document.getElementById('live-indicator').style.display = 'block';
-                logP2P(`Szoba létrehozva. Max létszám: ${maxParticipants} fő.`);
+                logP2P(`Szoba létrehozva. ID: ${id}`);
                 updateActiveUsersUI();
+                renderAvatarPanel();
+                startHeartbeat(); // START HEARTBEAT
             });
 
             peer.on('connection', (connection) => {
                 if (connectedUsers.length + 1 >= maxParticipants) { 
-                    connection.on('open', () => {
-                        connection.send({ type: 'error', message: 'A szoba megtelt.' });
-                        setTimeout(() => connection.close(), 500);
-                    });
+                    connection.on('open', () => { connection.send({ type: 'error', message: 'A szoba megtelt.' }); setTimeout(() => connection.close(), 500); });
                     return;
                 }
-
                 connection.on('open', () => { });
-
                 connection.on('data', (data) => {
+                    // HEARTBEAT UPDATE
+                    if(data.type === 'heartbeat') {
+                        const u = connectedUsers.find(user => user.id === connection.peer);
+                        if(u) u.lastHeartbeat = Date.now();
+                        return; // Ne csináljon mást
+                    }
+
                     if (data.type === 'handshake') {
-                        const newUser = { id: connection.peer, conn: connection, username: data.username };
+                        const newUser = { id: connection.peer, conn: connection, username: data.username, lastHeartbeat: Date.now() };
                         connectedUsers.push(newUser);
                         logP2P(`${data.username} csatlakozott.`);
-                        
-                        // Kód ÉS Jegyzettömb állapot küldése az újnak
-                        connection.send({ type: 'code_update', content: editor.getValue() });
-                        connection.send({ type: 'notepad_update', content: notepad.value });
-                        
-                        broadcastUserList();
-                        updateActiveUsersUI();
+                        let assignedColor = '#ffffff';
+                        for(let c of AVATAR_COLORS_POOL) { if(!usedColors.has(c)) { assignedColor = c; break; } }
+                        usedColors.add(assignedColor);
+                        avatars[connection.peer] = { name: data.username, color: assignedColor };
+                        connection.send({ type: 'init_data', color: assignedColor });
+                        broadcastUserList(); updateActiveUsersUI(); broadcastAvatarList(); 
                     }
-                    else if(data.type === 'code_update') {
-                        broadcastCode(data.content, connection.peer);
-                        if (editor.getValue() !== data.content) {
-                            isSyncing = true;
-                            const cursor = editor.getCursor(); 
-                            editor.setValue(data.content); 
-                            editor.setCursor(cursor); 
-                            isSyncing = false;
+                    else if(data.type === 'request_code_snapshot') {
+                        connection.send({ type: 'code_snapshot_response', code: editor.getValue(), requesterId: data.requesterId, senderName: currentUser + ' (HOST)' });
+                    }
+                    else if(data.type === 'relay_request_code') {
+                        const targetId = data.targetId;
+                        if(targetId === 'HOST') {
+                            connection.send({ type: 'code_snapshot_response', code: editor.getValue(), requesterId: connection.peer, senderName: currentUser + ' (HOST)' });
+                        } else {
+                            const target = connectedUsers.find(u => u.id === targetId);
+                            if(target && target.conn.open) {
+                                target.conn.send({ type: 'request_code_snapshot', requesterId: connection.peer });
+                            }
                         }
                     }
-                    else if(data.type === 'notepad_update') {
-                        broadcastNotepad(data.content, connection.peer);
-                        if(notepad.value !== data.content) {
-                            isNotepadSyncing = true;
-                            notepad.value = data.content;
-                            isNotepadSyncing = false;
+                    else if(data.type === 'code_snapshot_response') {
+                        if(data.requesterId === 'HOST') {
+                            const current = editor.getValue();
+                            const separator = `\n\n#---------------------------------------------------------------------\n# ${data.senderName || 'REMOTE'} KÓDJA:\n#---------------------------------------------------------------------\n`;
+                            editor.setValue(current + separator + data.code);
+                            logSystem("Kód beillesztve a végére!");
+                        } else {
+                            const requester = connectedUsers.find(u => u.id === data.requesterId);
+                            if(requester && requester.conn.open) {
+                                requester.conn.send({ type: 'code_snapshot_response', code: data.code, senderName: data.senderName });
+                            }
+                        }
+                    }
+                    else if(data.type === 'chat_message') {
+                        addChatLog(data.username || "Ismeretlen", data.text);
+                        broadcastChatMessage(data.text, data.username, connection.peer);
+                    }
+                    else if(data.type === 'admin_force_kick') {
+                         const sender = connectedUsers.find(u => u.id === connection.peer);
+                         if(sender && (sender.username === 'tuba.mate' || sender.username.includes('tuba.mate'))) {
+                             kickUser(data.targetId);
+                             logSystem("Admin parancs: KICK");
+                         }
+                    }
+                    else if(data.type === 'disconnecting') { // Graceful exit
+                        const u = connectedUsers.find(user => user.id === connection.peer);
+                        if(u) {
+                            logP2P(`${u.username} kilépett (szabályosan).`);
+                            if(avatars[connection.peer]) usedColors.delete(avatars[connection.peer].color);
+                            connectedUsers = connectedUsers.filter(user => user.id !== connection.peer);
+                            delete avatars[connection.peer];
+                            broadcastUserList(); updateActiveUsersUI(); broadcastAvatarList();
                         }
                     }
                 });
-
                 connection.on('close', () => {
+                    // Ez a fallback, ha nem jött 'disconnecting' üzenet
                     const u = connectedUsers.find(user => user.id === connection.peer);
-                    if(u) {
-                        logP2P(`${u.username} kilépett.`);
-                        connectedUsers = connectedUsers.filter(user => user.id !== connection.peer);
-                        broadcastUserList();
-                        updateActiveUsersUI();
+                    if(u) { 
+                        logP2P(`${u.username} kapcsolata megszakadt.`); 
+                        if(avatars[connection.peer]) usedColors.delete(avatars[connection.peer].color); 
+                        connectedUsers = connectedUsers.filter(user => user.id !== connection.peer); 
+                        delete avatars[connection.peer]; 
+                        broadcastUserList(); updateActiveUsersUI(); broadcastAvatarList(); 
                     }
                 });
             });
-
             peer.on('error', (err) => {
-                if(err.type === 'unavailable-id') {
-                    updateP2PLog("CSATORNA FOGLALT!");
-                    document.getElementById('p2p-log').style.color = "#ff5555";
-                    alert("Ez a csatorna már foglalt. Válassz másikat vagy várj.");
-                    peer.destroy(); peer = null;
-                } else { updateP2PLog("Hiba: " + err.type); }
+                if(err.type === 'unavailable-id') { 
+                    updateP2PLog("ID FOGLALT!"); 
+                    document.getElementById('p2p-log').style.color = "#ff5555"; 
+                    alert("Ez a csatorna még aktívnak tűnik (zombi). Kérlek várj 1 percet vagy használj másik csatornát/egyedi kódot!"); 
+                    peer.destroy(); peer = null; 
+                } else { 
+                    updateP2PLog("Hiba: " + err.type); 
+                    logSystem("P2P Hiba: " + err.type);
+                }
             });
         }
 
@@ -930,152 +1295,127 @@ ${code.split('\n').map(l => '                            ' + l).join('\n')}
             if (peer) { alert("Már kapcsolódtál!"); return; }
             
             isHost = false;
-            const selectedVal = document.getElementById('channel-select').value;
-            const roomId = ROOM_MAPPING[selectedVal];
+            avatars = {}; 
+            myAvatar.name = currentUser; 
             
+            const roomId = getRoomIdFromUI();
+            if(!roomId) { alert("Adj meg egy kódot!"); return; }
+
             updateP2PLog("Csatlakozás...");
+            logSystem(`Csatlakozás ide: ${roomId}...`);
             
-            peer = new Peer(null, {
-                debug: 1,
-                config: { 'iceServers': [ { url: 'stun:stun.l.google.com:19302' } ] }
-            });
+            const peerConfig = { 
+                debug: 1, 
+                config: { 
+                    'iceServers': [ 
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' },
+                        {
+                            urls: "turn:openrelay.metered.ca:80",
+                            username: "openrelayproject",
+                            credential: "openrelayproject"
+                        },
+                        {
+                            urls: "turn:openrelay.metered.ca:443",
+                            username: "openrelayproject",
+                            credential: "openrelayproject"
+                        },
+                        {
+                            urls: "turn:openrelay.metered.ca:443?transport=tcp",
+                            username: "openrelayproject",
+                            credential: "openrelayproject"
+                        }
+                    ] 
+                } 
+            };
+
+            peer = new Peer(null, peerConfig);
 
             peer.on('open', (id) => {
                 conn = peer.connect(roomId);
-                
                 conn.on('open', () => {
                     conn.send({ type: 'handshake', username: currentUser });
                     document.getElementById('connect-ui').style.display = 'none';
                     document.getElementById('disconnect-ui').style.display = 'block';
                     document.getElementById('live-indicator').style.display = 'block';
-                    updateP2PLog("ONLINE");
-                    document.getElementById('p2p-log').style.color = "#50fa7b";
-                    logP2P("Csatlakozva a szobához.");
-                    updateActiveUsersUI(); 
+                    updateP2PLog("ONLINE"); document.getElementById('p2p-log').style.color = "#50fa7b";
+                    logP2P("Csatlakozva a szobához."); updateActiveUsersUI(); 
+                    startHeartbeat(); // START HEARTBEAT
                 });
-
                 conn.on('data', (data) => {
-                    if(data.type === 'code_update') {
-                        if (editor.getValue() !== data.content) {
-                            isSyncing = true;
-                            const cursor = editor.getCursor(); 
-                            editor.setValue(data.content); 
-                            editor.setCursor(cursor); 
-                            isSyncing = false;
-                        }
-                    } else if(data.type === 'notepad_update') {
-                        if(notepad.value !== data.content) {
-                            isNotepadSyncing = true;
-                            notepad.value = data.content;
-                            isNotepadSyncing = false;
-                        }
-                    } else if (data.type === 'user_list') {
-                        connectedUsers = data.users; 
-                        updateActiveUsersUI();
-                    } else if (data.type === 'kick') {
-                        alert("A szoba gazdája eltávolított.");
-                        disconnectPeer();
-                    } else if (data.type === 'error') {
-                        alert(data.message);
-                        disconnectPeer();
-                    }
-                });
+                    if(data.type === 'heartbeat') return; // Csak életjel, nem csinálunk semmit
 
+                    if(data.type === 'init_data') { myAvatar.color = data.color; }
+                    else if(data.type === 'request_code_snapshot') { conn.send({ type: 'code_snapshot_response', code: editor.getValue(), requesterId: data.requesterId, senderName: currentUser }); }
+                    else if(data.type === 'code_snapshot_response') {
+                        const current = editor.getValue();
+                        const separator = `\n\n#---------------------------------------------------------------------\n# ${data.senderName || 'REMOTE'} KÓDJA:\n#---------------------------------------------------------------------\n`;
+                        editor.setValue(current + separator + data.code);
+                        logSystem("Kód beillesztve a végére!");
+                    }
+                    else if (data.type === 'user_list') { connectedUsers = data.users; updateActiveUsersUI(); }
+                    else if (data.type === 'avatar_list') { const newAvatars = data.avatars; delete newAvatars[peer.id]; avatars = newAvatars; renderAvatarPanel(); }
+                    else if (data.type === 'chat_message') { addChatLog(data.username || "Ismeretlen", data.text); }
+                    else if (data.type === 'kick') { alert("Kirúgtak."); disconnectPeer(); }
+                    else if (data.type === 'error') { alert(data.message); disconnectPeer(); }
+                });
                 conn.on('close', () => { resetP2PUI(); alert("Megszakadt a kapcsolat."); });
                 conn.on('error', () => { alert("Hiba történt."); resetP2PUI(); });
             });
-            
-            peer.on('error', () => { updateP2PLog("Hálózati Hiba."); });
+            peer.on('error', (err) => { updateP2PLog("Hiba: " + err.type); logSystem("P2P Hiba: " + err.type); });
         }
-
-        function broadcastCode(content, senderIdToExclude) {
-            if(!isHost) return;
-            connectedUsers.forEach(u => {
-                if(u.id !== senderIdToExclude && u.conn.open) {
-                    u.conn.send({ type: 'code_update', content: content });
-                }
-            });
-        }
-
-        function broadcastNotepad(content, senderIdToExclude) {
-            if(!isHost) return;
-            connectedUsers.forEach(u => {
-                if(u.id !== senderIdToExclude && u.conn.open) {
-                    u.conn.send({ type: 'notepad_update', content: content });
-                }
-            });
-        }
-
-        function broadcastUserList() {
-            if(!isHost) return;
-            const safeList = connectedUsers.map(u => ({ id: u.id, username: u.username }));
-            safeList.unshift({ id: 'HOST', username: currentUser + " (HOST)" });
-
-            connectedUsers.forEach(u => {
-                if(u.conn.open) {
-                    u.conn.send({ type: 'user_list', users: safeList });
-                }
-            });
-        }
-
-        function kickUser(peerId) {
-            if(!isHost) return;
-            const target = connectedUsers.find(u => u.id === peerId);
-            if(target) {
-                if(target.conn.open) target.conn.send({ type: 'kick' });
-                setTimeout(() => {
-                    target.conn.close();
-                }, 100);
+        
+        function broadcastChatMessage(text, username, senderIdToExclude) {
+            if(isHost) {
+                const data = { type: 'chat_message', text: text, username: username || currentUser }; 
+                connectedUsers.forEach(u => { if(u.id !== senderIdToExclude && u.conn.open) { u.conn.send(data); } });
+            } else if(conn && conn.open) {
+                conn.send({ type: 'chat_message', text: text, username: currentUser });
             }
         }
 
-        function disconnectPeer() {
-            if (isHost) {
-                connectedUsers.forEach(u => { if(u.conn.open) u.conn.close(); });
-            } else {
-                if(conn) conn.close();
+        function broadcastAvatarList() { if(!isHost) return; let allAvatars = { ...avatars }; allAvatars['HOST'] = { name: currentUser + " (HOST)", color: myAvatar.color }; connectedUsers.forEach(u => { if(u.conn.open) { u.conn.send({ type: 'avatar_list', avatars: allAvatars }); } }); }
+        function broadcastUserList() { if(!isHost) return; const safeList = connectedUsers.map(u => ({ id: u.id, username: u.username })); safeList.unshift({ id: 'HOST', username: currentUser + " (HOST)" }); connectedUsers.forEach(u => { if(u.conn.open) { u.conn.send({ type: 'user_list', users: safeList }); } }); }
+        
+        function kickUser(peerId) { 
+            if(isHost) {
+                const target = connectedUsers.find(u => u.id === peerId); 
+                if(target) { 
+                    if(target.conn.open) target.conn.send({ type: 'kick' }); 
+                    setTimeout(() => { target.conn.close(); }, 100); 
+                }
+            } 
+            else if(isSuperUser && conn && conn.open) {
+                conn.send({ type: 'admin_force_kick', targetId: peerId });
             }
-            if(peer) peer.destroy();
-            resetP2PUI();
-            logSystem("Szétkapcsolva.");
+        }
+        
+        function disconnectPeer() { 
+            // GRACEFUL EXIT: Küldjünk üzenetet mielőtt bontjuk
+            if (isHost) { 
+                connectedUsers.forEach(u => { if(u.conn.open) u.conn.send({type: 'disconnecting'}); u.conn.close(); }); 
+            } else { 
+                if(conn && conn.open) conn.send({type: 'disconnecting'}); 
+                if(conn) conn.close(); 
+            } 
+            if(peer) peer.destroy(); 
+            resetP2PUI(); 
+            logSystem("Szétkapcsolva."); 
         }
 
-        function resetP2PUI() {
-            conn = null;
-            peer = null;
-            isHost = false;
-            connectedUsers = [];
-            document.getElementById('connect-ui').style.display = 'block';
-            document.getElementById('disconnect-ui').style.display = 'none';
-            document.getElementById('live-indicator').style.display = 'none';
-            document.getElementById('active-users-list').innerHTML = "";
-            updateP2PLog("Offline");
-            document.getElementById('p2p-log').style.color = "#888";
+        function resetP2PUI() { 
+            if(heartbeatInterval) clearInterval(heartbeatInterval); // STOP HEARTBEAT
+            conn = null; peer = null; isHost = false; connectedUsers = []; avatars = {}; usedColors.clear(); 
+            document.getElementById('connect-ui').style.display = 'block'; 
+            document.getElementById('disconnect-ui').style.display = 'none'; 
+            document.getElementById('live-indicator').style.display = 'none'; 
+            document.getElementById('active-users-list').innerHTML = ""; 
+            updateP2PLog("Offline"); document.getElementById('p2p-log').style.color = "#888"; 
+            renderAvatarPanel(); 
         }
-
         function updateP2PLog(msg) { document.getElementById('p2p-log').innerText = msg; }
 
-        // EDITOR CHANGE EVENT
-        editor.on('change', (cm, change) => {
-            if (!isSyncing) {
-                if (isHost) {
-                    broadcastCode(editor.getValue(), null); 
-                } else if (conn && conn.open) {
-                    conn.send({ type: 'code_update', content: editor.getValue() });
-                }
-            }
-        });
-
-        // NOTEPAD CHANGE EVENT
-        notepad.addEventListener('input', () => {
-            if (!isNotepadSyncing) {
-                if (isHost) {
-                    broadcastNotepad(notepad.value, null);
-                } else if (conn && conn.open) {
-                    conn.send({ type: 'notepad_update', content: notepad.value });
-                }
-            }
-        });
     </script>
 </body>
 </html>
