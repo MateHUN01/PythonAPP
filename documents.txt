@@ -1,0 +1,62 @@
+===ENTRY===
+[TITLE]
+Szöveg Megfordítása (Slicing)
+[KEYWORDS]
+string fordítás visszafelé reverse megfordít betűk tükrözés slice szeletelés
+[DESC]
+Pythonban a legegyszerűbb módja egy string megfordításának a slicing. Nem kell hozzá külön függvény, csak a [::-1] szintaxis.
+[CODE]
+szoveg = "Indul a görög aludni"
+# [kezdet:vég:lépés] -> -1 lépés visszafelé
+forditott = szoveg[::-1]
+print(forditott)
+
+===ENTRY===
+[TITLE]
+Lista Szűrése (List Comprehension)
+[KEYWORDS]
+lista szűrés filter keresés kiválogatás comprehension
+[DESC]
+Egy elegáns egysoros megoldás arra, hogyan válogassunk ki elemeket egy feltétel alapján.
+[CODE]
+szamok = [1, 5, 8, 10, 12, 3]
+# Csak a 10-nél kisebb számok kellenek
+kicsik = [x for x in szamok if x < 10]
+print(kicsik)
+
+===ENTRY===
+[TITLE]
+Fájl Beolvasása (Read)
+[KEYWORDS]
+fájl olvasás read open with line soronként
+[DESC]
+A 'with' kulcsszó gondoskodik arról, hogy a fájl be is záródjon a művelet végén.
+[CODE]
+with open("adat.txt", "r", encoding="utf-8") as f:
+    tartalom = f.read()
+    print(tartalom)
+
+===ENTRY===
+[TITLE]
+Ismétlődések Eltávolítása (Set)
+[KEYWORDS]
+lista egyedi duplikáció ismétlés eltávolítás set halmaz
+[DESC]
+Ha egy listát halmazzá (set) alakítasz, a duplikációk automatikusan eltűnnek, mivel a halmazban minden elem csak egyszer szerepelhet.
+[CODE]
+lista = [1, 2, 2, 3, 3, 3, 4]
+egyedi = list(set(lista))
+print(egyedi) # [1, 2, 3, 4]
+
+===ENTRY===
+[TITLE]
+Szótár Bejárása (Loop Dict)
+[KEYWORDS]
+dict szótár ciklus for loop kulcs érték items
+[DESC]
+A .items() metódussal egyszerre férsz hozzá a kulcshoz (key) és az értékhez (value).
+[CODE]
+adatok = {"név": "Béla", "kor": 25}
+
+for kulcs, ertek in adatok.items():
+    print(f"{kulcs}: {ertek}")
