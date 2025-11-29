@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroDraw PRO v3.6 - New UI & Palette</title>
+    <title>AeroDraw PRO v3.7 - Export FIX</title>
     
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
@@ -82,13 +82,13 @@
         }
         
         /* Eszköztár (Bal) */
-        .toolbar-left { top: 100px; left: 20px; width: 130px; /* Kicsit szélesebb a sorok miatt */ }
+        .toolbar-left { top: 100px; left: 20px; width: 130px; }
 
         /* Rétegkezelő (Jobb) - Animáció módban elrejtjük */
         .layer-panel-right { top: 100px; right: 20px; width: 200px; max-height: 60vh; transition: opacity 0.3s; }
         .layer-panel-right.hidden { opacity: 0; pointer-events: none; }
 
-        /* TOOL ROW (Egymás melletti gombokhoz) - ÚJ */
+        /* TOOL ROW (Egymás melletti gombokhoz) */
         .tool-row {
             display: flex;
             gap: 5px;
@@ -98,28 +98,27 @@
         .tool-btn { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; }
         .tool-btn:hover, .tool-btn.active { background: var(--accent-color); color: white; border-color: transparent; }
         
-        /* ÚJ: MÉHKAPTÁR SZÍNPALETTA */
+        /* MÉHKAPTÁR SZÍNPALETTA */
         .hex-palette-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: -4px; /* Egymásba csúszás függőlegesen */
+            gap: -4px;
             margin: 5px 0;
         }
         .hex-row {
             display: flex;
             gap: 2px;
         }
-        /* Minden második sort eltolunk */
         .hex-row:nth-child(even) {
-            margin-left: 14px; /* A swatch szélességének fele + kis rés */
+            margin-left: 14px;
         }
         .hex-swatch {
             width: 26px;
             height: 26px;
-            border-radius: 50%; /* Kör alak */
+            border-radius: 50%;
             cursor: pointer;
-            border: 2px solid rgba(255,255,255,0.1); /* Halvány keret */
+            border: 2px solid rgba(255,255,255,0.1);
             transition: all 0.2s ease;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
@@ -148,10 +147,10 @@
         /* ANIMATION TIMELINE (Bottom) */
         #animation-panel {
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            width: 80%; height: 110px; /* Megnövelve a Play gomb miatt */
+            width: 80%; height: 110px;
             background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
             border: 1px solid var(--glass-border); border-radius: 16px;
-            display: none; /* Alapból rejtett */
+            display: none;
             flex-direction: column; padding: 10px; z-index: 100;
             box-shadow: var(--glass-shadow);
         }
@@ -232,7 +231,7 @@
         <div class="glass-bubble left-bubble">
             <div class="app-title">
                 <span class="material-icons" style="color:var(--accent-color)">draw</span>
-                AeroDraw PRO v3.6
+                AeroDraw PRO v3.7
             </div>
             <div class="vertical-divider"></div>
             
@@ -387,8 +386,7 @@
 
                     <button class="anim-btn record" onclick="renderGIF()"><span class="material-icons" style="font-size:16px">download</span> GIF Mentés</button>
                 </div>
-                <div class="timeline-frames" id="timeline-container">
-                    </div>
+                <div class="timeline-frames" id="timeline-container"></div>
             </div>
 
         </div>
@@ -448,7 +446,7 @@
         let isDrawing = false;
         let startX = 0, startY = 0; 
         let lastX = 0, lastY = 0;
-        let currentTool = 'brush'; // brush, eraser, rect, circle, fill
+        let currentTool = 'brush'; 
         let penColor = '#ffffff';
         let penWidth = 5;
         let canvasBgColor = '#000000';
@@ -534,7 +532,6 @@
             return cvs;
         }
         
-        // Eseménykezelő delegálás
         canvasWrapper.addEventListener('mousedown', startDraw);
         canvasWrapper.addEventListener('mousemove', draw);
         canvasWrapper.addEventListener('mouseup', stopDraw);
@@ -664,19 +661,17 @@
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
 
-            // KITÖLTÉS (FILL TOOL)
             if (currentTool === 'fill') {
                 saveStateForUndo();
                 const activeLayer = layers.find(l => l.id === activeLayerId);
                 if (activeLayer) {
                     floodFill(activeLayer.ctx, Math.floor(x), Math.floor(y), penColor);
-                    // P2P
                     if(isHost || (conn && conn.open)) {
                          broadcastDrawEvent({ type: 'fill', layerId: activeLayerId, x: Math.floor(x), y: Math.floor(y), color: penColor });
                     }
                     if(isAnimationMode) saveFrameToMemory(currentFrameIndex);
                 }
-                return; // Nem folytatjuk a "húzást"
+                return; 
             }
 
             isDrawing = true;
@@ -761,7 +756,7 @@
             ctx.closePath();
         }
 
-        // --- FLOOD FILL LOGIKA (Stack-based) ---
+        // --- FLOOD FILL ---
         function floodFill(ctx, startX, startY, fillColorHex) {
             const r = parseInt(fillColorHex.slice(1, 3), 16);
             const g = parseInt(fillColorHex.slice(3, 5), 16);
@@ -818,7 +813,7 @@
                 layerPanel.classList.add('hidden'); 
                 initAnimation();
             } else {
-                stopAnimation(); // Biztos ami biztos
+                stopAnimation();
                 btn.classList.remove('active-mode');
                 canvasWrapper.classList.remove('square-mode');
                 panel.classList.remove('active');
@@ -879,7 +874,7 @@
         }
 
         function animNextFrame() {
-            if(isPlaying) return; // Lejátszás közben ne piszkáljuk
+            if(isPlaying) return;
             saveFrameToMemory(currentFrameIndex);
             if (currentFrameIndex < frames.length - 1) {
                 loadFrameFromMemory(currentFrameIndex + 1);
@@ -909,7 +904,7 @@
 
         function updateOnionSkin() {
             onionCtx.clearRect(0, 0, onionLayer.width, onionLayer.height);
-            if (isPlaying || !isOnionSkin || currentFrameIndex === 0) return; // Lejátszásnál nincs onion
+            if (isPlaying || !isOnionSkin || currentFrameIndex === 0) return;
 
             const prevFrame = frames[currentFrameIndex - 1];
             if (prevFrame) {
@@ -923,7 +918,7 @@
             }
         }
 
-        // --- ANIMÁCIÓ LEJÁTSZÁS (PLAYBACK) ---
+        // --- ANIMÁCIÓ LEJÁTSZÁS ---
         function togglePlayAnimation() {
             if (isPlaying) {
                 stopAnimation();
@@ -934,16 +929,10 @@
 
         function playAnimation() {
             if (frames.length < 2) return;
-            
-            // Mentjük az aktuális állapotot, hogy stop-nál ide térjünk vissza
             saveFrameToMemory(currentFrameIndex);
-            const savedIndex = currentFrameIndex;
-
             isPlaying = true;
             document.getElementById('btn-play').innerHTML = '<span class="material-icons">stop</span> Stop';
             document.getElementById('btn-play').classList.add('playing');
-            
-            // Onion skin kikapcsolása lejátszás alatt
             onionCtx.clearRect(0, 0, onionLayer.width, onionLayer.height);
 
             let playIndex = 0;
@@ -954,10 +943,8 @@
                 const activeLayer = layers.find(l => l.id === activeLayerId);
                 if(activeLayer && frames[playIndex]) {
                     activeLayer.ctx.putImageData(frames[playIndex].imageData, 0, 0);
-                    // UI update (de nem scrollolunk, hogy ne legyen zavaró)
                     document.getElementById('frame-counter').innerText = `${playIndex + 1} / ${frames.length}`;
                 }
-                
                 playIndex++;
                 if (playIndex >= frames.length) playIndex = 0;
             }, intervalTime);
@@ -968,8 +955,6 @@
             clearInterval(playbackInterval);
             document.getElementById('btn-play').innerHTML = '<span class="material-icons">play_arrow</span> Lejátszás';
             document.getElementById('btn-play').classList.remove('playing');
-            
-            // Visszatöltjük azt a frame-et, ahol a user volt
             loadFrameFromMemory(currentFrameIndex);
         }
 
@@ -997,23 +982,34 @@
             if(activeThumb) activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
         }
 
-        // --- GIF EXPORT ---
-        function renderGIF() {
+        // --- GIF EXPORT (Javított BLOB módszerrel) ---
+        async function renderGIF() {
             if(frames.length === 0) return;
-            if(isPlaying) stopAnimation(); // Ha megy a lejátszás, állítsuk meg
+            if(isPlaying) stopAnimation();
             saveFrameToMemory(currentFrameIndex);
 
             const overlay = document.getElementById('loading-overlay');
             overlay.style.display = 'flex';
-            document.getElementById('loading-text').innerText = "GIF Generálása...";
+            document.getElementById('loading-text').innerText = "GIF Generálása (Internet szükséges)...";
 
             try {
+                // 1. Worker kód letöltése manuálisan a CORS megkerülésére
+                const workerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js';
+                const response = await fetch(workerUrl);
+                if (!response.ok) throw new Error("Nem sikerült letölteni a GIF generáló komponenst.");
+                const workerScriptText = await response.text();
+                
+                // 2. Blob készítése a letöltött kódból
+                const blob = new Blob([workerScriptText], { type: 'application/javascript' });
+                const blobUrl = URL.createObjectURL(blob);
+
+                // 3. GIF inicializálása a belső Blob URL-lel
                 const gif = new GIF({
                     workers: 2,
                     quality: 10,
                     width: bgLayer.width,
                     height: bgLayer.height,
-                    workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js'
+                    workerScript: blobUrl // Ez a kulcs a javításhoz!
                 });
 
                 const fps = parseInt(document.getElementById('fps-input').value) || 5;
@@ -1035,13 +1031,15 @@
                     link.download = `AeroDraw_Anim_${Date.now()}.gif`;
                     link.href = URL.createObjectURL(blob);
                     link.click();
+                    // Takarítás
+                    URL.revokeObjectURL(blobUrl);
                 });
 
                 gif.render();
 
             } catch (err) {
                 console.error(err);
-                alert("Hiba a GIF generálásakor.");
+                alert("Hiba a GIF generálásakor: " + err.message + "\nEllenőrizd az internetkapcsolatot!");
                 overlay.style.display = 'none';
             }
         }
@@ -1050,12 +1048,10 @@
         function pickColor(color, element) {
             penColor = color;
             document.getElementById('pen-color-input').value = color;
-            // ÚJ SELEKTOR: .hex-swatch
             document.querySelectorAll('.hex-swatch').forEach(el => el.classList.remove('active'));
             element.classList.add('active');
             if(currentTool === 'eraser') setTool('brush');
         }
-        // ÚJ SELEKTOR AZ INPUT ESEMÉNYNÉL IS
         document.getElementById('pen-color-input').addEventListener('input', (e) => { penColor = e.target.value; document.querySelectorAll('.hex-swatch').forEach(el => el.classList.remove('active')); if(currentTool === 'eraser') setTool('brush'); });
         document.getElementById('pen-width').addEventListener('input', (e) => penWidth = e.target.value);
         function setTool(tool) { 
@@ -1065,16 +1061,20 @@
         }
 
         function downloadImage() {
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = bgLayer.width; tempCanvas.height = bgLayer.height;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.drawImage(bgLayer, 0, 0);
-            layers.forEach(layer => { tempCtx.drawImage(layer.canvas, 0, 0); });
-            
-            const link = document.createElement('a');
-            link.download = `AeroDraw_Pro_${new Date().getTime()}.png`;
-            link.href = tempCanvas.toDataURL('image/png');
-            link.click();
+            try {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = bgLayer.width; tempCanvas.height = bgLayer.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(bgLayer, 0, 0);
+                layers.forEach(layer => { tempCtx.drawImage(layer.canvas, 0, 0); });
+                
+                const link = document.createElement('a');
+                link.download = `AeroDraw_Pro_${new Date().getTime()}.png`;
+                link.href = tempCanvas.toDataURL('image/png');
+                link.click();
+            } catch (e) {
+                alert("Hiba a kép mentésekor. Lehetséges ok: túl nagy vászon.");
+            }
         }
 
         // --- AUTH & P2P ALAPOK ---
