@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroDraw PRO v3.8 - Hexagon & Line Tool</title>
+    <title>AeroDraw PRO v3.9 - Selection Tool</title>
     
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
@@ -19,17 +19,15 @@
             --text-color: #e0e0e0;
             --border-color: #333333;
             --accent-color: #2196F3;
-            
-            /* --- ÜVEG HATÁS --- */
             --glass-bg: rgba(20, 20, 20, 0.7);
             --glass-border: rgba(255, 255, 255, 0.1);
             --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
             --glass-blur: 15px;
-            
             --modal-bg: #1a1a1a;
             --input-field-bg: #252525;
             --btn-hover: rgba(255, 255, 255, 0.15);
             --run-color: #2196F3;
+            --selection-color: #00ffcc; /* Kijelölő keret színe */
         }
 
         body.light-mode {
@@ -43,6 +41,7 @@
             --input-field-bg: #e6e6e6;
             --btn-hover: rgba(0, 0, 0, 0.05);
             --run-color: #1976D2;
+            --selection-color: #007766;
         }
 
         * { box-sizing: border-box; }
@@ -53,26 +52,15 @@
             position: relative; width: 100%; height: 100%; background: var(--bg-color); overflow: hidden; cursor: crosshair;
             transition: all 0.3s ease;
         }
-        /* NÉGYZETES NÉZET (ANIMÁCIÓHOZ) */
         #canvas-wrapper.square-mode {
-            width: auto;
-            aspect-ratio: 1 / 1;
-            margin: 0 auto;
-            border: 2px solid var(--accent-color);
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
-            max-height: calc(100vh - 160px); /* Hely a timeline-nak */
-            margin-top: 80px;
+            width: auto; aspect-ratio: 1 / 1; margin: 0 auto; border: 2px solid var(--accent-color);
+            box-shadow: 0 0 50px rgba(0,0,0,0.5); max-height: calc(100vh - 160px); margin-top: 80px;
         }
 
-        .drawing-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
-        }
+        .drawing-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         .drawing-layer.active { pointer-events: auto; }
         #background-layer { z-index: 0; background-color: #000000; transition: background-color 0.3s; }
-        
-        /* PREVIEW LAYER (Alakzatokhoz) */
-        #preview-layer { z-index: 50; pointer-events: none; }
-        /* ONION SKIN LAYER (Animációhoz) */
+        #preview-layer { z-index: 50; pointer-events: none; } /* Preview is topmost for selection UI */
         #onion-layer { z-index: 1; pointer-events: none; opacity: 0.3; filter: grayscale(100%); }
 
         /* --- LEBEGŐ PANELEK --- */
@@ -80,60 +68,23 @@
             position: absolute; background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
             border: 1px solid var(--glass-border); padding: 10px; border-radius: 12px; display: flex; flex-direction: column; gap: 10px; z-index: 100; box-shadow: var(--glass-shadow);
         }
-        
-        /* Eszköztár (Bal) */
         .toolbar-left { top: 100px; left: 20px; width: 130px; }
-
-        /* Rétegkezelő (Jobb) - Animáció módban elrejtjük */
         .layer-panel-right { top: 100px; right: 20px; width: 200px; max-height: 60vh; transition: opacity 0.3s; }
         .layer-panel-right.hidden { opacity: 0; pointer-events: none; }
 
-        /* TOOL ROW (Egymás melletti gombokhoz) */
-        .tool-row {
-            display: flex;
-            gap: 5px;
-            justify-content: center;
-        }
-
+        .tool-row { display: flex; gap: 5px; justify-content: center; }
         .tool-btn { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; }
         .tool-btn:hover, .tool-btn.active { background: var(--accent-color); color: white; border-color: transparent; }
         
-        /* MÉHKAPTÁR SZÍNPALETTA */
-        .hex-palette-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: -4px;
-            margin: 5px 0;
-        }
-        .hex-row {
-            display: flex;
-            gap: 2px;
-        }
-        .hex-row:nth-child(even) {
-            margin-left: 14px;
-        }
-        .hex-swatch {
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            cursor: pointer;
-            border: 2px solid rgba(255,255,255,0.1);
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        .hex-swatch:hover {
-            transform: scale(1.2); z-index: 2;
-        }
-        .hex-swatch.active {
-            border-color: white;
-            box-shadow: 0 0 10px var(--accent-color);
-            z-index: 3; transform: scale(1.1);
-        }
+        .hex-palette-container { display: flex; flex-direction: column; align-items: center; gap: -4px; margin: 5px 0; }
+        .hex-row { display: flex; gap: 2px; }
+        .hex-row:nth-child(even) { margin-left: 14px; }
+        .hex-swatch { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 2px solid rgba(255,255,255,0.1); transition: all 0.2s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .hex-swatch:hover { transform: scale(1.2); z-index: 2; }
+        .hex-swatch.active { border-color: white; box-shadow: 0 0 10px var(--accent-color); z-index: 3; transform: scale(1.1); }
 
         input[type="color"] { -webkit-appearance: none; padding: 0; height: 30px; width: 100%; cursor: pointer; border: 2px solid var(--border-color); background: transparent; border-radius: 8px; overflow: hidden; margin-top: 5px;}
 
-        /* Réteg lista */
         .layer-list { display: flex; flex-direction: column-reverse; gap: 5px; overflow-y: auto; flex: 1; }
         .layer-item { display: flex; align-items: center; justify-content: space-between; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid transparent; cursor: pointer; font-size: 13px; }
         .layer-item.active { border-color: var(--accent-color); background: rgba(33, 150, 243, 0.1); }
@@ -144,41 +95,25 @@
         input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: #444; outline: none; margin-top: 5px; }
         input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--accent-color); cursor: pointer; }
 
-        /* ANIMATION TIMELINE (Bottom) */
-        #animation-panel {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            width: 80%; height: 110px;
-            background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
-            border: 1px solid var(--glass-border); border-radius: 16px;
-            display: none;
-            flex-direction: column; padding: 10px; z-index: 100;
-            box-shadow: var(--glass-shadow);
-        }
+        #animation-panel { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 80%; height: 110px; background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)); border: 1px solid var(--glass-border); border-radius: 16px; display: none; flex-direction: column; padding: 10px; z-index: 100; box-shadow: var(--glass-shadow); }
         #animation-panel.active { display: flex; }
-        
         .timeline-controls { display: flex; justify-content: center; gap: 10px; margin-bottom: 10px; align-items: center; flex-wrap: wrap;}
         .timeline-frames { display: flex; overflow-x: auto; gap: 5px; padding-bottom: 5px; align-items: center; }
         .timeline-frames::-webkit-scrollbar { height: 6px; }
         .timeline-frames::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
-
-        .frame-thumb {
-            min-width: 50px; height: 50px; background: #000; border: 2px solid #444; border-radius: 6px; cursor: pointer; position: relative; overflow: hidden;
-        }
+        .frame-thumb { min-width: 50px; height: 50px; background: #000; border: 2px solid #444; border-radius: 6px; cursor: pointer; position: relative; overflow: hidden; }
         .frame-thumb.active { border-color: var(--accent-color); box-shadow: 0 0 10px var(--accent-color); }
         .frame-thumb canvas { width: 100%; height: 100%; object-fit: contain; }
         .frame-number { position: absolute; bottom: 2px; right: 2px; font-size: 9px; color: white; background: rgba(0,0,0,0.6); padding: 1px 3px; border-radius: 4px; }
-
         .anim-btn { padding: 5px 10px; background: var(--btn-hover); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 6px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 5px; }
         .anim-btn:hover { background: var(--accent-color); color: white; }
         .anim-btn.record { color: #ff5555; border-color: #ff5555; }
         .anim-btn.play { color: #50fa7b; border-color: #50fa7b; font-weight: bold; }
         .anim-btn.play.playing { background: #50fa7b; color: #121212; }
 
-        /* LIVE jelző */
         #live-indicator { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); background: rgba(80, 250, 123, 0.1); color: #50fa7b; border: 1px solid #50fa7b; padding: 2px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; pointer-events: none; z-index: 50; display: none; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
 
-        /* --- HEADER --- */
         .header-wrapper { position: fixed; top: 25px; left: 0; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; z-index: 1000; pointer-events: none; }
         .glass-bubble { pointer-events: auto; background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); border-radius: 100px; padding: 6px 10px; display: flex; align-items: center; gap: 10px; transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .glass-bubble:hover { transform: translateY(-2px); box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.8); }
@@ -188,29 +123,24 @@
         button.icon-btn:hover { background: var(--btn-hover); transform: scale(1.1); }
         button.icon-btn.active-mode { background: var(--accent-color); color: white; box-shadow: 0 0 10px var(--accent-color); }
         button.icon-btn:disabled { opacity: 0.3; cursor: default; transform: none; }
-        
         #user-btn { cursor: pointer; font-size:12px; opacity:0.8; margin-right:5px; padding: 6px 12px; border-radius: 20px; transition: background 0.2s; font-weight:600; letter-spacing:0.5px; }
         #user-btn:hover { background: var(--btn-hover); opacity: 1; }
 
-        /* --- DROPDOWN --- */
         .dropdown { position: relative; display: inline-block; }
         .dropdown-content { opacity: 0; visibility: hidden; position: absolute; right: 0; top: 50px; background-color: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)); min-width: 280px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.6); border-radius: 12px; border: 1px solid var(--glass-border); z-index: 2000; overflow: hidden; transition: all 0.2s ease-in-out; transform: translateY(-10px) scale(0.98); padding: 10px; cursor: default; }
         .dropdown:hover .dropdown-content { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
         .menu-item { color: var(--text-color); padding: 12px 16px; text-decoration: none; display: flex; align-items: center; gap: 10px; font-size: 13px; transition: background 0.2s; cursor: pointer; border-radius: 6px; }
         .menu-item:hover { background-color: var(--accent-color); color: white; }
 
-        /* P2P UI */
         .user-chip-container { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; margin-bottom: 10px; }
         .user-chip { background: rgba(255, 255, 255, 0.1); padding: 6px 10px; border-radius: 20px; font-size: 12px; display: flex; align-items: center; justify-content: space-between; border: 1px solid transparent; }
         .user-chip.self { border-color: var(--accent-color); }
         .user-chip .username { font-weight: 600; }
         .user-chip .kick-btn { background: transparent; border: none; color: #ff5555; cursor: pointer; display: flex; align-items: center; padding: 2px; border-radius: 50%; }
 
-        /* --- MAIN CONTAINER --- */
         .main-container { display: flex; height: 100vh; width: 100%; }
         .editor-container { flex: 1; display: flex; flex-direction: column; background: var(--bg-color); min-width: 0; position: relative; }
         
-        /* --- MODALS --- */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10001; backdrop-filter: blur(8px); justify-content: center; align-items: center; }
         .modal { background: var(--modal-bg); width: 350px; padding: 25px; border-radius: 24px; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.7); }
         .modal button { background: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; float: right; margin-top: 15px; font-weight: 600; }
@@ -231,7 +161,7 @@
         <div class="glass-bubble left-bubble">
             <div class="app-title">
                 <span class="material-icons" style="color:var(--accent-color)">draw</span>
-                AeroDraw PRO v3.8
+                AeroDraw PRO v3.9
             </div>
             <div class="vertical-divider"></div>
             
@@ -309,6 +239,7 @@
                     <button class="tool-btn active" id="btn-brush" onclick="setTool('brush')" title="Ecset"><span class="material-icons">brush</span></button>
                     <button class="tool-btn" id="btn-eraser" onclick="setTool('eraser')" title="Radír"><span class="material-icons">auto_fix_normal</span></button>
                     <button class="tool-btn" id="btn-fill" onclick="setTool('fill')" title="Kitöltés"><span class="material-icons">format_color_fill</span></button>
+                    <button class="tool-btn" id="btn-select" onclick="setTool('select')" title="Kijelölő (Lasso)"><span class="material-icons">gesture</span></button>
                 </div>
 
                 <div style="width:100%; height:1px; background:var(--border-color); margin:5px 0;"></div>
@@ -455,6 +386,14 @@
         let penWidth = 5;
         let canvasBgColor = '#000000';
 
+        // --- KIJELÖLÉS & VÁGÓLAP ---
+        let selectionObj = null; // { canvas: offscreenCanvas, x, y, width, height, rotation }
+        let isSelectionActive = false;
+        let selectionPath = []; // Lasso path pontok
+        let transformMode = null; // 'move', 'resize', 'rotate'
+        let transformStartData = {}; // Segédváltozó transzformációhoz
+        let appClipboard = null; // Belső vágólap (Ctrl+C/V)
+
         // --- ANIMÁCIÓS VÁLTOZÓK ---
         let isAnimationMode = false;
         let frames = [];
@@ -473,6 +412,9 @@
             const activeLayer = layers.find(l => l.id === activeLayerId);
             if (!activeLayer) return;
 
+            // Ha van aktív kijelölés, azt süssük rá mielőtt mentünk, vagy mentsük a kijelölés előtti állapotot.
+            // Egyszerűsítés: Ha rajzolunk, a kijelölés már rákerült vagy megszűnt.
+            
             const currentState = {
                 layerId: activeLayerId,
                 imageData: activeLayer.ctx.getImageData(0, 0, activeLayer.canvas.width, activeLayer.canvas.height)
@@ -484,6 +426,12 @@
         }
 
         function undoLastAction() {
+            // Ha van aktív kijelölés, az Undo először megszünteti azt (commit nélkül)
+            if (isSelectionActive) {
+                commitSelection(); // Vagy eldobás? Legyen inkább eldobás visszavonásnál.
+                // De most egyszerűsítsünk: Undo visszateszi a képet az előző állapotra.
+            }
+
             if (undoStack.length === 0) return;
             const previousState = undoStack.pop();
             const targetLayer = layers.find(l => l.id === previousState.layerId);
@@ -539,11 +487,59 @@
         canvasWrapper.addEventListener('mousedown', startDraw);
         canvasWrapper.addEventListener('mousemove', draw);
         canvasWrapper.addEventListener('mouseup', stopDraw);
-        canvasWrapper.addEventListener('mouseout', stopDraw);
+        canvasWrapper.addEventListener('mouseout', stopDraw); // stop selection drag
         canvasWrapper.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(new MouseEvent('mousedown', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); });
         canvasWrapper.addEventListener('touchmove', (e) => { e.preventDefault(); draw(new MouseEvent('mousemove', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); });
         canvasWrapper.addEventListener('touchend', (e) => { stopDraw(new MouseEvent('mouseup', { clientX: e.changedTouches[0]?.clientX, clientY: e.changedTouches[0]?.clientY })); });
 
+        // Billentyűfigyelés (Ctrl+C, Ctrl+V, Enter, Esc)
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                if (isSelectionActive) commitSelection();
+            }
+            if (e.key === 'Escape') {
+                if (isSelectionActive) commitSelection(); // Vagy cancel? Most legyen commit.
+            }
+            if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) {
+                if (isSelectionActive && selectionObj) {
+                    appClipboard = {
+                        canvas: document.createElement('canvas'),
+                        width: selectionObj.width,
+                        height: selectionObj.height
+                    };
+                    appClipboard.canvas.width = selectionObj.width;
+                    appClipboard.canvas.height = selectionObj.height;
+                    appClipboard.canvas.getContext('2d').drawImage(selectionObj.canvas, 0, 0);
+                    // Opcionális: Rendszervágólapra is tehetnénk blobként, de most maradjunk belsőnél.
+                }
+            }
+            if (e.ctrlKey && (e.key === 'v' || e.key === 'V')) {
+                if (appClipboard) {
+                    if (isSelectionActive) commitSelection(); // Ha volt aktív, süssük rá
+                    
+                    // Új selection létrehozása a vágólapról, középre
+                    const rect = canvasWrapper.getBoundingClientRect();
+                    const centerX = canvasWrapper.offsetWidth / 2 - appClipboard.width / 2;
+                    const centerY = canvasWrapper.offsetHeight / 2 - appClipboard.height / 2;
+
+                    selectionObj = {
+                        canvas: document.createElement('canvas'),
+                        x: centerX,
+                        y: centerY,
+                        width: appClipboard.width,
+                        height: appClipboard.height,
+                        rotation: 0
+                    };
+                    selectionObj.canvas.width = appClipboard.width;
+                    selectionObj.canvas.height = appClipboard.height;
+                    selectionObj.canvas.getContext('2d').drawImage(appClipboard.canvas, 0, 0);
+                    
+                    isSelectionActive = true;
+                    setTool('select'); // Váltsunk kijelölőre, hogy mozgatható legyen
+                    renderSelection();
+                }
+            }
+        });
 
         function addNewLayer(nameOverride) {
             const id = layerCounter++;
@@ -578,6 +574,7 @@
         }
 
         function setActiveLayer(id) {
+            if (isSelectionActive) commitSelection(); // Ha réteget váltunk, véglegesítsük a kijelölést az előzőn (vagy az újon)
             activeLayerId = id;
             layers.forEach(l => {
                 if(l.id === id) {
@@ -665,7 +662,77 @@
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
 
+            // KIJELÖLÉS KEZELÉSE (Transzformáció)
+            if (currentTool === 'select' && isSelectionActive && selectionObj) {
+                // Ellenőrizzük, hogy transzformációs ponton vagyunk-e
+                const handleSize = 10;
+                // Forgatás fogantyú (felül középen, kicsit kijjebb)
+                // Egyszerűsítés: koordinátarendszer forgatása miatt a hit-test is trükkös.
+                // Most egyszerű doboz hit-testet használunk a képernyő koordinátákon.
+                
+                // Középpont
+                const cx = selectionObj.x + selectionObj.width/2;
+                const cy = selectionObj.y + selectionObj.height/2;
+                
+                // Egyszerű távolság alapú hit test a forgatóponthoz
+                // A forgató pont a doboz felett van. Ha elforgatjuk, a pont is elfordul.
+                const rotRad = selectionObj.rotation;
+                const topHandleDist = selectionObj.height/2 + 20;
+                const rotHandleX = cx + Math.sin(rotRad) * topHandleDist; // Ez a matek most csak kb. jó
+                const rotHandleY = cy - Math.cos(rotRad) * topHandleDist;
+                
+                if (Math.hypot(x - rotHandleX, y - rotHandleY) < 15) {
+                    isDrawing = true;
+                    transformMode = 'rotate';
+                    transformStartData = { startAngle: Math.atan2(y - cy, x - cx), originalRot: selectionObj.rotation };
+                    return;
+                }
+                
+                // Méretezés (jobb alsó sarok, elforgatva)
+                // A sarok pontok kiszámítása transzformációval:
+                // Túl bonyolult lenne itt a pontos OBB (Oriented Bounding Box) hit test minden sarokra.
+                // Egyszerűsítés: Ha a doboz belsejében kattint: Mozgatás.
+                
+                // Transzformáljuk vissza az egeret a doboz lokális koordinátáiba
+                const dx = x - cx;
+                const dy = y - cy;
+                const localX = dx * Math.cos(-rotRad) - dy * Math.sin(-rotRad);
+                const localY = dx * Math.sin(-rotRad) + dy * Math.cos(-rotRad);
+                
+                const halfW = selectionObj.width / 2;
+                const halfH = selectionObj.height / 2;
+
+                if (localX > halfW - 15 && localX < halfW + 15 && localY > halfH - 15 && localY < halfH + 15) {
+                     isDrawing = true;
+                     transformMode = 'resize';
+                     transformStartData = { startX: x, startY: y, startW: selectionObj.width, startH: selectionObj.height };
+                     return;
+                }
+
+                if (localX >= -halfW && localX <= halfW && localY >= -halfH && localY <= halfH) {
+                    isDrawing = true;
+                    transformMode = 'move';
+                    transformStartData = { startX: x, startY: y, objX: selectionObj.x, objY: selectionObj.y };
+                    return;
+                }
+
+                // Ha kívül kattint, commitoljuk a kijelölést és kezdjünk újat (ha select tool)
+                commitSelection();
+            }
+
+            // Ha Select tool, de nincs aktív, kezdjük a lasso-t
+            if (currentTool === 'select' && !isSelectionActive) {
+                isDrawing = true;
+                selectionPath = [{x, y}];
+                previewCtx.clearRect(0, 0, previewLayer.width, previewLayer.height);
+                previewCtx.beginPath();
+                previewCtx.moveTo(x, y);
+                return;
+            }
+
+            // Egyéb eszközök
             if (currentTool === 'fill') {
+                if (isSelectionActive) commitSelection(); // Ha rajzolunk, süssük rá a kijelölést
                 saveStateForUndo();
                 const activeLayer = layers.find(l => l.id === activeLayerId);
                 if (activeLayer) {
@@ -678,6 +745,8 @@
                 return; 
             }
 
+            if (isSelectionActive) commitSelection(); // Bármi más rajzolásnál commit
+
             isDrawing = true;
             startX = x; startY = y;
             [lastX, lastY] = [x, y];
@@ -685,11 +754,60 @@
         }
 
         function draw(e) {
-            if (!isDrawing || !activeLayerId) return;
+            if (!isDrawing) return;
             const rect = canvasWrapper.getBoundingClientRect();
             const newX = e.clientX - rect.left;
             const newY = e.clientY - rect.top;
+
+            // KIJELÖLÉS TRANSZFORMÁCIÓ
+            if (currentTool === 'select' && isSelectionActive && selectionObj) {
+                if (transformMode === 'move') {
+                    const dx = newX - transformStartData.startX;
+                    const dy = newY - transformStartData.startY;
+                    selectionObj.x = transformStartData.objX + dx;
+                    selectionObj.y = transformStartData.objY + dy;
+                } else if (transformMode === 'resize') {
+                    // Egyszerű méretezés (aránytartás nélkül most)
+                    // Az egér távolsága a középponttól a méretet határozza meg
+                    const cx = selectionObj.x + selectionObj.width/2;
+                    const cy = selectionObj.y + selectionObj.height/2;
+                    // Visszaforgatott koordináták
+                    const dx = newX - cx;
+                    const dy = newY - cy;
+                    const rot = -selectionObj.rotation;
+                    const localX = dx * Math.cos(rot) - dy * Math.sin(rot);
+                    const localY = dx * Math.sin(rot) + dy * Math.cos(rot);
+                    
+                    // Új szélesség/magasság (min 10px)
+                    selectionObj.width = Math.max(10, localX * 2);
+                    selectionObj.height = Math.max(10, localY * 2);
+                    // Kompenzálni kell az x,y pozíciót, mert a méret változás a bal felső sarokból indulna
+                    selectionObj.x = cx - selectionObj.width/2;
+                    selectionObj.y = cy - selectionObj.height/2;
+
+                } else if (transformMode === 'rotate') {
+                    const cx = selectionObj.x + selectionObj.width/2;
+                    const cy = selectionObj.y + selectionObj.height/2;
+                    const currentAngle = Math.atan2(newY - cy, newX - cx);
+                    const angleDiff = currentAngle - transformStartData.startAngle;
+                    selectionObj.rotation = transformStartData.originalRot + angleDiff;
+                }
+                renderSelection();
+                return;
+            }
+
+            // KIJELÖLÉS RAJZOLÁS (LASSO)
+            if (currentTool === 'select' && !isSelectionActive) {
+                selectionPath.push({x: newX, y: newY});
+                previewCtx.lineTo(newX, newY);
+                previewCtx.strokeStyle = '#00ffcc';
+                previewCtx.lineWidth = 1;
+                previewCtx.setLineDash([5, 5]);
+                previewCtx.stroke();
+                return;
+            }
             
+            // NORMÁL RAJZOLÁS
             const activeLayer = layers.find(l => l.id === activeLayerId);
             if(!activeLayer) return;
 
@@ -702,7 +820,7 @@
                 broadcastDrawEvent({ type: 'draw', layerId: activeLayerId, x0: lastX, y0: lastY, x1: newX, y1: newY, color: colorToUse, width: penWidth, isEraser: isEraser });
                 [lastX, lastY] = [newX, newY];
             } 
-            else if (currentTool === 'rect' || currentTool === 'circle' || currentTool === 'hexagon' || currentTool === 'line') {
+            else if (['rect', 'circle', 'hexagon', 'line'].includes(currentTool)) {
                 previewCtx.clearRect(0, 0, previewLayer.width, previewLayer.height);
                 drawShape(previewCtx, startX, startY, newX, newY, currentTool, penColor, penWidth);
             }
@@ -712,7 +830,20 @@
             if (!isDrawing) return;
             isDrawing = false;
             
-            if (currentTool === 'rect' || currentTool === 'circle' || currentTool === 'hexagon' || currentTool === 'line') {
+            // KIJELÖLÉS VÉGE (Lasso befejezése -> Kivágás)
+            if (currentTool === 'select' && !isSelectionActive && selectionPath.length > 2) {
+                createSelectionFromPath();
+                previewCtx.setLineDash([]);
+                return;
+            }
+
+            // Transzformáció vége
+            if (currentTool === 'select' && isSelectionActive) {
+                transformMode = null;
+                return;
+            }
+
+            if (['rect', 'circle', 'hexagon', 'line'].includes(currentTool)) {
                 const rect = canvasWrapper.getBoundingClientRect();
                 let endX = lastX;
                 let endY = lastY;
@@ -730,6 +861,158 @@
             if(isAnimationMode) saveFrameToMemory(currentFrameIndex);
         }
 
+        // --- SELECTION LOGIC ---
+
+        function createSelectionFromPath() {
+            const activeLayer = layers.find(l => l.id === activeLayerId);
+            if (!activeLayer) return;
+
+            // 1. Bounding Box számítás
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            selectionPath.forEach(p => {
+                if (p.x < minX) minX = p.x;
+                if (p.x > maxX) maxX = p.x;
+                if (p.y < minY) minY = p.y;
+                if (p.y > maxY) maxY = p.y;
+            });
+            const w = maxX - minX;
+            const h = maxY - minY;
+            if (w <= 0 || h <= 0) return;
+
+            // 2. Offscreen canvas létrehozása a kivágott tartalomnak
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = w;
+            tempCanvas.height = h;
+            const tCtx = tempCanvas.getContext('2d');
+
+            // 3. Kivágás: Először a path-t használjuk clipping mask-ként
+            tCtx.beginPath();
+            tCtx.moveTo(selectionPath[0].x - minX, selectionPath[0].y - minY);
+            for (let i = 1; i < selectionPath.length; i++) {
+                tCtx.lineTo(selectionPath[i].x - minX, selectionPath[i].y - minY);
+            }
+            tCtx.closePath();
+            tCtx.clip();
+            
+            // Rárajzoljuk az eredeti képet (eltolva, hogy a boxba essen)
+            tCtx.drawImage(activeLayer.canvas, -minX, -minY);
+
+            // 4. Eredeti helyről törlés (Clear)
+            activeLayer.ctx.save();
+            activeLayer.ctx.beginPath();
+            activeLayer.ctx.moveTo(selectionPath[0].x, selectionPath[0].y);
+            for (let i = 1; i < selectionPath.length; i++) {
+                activeLayer.ctx.lineTo(selectionPath[i].x, selectionPath[i].y);
+            }
+            activeLayer.ctx.closePath();
+            activeLayer.ctx.clip();
+            activeLayer.ctx.clearRect(0, 0, activeLayer.canvas.width, activeLayer.canvas.height);
+            activeLayer.ctx.restore();
+
+            // 5. Selection Object mentése
+            selectionObj = {
+                canvas: tempCanvas,
+                x: minX,
+                y: minY,
+                width: w,
+                height: h,
+                rotation: 0
+            };
+            isSelectionActive = true;
+            selectionPath = []; // Path már nem kell
+
+            // Törlés esemény küldése (hogy másoknál is eltűnjön az eredeti helyről)
+            // Megjegyzés: Ez nem tökéletes, mert a clipping path bonyolult hálózaton.
+            // Egyszerűsítés: Most nem szinkronizáljuk a "lyukat" azonnal, csak amikor visszasütjük a képet.
+            // Vagy: P2P-ben "Select" eszköz csak lokális, amíg Entert nem nyomsz.
+
+            renderSelection();
+        }
+
+        function renderSelection() {
+            if (!selectionObj) return;
+            previewCtx.clearRect(0, 0, previewLayer.width, previewLayer.height);
+
+            previewCtx.save();
+            
+            // Középpontba transzformálás
+            const cx = selectionObj.x + selectionObj.width / 2;
+            const cy = selectionObj.y + selectionObj.height / 2;
+            
+            previewCtx.translate(cx, cy);
+            previewCtx.rotate(selectionObj.rotation);
+            
+            // Kép kirajzolása (méretezve is)
+            previewCtx.drawImage(selectionObj.canvas, -selectionObj.width/2, -selectionObj.height/2, selectionObj.width, selectionObj.height);
+
+            // Keret rajzolása
+            previewCtx.strokeStyle = 'var(--selection-color)'; // Zöldes keret
+            previewCtx.lineWidth = 1;
+            previewCtx.setLineDash([5, 3]);
+            previewCtx.strokeRect(-selectionObj.width/2, -selectionObj.height/2, selectionObj.width, selectionObj.height);
+
+            // Fogantyúk
+            previewCtx.setLineDash([]);
+            previewCtx.fillStyle = 'white';
+            previewCtx.strokeStyle = 'black';
+            
+            // Resize (jobb alsó)
+            previewCtx.beginPath();
+            previewCtx.rect(selectionObj.width/2 - 5, selectionObj.height/2 - 5, 10, 10);
+            previewCtx.fill();
+            previewCtx.stroke();
+
+            // Rotate (fent középen, kiemelve)
+            previewCtx.beginPath();
+            previewCtx.moveTo(0, -selectionObj.height/2);
+            previewCtx.lineTo(0, -selectionObj.height/2 - 20);
+            previewCtx.stroke();
+            previewCtx.beginPath();
+            previewCtx.arc(0, -selectionObj.height/2 - 20, 5, 0, Math.PI * 2);
+            previewCtx.fill();
+            previewCtx.stroke();
+
+            previewCtx.restore();
+        }
+
+        function commitSelection() {
+            if (!isSelectionActive || !selectionObj) return;
+
+            const activeLayer = layers.find(l => l.id === activeLayerId);
+            if (activeLayer) {
+                activeLayer.ctx.save();
+                
+                const cx = selectionObj.x + selectionObj.width / 2;
+                const cy = selectionObj.y + selectionObj.height / 2;
+                
+                activeLayer.ctx.translate(cx, cy);
+                activeLayer.ctx.rotate(selectionObj.rotation);
+                activeLayer.ctx.drawImage(selectionObj.canvas, -selectionObj.width/2, -selectionObj.height/2, selectionObj.width, selectionObj.height);
+                activeLayer.ctx.restore();
+
+                // P2P Szinkronizáció: Mivel a transzformáció bonyolult, elküldjük a végeredményt képként (snapshot-szerűen) 
+                // vagy "drawImage" parancsként.
+                if (isHost || (conn && conn.open)) {
+                     // Elküldjük a beillesztést drawImage parancsként. 
+                     // Ehhez konvertáljuk dataURL-re a kis canvas-t
+                     const imgDataUrl = selectionObj.canvas.toDataURL();
+                     broadcastDrawEvent({
+                         type: 'paste_image',
+                         layerId: activeLayerId,
+                         image: imgDataUrl,
+                         x: cx, y: cy, w: selectionObj.width, h: selectionObj.height, r: selectionObj.rotation
+                     });
+                }
+            }
+
+            // Takarítás
+            previewCtx.clearRect(0, 0, previewLayer.width, previewLayer.height);
+            selectionObj = null;
+            isSelectionActive = false;
+            if(isAnimationMode) saveFrameToMemory(currentFrameIndex);
+        }
+
+        // --- HELPER FUNCTIONS ---
         function drawLine(targetCtx, x0, y0, x1, y1, color, width, isEraser) {
             targetCtx.beginPath(); targetCtx.moveTo(x0, y0); targetCtx.lineTo(x1, y1);
             targetCtx.strokeStyle = color; targetCtx.lineWidth = width;
@@ -772,7 +1055,6 @@
                 ctx.closePath();
             }
             ctx.stroke();
-            // ...
         }
 
         // --- FLOOD FILL ---
@@ -820,6 +1102,7 @@
 
         // --- ANIMÁCIÓS LOGIKA ---
         function toggleAnimationMode() {
+            if(isSelectionActive) commitSelection(); // Animáció előtt commit
             isAnimationMode = !isAnimationMode;
             const btn = document.getElementById('btn-anim-toggle');
             const panel = document.getElementById('animation-panel');
@@ -1001,7 +1284,7 @@
             if(activeThumb) activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
         }
 
-        // --- GIF EXPORT (Javított BLOB módszerrel) ---
+        // --- GIF EXPORT ---
         async function renderGIF() {
             if(frames.length === 0) return;
             if(isPlaying) stopAnimation();
@@ -1012,23 +1295,19 @@
             document.getElementById('loading-text').innerText = "GIF Generálása (Internet szükséges)...";
 
             try {
-                // 1. Worker kód letöltése manuálisan a CORS megkerülésére
                 const workerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js';
                 const response = await fetch(workerUrl);
                 if (!response.ok) throw new Error("Nem sikerült letölteni a GIF generáló komponenst.");
                 const workerScriptText = await response.text();
-                
-                // 2. Blob készítése a letöltött kódból
                 const blob = new Blob([workerScriptText], { type: 'application/javascript' });
                 const blobUrl = URL.createObjectURL(blob);
 
-                // 3. GIF inicializálása a belső Blob URL-lel
                 const gif = new GIF({
                     workers: 2,
                     quality: 10,
                     width: bgLayer.width,
                     height: bgLayer.height,
-                    workerScript: blobUrl // Ez a kulcs a javításhoz!
+                    workerScript: blobUrl
                 });
 
                 const fps = parseInt(document.getElementById('fps-input').value) || 5;
@@ -1050,7 +1329,6 @@
                     link.download = `AeroDraw_Anim_${Date.now()}.gif`;
                     link.href = URL.createObjectURL(blob);
                     link.click();
-                    // Takarítás
                     URL.revokeObjectURL(blobUrl);
                 });
 
@@ -1074,12 +1352,14 @@
         document.getElementById('pen-color-input').addEventListener('input', (e) => { penColor = e.target.value; document.querySelectorAll('.hex-swatch').forEach(el => el.classList.remove('active')); if(currentTool === 'eraser') setTool('brush'); });
         document.getElementById('pen-width').addEventListener('input', (e) => penWidth = e.target.value);
         function setTool(tool) { 
+            if (isSelectionActive && tool !== 'select') commitSelection(); // Ha váltunk másra, commit
             currentTool = tool; 
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active')); 
             document.getElementById(`btn-${tool}`).classList.add('active'); 
         }
 
         function downloadImage() {
+            if(isSelectionActive) commitSelection();
             try {
                 const tempCanvas = document.createElement('canvas');
                 tempCanvas.width = bgLayer.width; tempCanvas.height = bgLayer.height;
@@ -1139,6 +1419,20 @@
                 const targetLayer = layers.find(l => l.id === data.layerId);
                 if(targetLayer) floodFill(targetLayer.ctx, data.x, data.y, data.color);
             }
+            else if (data.type === 'paste_image') {
+                const targetLayer = layers.find(l => l.id === data.layerId);
+                if (targetLayer) {
+                    const img = new Image();
+                    img.onload = () => {
+                        targetLayer.ctx.save();
+                        targetLayer.ctx.translate(data.x, data.y);
+                        targetLayer.ctx.rotate(data.r);
+                        targetLayer.ctx.drawImage(img, -data.w/2, -data.h/2, data.w, data.h);
+                        targetLayer.ctx.restore();
+                    };
+                    img.src = data.image;
+                }
+            }
             else if(data.type === 'clear_layer') {
                 const targetLayer = layers.find(l => l.id === data.layerId);
                 if(targetLayer) targetLayer.ctx.clearRect(0,0,targetLayer.canvas.width, targetLayer.canvas.height);
@@ -1197,7 +1491,9 @@
         function updateP2PUI(online){document.getElementById('connect-ui').style.display=online?'none':'block';document.getElementById('disconnect-ui').style.display=online?'block':'none';document.getElementById('p2p-log').innerText=online?(isHost?"HOST ONLINE":"ONLINE"):"Offline";document.getElementById('p2p-log').style.color=online?"#50fa7b":"#888";}
 
         // --- DRIVE SAVE ---
-        async function handleDriveSave() { document.getElementById('loading-overlay').style.display='flex'; document.getElementById('loading-text').innerText="Felhő mentés..."; if(!currentUser||!gapi.client.getToken()){alert("Jelentkezz be!");document.getElementById('loading-overlay').style.display='none';return;}
+        async function handleDriveSave() { 
+            if(isSelectionActive) commitSelection();
+            document.getElementById('loading-overlay').style.display='flex'; document.getElementById('loading-text').innerText="Felhő mentés..."; if(!currentUser||!gapi.client.getToken()){alert("Jelentkezz be!");document.getElementById('loading-overlay').style.display='none';return;}
             const tempCanvas=document.createElement('canvas'); tempCanvas.width=bgLayer.width; tempCanvas.height=bgLayer.height; const ctx=tempCanvas.getContext('2d'); ctx.drawImage(bgLayer,0,0); layers.forEach(l=>ctx.drawImage(l.canvas,0,0));
             tempCanvas.toBlob(async blob=>{ const meta={'name':`AeroDraw_${currentUser}_${Date.now()}.png`,'mimeType':'image/png'}; const form=new FormData(); form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'})); form.append('file',blob);
             try{await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:new Headers({'Authorization':'Bearer '+gapi.client.getToken().access_token}),body:form});alert("Mentve!");}catch(e){alert("Hiba!");} document.getElementById('loading-overlay').style.display='none'; }); }
