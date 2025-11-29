@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroDraw PRO v2.2 - Network Fix</title>
+    <title>AeroDraw PRO v3.6 - New UI & Palette</title>
     
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -29,8 +30,6 @@
             --input-field-bg: #252525;
             --btn-hover: rgba(255, 255, 255, 0.15);
             --run-color: #2196F3;
-            --system-msg-color: #888;
-            --p2p-msg-color: #d19a66;
         }
 
         body.light-mode {
@@ -52,36 +51,91 @@
         /* --- CANVAS LAYERS --- */
         #canvas-wrapper {
             position: relative; width: 100%; height: 100%; background: var(--bg-color); overflow: hidden; cursor: crosshair;
+            transition: all 0.3s ease;
         }
+        /* NÉGYZETES NÉZET (ANIMÁCIÓHOZ) */
+        #canvas-wrapper.square-mode {
+            width: auto;
+            aspect-ratio: 1 / 1;
+            margin: 0 auto;
+            border: 2px solid var(--accent-color);
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            max-height: calc(100vh - 160px); /* Hely a timeline-nak */
+            margin-top: 80px;
+        }
+
         .drawing-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; /* Alapból átenged, csak az aktív fogad */
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
         }
         .drawing-layer.active { pointer-events: auto; }
         #background-layer { z-index: 0; background-color: #000000; transition: background-color 0.3s; }
+        
+        /* PREVIEW LAYER (Alakzatokhoz) */
+        #preview-layer { z-index: 50; pointer-events: none; }
+        /* ONION SKIN LAYER (Animációhoz) */
+        #onion-layer { z-index: 1; pointer-events: none; opacity: 0.3; filter: grayscale(100%); }
 
-        /* --- LEBEGŐ PANELEK (GLASS) --- */
+        /* --- LEBEGŐ PANELEK --- */
         .floating-panel {
             position: absolute; background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
             border: 1px solid var(--glass-border); padding: 10px; border-radius: 12px; display: flex; flex-direction: column; gap: 10px; z-index: 100; box-shadow: var(--glass-shadow);
         }
         
         /* Eszköztár (Bal) */
-        .toolbar-left { top: 100px; left: 20px; }
+        .toolbar-left { top: 100px; left: 20px; width: 130px; /* Kicsit szélesebb a sorok miatt */ }
 
-        /* Rétegkezelő (Jobb) */
-        .layer-panel-right { top: 100px; right: 20px; width: 200px; max-height: 60vh; }
+        /* Rétegkezelő (Jobb) - Animáció módban elrejtjük */
+        .layer-panel-right { top: 100px; right: 20px; width: 200px; max-height: 60vh; transition: opacity 0.3s; }
+        .layer-panel-right.hidden { opacity: 0; pointer-events: none; }
 
-        .tool-btn { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        /* TOOL ROW (Egymás melletti gombokhoz) - ÚJ */
+        .tool-row {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+        }
+
+        .tool-btn { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; }
         .tool-btn:hover, .tool-btn.active { background: var(--accent-color); color: white; border-color: transparent; }
         
-        /* Színpaletta */
-        .color-palette { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; }
-        .color-swatch { width: 30px; height: 30px; border-radius: 6px; cursor: pointer; border: 2px solid transparent; }
-        .color-swatch.active { border-color: white; box-shadow: 0 0 5px var(--accent-color); }
-        input[type="color"] { -webkit-appearance: none; padding: 0; height: 36px; width: 36px; cursor: pointer; border: 2px solid var(--border-color); background: transparent; border-radius: 8px; overflow: hidden; }
+        /* ÚJ: MÉHKAPTÁR SZÍNPALETTA */
+        .hex-palette-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: -4px; /* Egymásba csúszás függőlegesen */
+            margin: 5px 0;
+        }
+        .hex-row {
+            display: flex;
+            gap: 2px;
+        }
+        /* Minden második sort eltolunk */
+        .hex-row:nth-child(even) {
+            margin-left: 14px; /* A swatch szélességének fele + kis rés */
+        }
+        .hex-swatch {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%; /* Kör alak */
+            cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.1); /* Halvány keret */
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .hex-swatch:hover {
+            transform: scale(1.2); z-index: 2;
+        }
+        .hex-swatch.active {
+            border-color: white;
+            box-shadow: 0 0 10px var(--accent-color);
+            z-index: 3; transform: scale(1.1);
+        }
 
-        /* Réteg lista elemek */
-        .layer-list { display: flex; flex-direction: column-reverse; gap: 5px; overflow-y: auto; flex: 1; } /* Reverse: új réteg felül */
+        input[type="color"] { -webkit-appearance: none; padding: 0; height: 30px; width: 100%; cursor: pointer; border: 2px solid var(--border-color); background: transparent; border-radius: 8px; overflow: hidden; margin-top: 5px;}
+
+        /* Réteg lista */
+        .layer-list { display: flex; flex-direction: column-reverse; gap: 5px; overflow-y: auto; flex: 1; }
         .layer-item { display: flex; align-items: center; justify-content: space-between; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid transparent; cursor: pointer; font-size: 13px; }
         .layer-item.active { border-color: var(--accent-color); background: rgba(33, 150, 243, 0.1); }
         .layer-item .layer-name { flex: 1; margin-left: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -90,6 +144,36 @@
 
         input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: #444; outline: none; margin-top: 5px; }
         input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--accent-color); cursor: pointer; }
+
+        /* ANIMATION TIMELINE (Bottom) */
+        #animation-panel {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 80%; height: 110px; /* Megnövelve a Play gomb miatt */
+            background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border); border-radius: 16px;
+            display: none; /* Alapból rejtett */
+            flex-direction: column; padding: 10px; z-index: 100;
+            box-shadow: var(--glass-shadow);
+        }
+        #animation-panel.active { display: flex; }
+        
+        .timeline-controls { display: flex; justify-content: center; gap: 10px; margin-bottom: 10px; align-items: center; flex-wrap: wrap;}
+        .timeline-frames { display: flex; overflow-x: auto; gap: 5px; padding-bottom: 5px; align-items: center; }
+        .timeline-frames::-webkit-scrollbar { height: 6px; }
+        .timeline-frames::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+
+        .frame-thumb {
+            min-width: 50px; height: 50px; background: #000; border: 2px solid #444; border-radius: 6px; cursor: pointer; position: relative; overflow: hidden;
+        }
+        .frame-thumb.active { border-color: var(--accent-color); box-shadow: 0 0 10px var(--accent-color); }
+        .frame-thumb canvas { width: 100%; height: 100%; object-fit: contain; }
+        .frame-number { position: absolute; bottom: 2px; right: 2px; font-size: 9px; color: white; background: rgba(0,0,0,0.6); padding: 1px 3px; border-radius: 4px; }
+
+        .anim-btn { padding: 5px 10px; background: var(--btn-hover); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 6px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 5px; }
+        .anim-btn:hover { background: var(--accent-color); color: white; }
+        .anim-btn.record { color: #ff5555; border-color: #ff5555; }
+        .anim-btn.play { color: #50fa7b; border-color: #50fa7b; font-weight: bold; }
+        .anim-btn.play.playing { background: #50fa7b; color: #121212; }
 
         /* LIVE jelző */
         #live-indicator { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); background: rgba(80, 250, 123, 0.1); color: #50fa7b; border: 1px solid #50fa7b; padding: 2px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; pointer-events: none; z-index: 50; display: none; animation: pulse 2s infinite; }
@@ -103,9 +187,8 @@
         .vertical-divider { width: 1px; height: 24px; background-color: rgba(255,255,255,0.2); margin: 0 5px; }
         button.icon-btn { background: transparent; border: none; color: var(--text-color); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; position: relative;}
         button.icon-btn:hover { background: var(--btn-hover); transform: scale(1.1); }
-        /* Disabled state for undo/redo */
+        button.icon-btn.active-mode { background: var(--accent-color); color: white; box-shadow: 0 0 10px var(--accent-color); }
         button.icon-btn:disabled { opacity: 0.3; cursor: default; transform: none; }
-        button.icon-btn:disabled:hover { background: transparent; }
         
         #user-btn { cursor: pointer; font-size:12px; opacity:0.8; margin-right:5px; padding: 6px 12px; border-radius: 20px; transition: background 0.2s; font-weight:600; letter-spacing:0.5px; }
         #user-btn:hover { background: var(--btn-hover); opacity: 1; }
@@ -124,7 +207,7 @@
         .user-chip .username { font-weight: 600; }
         .user-chip .kick-btn { background: transparent; border: none; color: #ff5555; cursor: pointer; display: flex; align-items: center; padding: 2px; border-radius: 50%; }
 
-        /* --- MAIN CONTAINER (Full screen canvas) --- */
+        /* --- MAIN CONTAINER --- */
         .main-container { display: flex; height: 100vh; width: 100%; }
         .editor-container { flex: 1; display: flex; flex-direction: column; background: var(--bg-color); min-width: 0; position: relative; }
         
@@ -142,14 +225,14 @@
 
     <div id="loading-overlay">
         <svg class="gear" viewBox="0 0 512 512"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>
-        <div style="margin-top:20px; color:#666">Mentés...</div>
+        <div id="loading-text" style="margin-top:20px; color:#666">Mentés...</div>
     </div>
 
     <div class="header-wrapper">
         <div class="glass-bubble left-bubble">
             <div class="app-title">
-                <img src="aeroICON.png" style="height: 24px; margin-right: 5px;" onerror="this.style.display='none'">
-                AeroDraw PRO v2
+                <span class="material-icons" style="color:var(--accent-color)">draw</span>
+                AeroDraw PRO v3.6
             </div>
             <div class="vertical-divider"></div>
             
@@ -159,6 +242,9 @@
             
             <button class="icon-btn" onclick="clearCurrentLayer()" title="Réteg Törlése"><span class="material-icons">delete</span></button>
             <button class="icon-btn" onclick="downloadImage()" title="Mentés képként"><span class="material-icons">image</span></button>
+            
+            <div class="vertical-divider" style="height: 16px; margin: 0 2px; opacity: 0.5;"></div>
+            <button class="icon-btn" id="btn-anim-toggle" onclick="toggleAnimationMode()" title="Animációs Mód (GIF)"><span class="material-icons">movie_creation</span></button>
         </div>
 
         <div class="glass-bubble right-bubble">
@@ -215,30 +301,54 @@
             
             <div id="canvas-wrapper">
                 <canvas id="background-layer" class="drawing-layer"></canvas>
-                </div>
+                <canvas id="onion-layer" class="drawing-layer"></canvas>
+                <canvas id="preview-layer" class="drawing-layer"></canvas>
+            </div>
 
             <div class="floating-panel toolbar-left">
-                <div style="text-align:center; font-size:10px; opacity:0.7;">Vászon Háttér</div>
-                <input type="color" id="canvas-bg-picker" value="#000000" title="Vászon háttérszíne" onchange="changeCanvasBg(this.value)">
-                
-                <div style="width:100%; height:1px; background:var(--border-color); margin:5px 0;"></div>
-                
-                <div class="color-palette">
-                    <div class="color-swatch active" style="background:#ffffff" onclick="pickColor('#ffffff', this)"></div>
-                    <div class="color-swatch" style="background:#000000" onclick="pickColor('#000000', this)"></div>
-                    <div class="color-swatch" style="background:#ff5555" onclick="pickColor('#ff5555', this)"></div>
-                    <div class="color-swatch" style="background:#50fa7b" onclick="pickColor('#50fa7b', this)"></div>
-                    <div class="color-swatch" style="background:#2196F3" onclick="pickColor('#2196F3', this)"></div>
-                    <div class="color-swatch" style="background:#f1fa8c" onclick="pickColor('#f1fa8c', this)"></div>
+                <div class="tool-row">
+                    <button class="tool-btn active" id="btn-brush" onclick="setTool('brush')" title="Ecset"><span class="material-icons">brush</span></button>
+                    <button class="tool-btn" id="btn-eraser" onclick="setTool('eraser')" title="Radír"><span class="material-icons">auto_fix_normal</span></button>
+                    <button class="tool-btn" id="btn-fill" onclick="setTool('fill')" title="Kitöltés"><span class="material-icons">format_color_fill</span></button>
                 </div>
+
+                <div style="width:100%; height:1px; background:var(--border-color); margin:5px 0;"></div>
+
+                <div class="hex-palette-container">
+                    <div class="hex-row">
+                        <div class="hex-swatch active" style="background:#ffffff" onclick="pickColor('#ffffff', this)"></div>
+                        <div class="hex-swatch" style="background:#888888" onclick="pickColor('#888888', this)"></div>
+                        <div class="hex-swatch" style="background:#000000" onclick="pickColor('#000000', this)"></div>
+                    </div>
+                     <div class="hex-row">
+                        <div class="hex-swatch" style="background:#ff5555" onclick="pickColor('#ff5555', this)"></div>
+                        <div class="hex-swatch" style="background:#ffaa55" onclick="pickColor('#ffaa55', this)"></div>
+                        <div class="hex-swatch" style="background:#ffff55" onclick="pickColor('#ffff55', this)"></div>
+                    </div>
+                     <div class="hex-row">
+                        <div class="hex-swatch" style="background:#55ff55" onclick="pickColor('#55ff55', this)"></div>
+                        <div class="hex-swatch" style="background:#55ffff" onclick="pickColor('#55ffff', this)"></div>
+                        <div class="hex-swatch" style="background:#2196F3" onclick="pickColor('#2196F3', this)"></div>
+                    </div>
+                    <div class="hex-row">
+                        <div class="hex-swatch" style="background:#9c27b0" onclick="pickColor('#9c27b0', this)"></div>
+                        <div class="hex-swatch" style="background:#e91e63" onclick="pickColor('#e91e63', this)"></div>
+                        <div class="hex-swatch" style="background:#795548" onclick="pickColor('#795548', this)"></div>
+                    </div>
+                </div>
+                
                 <input type="color" id="pen-color-input" value="#ffffff" title="Egyedi szín">
+                <div style="text-align:center; font-size:9px; opacity:0.7; margin-bottom:5px;">Vászon Háttér</div>
+                <input type="color" id="canvas-bg-picker" value="#000000" title="Vászon háttérszíne" onchange="changeCanvasBg(this.value)" style="margin-top:0;">
                 
                 <div style="width:100%; height:1px; background:var(--border-color); margin:5px 0;"></div>
                 
-                <button class="tool-btn active" id="btn-brush" onclick="setTool('brush')" title="Ecset"><span class="material-icons">brush</span></button>
-                <button class="tool-btn" id="btn-eraser" onclick="setTool('eraser')" title="Radír"><span class="material-icons">auto_fix_normal</span></button>
+                <div class="tool-row">
+                    <button class="tool-btn" id="btn-rect" onclick="setTool('rect')" title="Kocka"><span class="material-icons">crop_square</span></button>
+                    <button class="tool-btn" id="btn-circle" onclick="setTool('circle')" title="Kör"><span class="material-icons">radio_button_unchecked</span></button>
+                </div>
                 
-                <div style="padding:0 5px;">
+                <div style="padding:0 5px; margin-top:5px;">
                     <label style="font-size:9px; opacity:0.7;">Méret</label>
                     <input type="range" id="pen-width" min="1" max="50" value="5">
                 </div>
@@ -250,6 +360,34 @@
                     <button class="icon-btn" style="width:24px; height:24px;" onclick="addNewLayer()" title="Új réteg">+</button>
                 </div>
                 <div id="layer-list-container" class="layer-list">
+                </div>
+            </div>
+
+            <div id="animation-panel">
+                <div class="timeline-controls">
+                    <button class="anim-btn play" id="btn-play" onclick="togglePlayAnimation()"><span class="material-icons">play_arrow</span> Lejátszás</button>
+                    <div style="display:flex; align-items:center; gap:5px; margin-left:5px;">
+                        <span style="font-size:10px; opacity:0.7;">FPS:</span>
+                        <input type="number" id="fps-input" value="5" min="1" max="24" style="width:40px; padding:3px; background:var(--input-field-bg); color:var(--text-color); border:1px solid var(--border-color); border-radius:4px;">
+                    </div>
+
+                    <div style="width:1px; height:20px; background:var(--border-color); margin:0 10px;"></div>
+
+                    <button class="anim-btn" onclick="animPrevFrame()"><span class="material-icons" style="font-size:16px">chevron_left</span></button>
+                    <span id="frame-counter" style="font-size:12px; font-weight:600; min-width:50px; text-align:center;">1 / 1</span>
+                    <button class="anim-btn" onclick="animNextFrame()"><span class="material-icons" style="font-size:16px">chevron_right</span></button>
+                    
+                    <div style="width:1px; height:20px; background:var(--border-color); margin:0 10px;"></div>
+                    
+                    <button class="anim-btn" onclick="animAddFrame()"><span class="material-icons" style="font-size:16px">add_box</span> Új Kép</button>
+                    <button class="anim-btn" onclick="animDeleteFrame()"><span class="material-icons" style="font-size:16px">delete</span></button>
+                    <button class="anim-btn" onclick="animToggleOnion()"><span class="material-icons" style="font-size:16px" id="onion-icon">layers</span> Hagymahéj</button>
+                    
+                    <div style="width:1px; height:20px; background:var(--border-color); margin:0 10px;"></div>
+
+                    <button class="anim-btn record" onclick="renderGIF()"><span class="material-icons" style="font-size:16px">download</span> GIF Mentés</button>
+                </div>
+                <div class="timeline-frames" id="timeline-container">
                     </div>
             </div>
 
@@ -280,7 +418,7 @@
         const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
         const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
-        // --- PEER CONFIG (Anti-Firewall) ---
+        // --- PEER CONFIG ---
         const peerConfig = {
             debug: 1,
             config: {
@@ -294,24 +432,37 @@
             }
         };
 
-        // --- GLOBÁLIS VÁLTOZÓK (Rajz & Rétegek) ---
+        // --- GLOBÁLIS VÁLTOZÓK ---
         const canvasWrapper = document.getElementById('canvas-wrapper');
         const bgLayer = document.getElementById('background-layer');
         const bgCtx = bgLayer.getContext('2d');
+        const previewLayer = document.getElementById('preview-layer');
+        const previewCtx = previewLayer.getContext('2d');
+        const onionLayer = document.getElementById('onion-layer');
+        const onionCtx = onionLayer.getContext('2d');
         
-        let layers = []; // { id, canvas, ctx, name }
+        let layers = [];
         let activeLayerId = null;
         let layerCounter = 1;
         
         let isDrawing = false;
+        let startX = 0, startY = 0; 
         let lastX = 0, lastY = 0;
-        let currentTool = 'brush';
+        let currentTool = 'brush'; // brush, eraser, rect, circle, fill
         let penColor = '#ffffff';
         let penWidth = 5;
         let canvasBgColor = '#000000';
 
-        // --- UNDO / REDO RENDSZER ---
-        const MAX_HISTORY = 30; // Maximum ennyi lépést jegyzünk meg a memória kímélése érdekében
+        // --- ANIMÁCIÓS VÁLTOZÓK ---
+        let isAnimationMode = false;
+        let frames = [];
+        let currentFrameIndex = 0;
+        let isOnionSkin = true;
+        let isPlaying = false;
+        let playbackInterval = null;
+
+        // --- UNDO / REDO ---
+        const MAX_HISTORY = 30; 
         let undoStack = [];
         let redoStack = [];
 
@@ -320,133 +471,108 @@
             const activeLayer = layers.find(l => l.id === activeLayerId);
             if (!activeLayer) return;
 
-            // Mentjük az aktív réteg jelenlegi állapotát (ImageData) és az ID-ját
             const currentState = {
                 layerId: activeLayerId,
                 imageData: activeLayer.ctx.getImageData(0, 0, activeLayer.canvas.width, activeLayer.canvas.height)
             };
-
             undoStack.push(currentState);
-
-            // Ha túllépjük a limitet, a legrégebbit eldobjuk
-            if (undoStack.length > MAX_HISTORY) {
-                undoStack.shift();
-            }
-
-            // Új műveletnél a Redo stack mindig törlődik
+            if (undoStack.length > MAX_HISTORY) undoStack.shift();
             redoStack = [];
             updateUndoRedoButtons();
         }
 
         function undoLastAction() {
             if (undoStack.length === 0) return;
-
-            // 1. Kivesszük az utolsó állapotot a veremből
             const previousState = undoStack.pop();
             const targetLayer = layers.find(l => l.id === previousState.layerId);
 
             if (targetLayer) {
-                // 2. Mielőtt visszaállítjuk, elmentjük a JELENLEGI állapotot a Redo stackbe
                 const redoState = {
                     layerId: previousState.layerId,
                     imageData: targetLayer.ctx.getImageData(0, 0, targetLayer.canvas.width, targetLayer.canvas.height)
                 };
                 redoStack.push(redoState);
-
-                // 3. Visszaállítjuk a régit
                 targetLayer.ctx.putImageData(previousState.imageData, 0, 0);
-            } else {
-                // Ha a réteg időközben törlődött, rekurzívan próbálkozunk a következővel
-                console.warn("A réteg már nem létezik, ugrás a következő visszavonásra.");
-                undoLastAction();
             }
             updateUndoRedoButtons();
+            if(isAnimationMode) saveFrameToMemory(currentFrameIndex);
         }
 
         function redoLastAction() {
             if (redoStack.length === 0) return;
-
-            // 1. Kivesszük a Redo állapotot
             const nextState = redoStack.pop();
             const targetLayer = layers.find(l => l.id === nextState.layerId);
 
             if (targetLayer) {
-                // 2. Elmentjük a mostani állapotot az Undo stackbe (hogy újra visszavonható legyen)
                 const undoState = {
                     layerId: nextState.layerId,
                     imageData: targetLayer.ctx.getImageData(0, 0, targetLayer.canvas.width, targetLayer.canvas.height)
                 };
                 undoStack.push(undoState);
-
-                // 3. Visszaállítjuk a jövőbeli állapotot
                 targetLayer.ctx.putImageData(nextState.imageData, 0, 0);
             }
             updateUndoRedoButtons();
+            if(isAnimationMode) saveFrameToMemory(currentFrameIndex);
         }
 
         function updateUndoRedoButtons() {
             document.getElementById('btn-undo').disabled = undoStack.length === 0;
             document.getElementById('btn-redo').disabled = redoStack.length === 0;
-            // Opacity kezelése CSS-ben van a :disabled szelektorral
         }
 
         // --- RÉTEGKEZELÉS ---
         function initLayers() {
-            // Kezdeti réteg létrehozása
             addNewLayer("Réteg 1");
             resizeCanvases();
-            updateUndoRedoButtons(); // Init gombok
+            updateUndoRedoButtons(); 
         }
 
         function createLayerCanvas(id) {
             const cvs = document.createElement('canvas');
             cvs.id = `layer-${id}`;
             cvs.className = 'drawing-layer';
-            // Eseménykezelők az új canvasra
-            cvs.addEventListener('mousedown', startDraw);
-            cvs.addEventListener('mousemove', draw);
-            cvs.addEventListener('mouseup', stopDraw);
-            cvs.addEventListener('mouseout', stopDraw);
-             // Touch events
-            cvs.addEventListener('touchstart', (e) => { e.preventDefault(); cvs.dispatchEvent(new MouseEvent('mousedown', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); });
-            cvs.addEventListener('touchmove', (e) => { e.preventDefault(); cvs.dispatchEvent(new MouseEvent('mousemove', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); });
-            cvs.addEventListener('touchend', (e) => { cvs.dispatchEvent(new MouseEvent('mouseup', {})); });
             return cvs;
         }
+        
+        // Eseménykezelő delegálás
+        canvasWrapper.addEventListener('mousedown', startDraw);
+        canvasWrapper.addEventListener('mousemove', draw);
+        canvasWrapper.addEventListener('mouseup', stopDraw);
+        canvasWrapper.addEventListener('mouseout', stopDraw);
+        canvasWrapper.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(new MouseEvent('mousedown', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); });
+        canvasWrapper.addEventListener('touchmove', (e) => { e.preventDefault(); draw(new MouseEvent('mousemove', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); });
+        canvasWrapper.addEventListener('touchend', (e) => { stopDraw(new MouseEvent('mouseup', { clientX: e.changedTouches[0]?.clientX, clientY: e.changedTouches[0]?.clientY })); });
+
 
         function addNewLayer(nameOverride) {
             const id = layerCounter++;
             const name = nameOverride || `Réteg ${id}`;
             const newCanvas = createLayerCanvas(id);
-            canvasWrapper.appendChild(newCanvas);
+            canvasWrapper.insertBefore(newCanvas, previewLayer);
             
-            const layerObj = { id: id, canvas: newCanvas, ctx: newCanvas.getContext('2d'), name: name };
+            const layerObj = { id: id, canvas: newCanvas, ctx: newCanvas.getContext('2d', {willReadFrequently: true}), name: name };
             layers.push(layerObj);
             setActiveLayer(id);
             updateLayerListUI();
-            resizeCanvases(); // Ensure size is correct
-            
-            if(isHost) broadcastLayerStructure(); // P2P szinkron
+            resizeCanvases(); 
+            if(isHost) broadcastLayerStructure(); 
         }
 
         function deleteLayer(id) {
             if(layers.length <= 1) { alert("Legalább egy rétegnek maradnia kell!"); return; }
             const index = layers.findIndex(l => l.id === id);
             if(index > -1) {
-                // Törlés előtt ürítjük a history-t, mert az ID-k bezavarhatnak (vagy bonyolultabb logika kellene)
-                // Egyszerűsítés: törlés után tiszta lappal indul a history, hogy ne legyen hiba
                 undoStack = undoStack.filter(state => state.layerId !== id);
                 redoStack = redoStack.filter(state => state.layerId !== id);
                 updateUndoRedoButtons();
 
                 canvasWrapper.removeChild(layers[index].canvas);
                 layers.splice(index, 1);
-                // Ha az aktívat töröltük, válasszuk ki az előzőt (vagy a legelsőt)
                 if(id === activeLayerId) {
                     setActiveLayer(layers[Math.max(0, index - 1)].id);
                 }
                 updateLayerListUI();
-                if(isHost) broadcastLayerStructure(); // P2P szinkron
+                if(isHost) broadcastLayerStructure(); 
             }
         }
 
@@ -483,10 +609,10 @@
         function clearCurrentLayer() {
             const activeLayer = layers.find(l => l.id === activeLayerId);
             if(activeLayer) {
-                // MENTÉS TÖRLÉS ELŐTT
                 saveStateForUndo();
                 activeLayer.ctx.clearRect(0, 0, activeLayer.canvas.width, activeLayer.canvas.height);
                 broadcastDrawEvent({ type: 'clear_layer', layerId: activeLayerId });
+                if(isAnimationMode) saveFrameToMemory(currentFrameIndex);
             }
         }
 
@@ -500,61 +626,110 @@
 
         // --- RAJZOLÓ LOGIKA ---
         function resizeCanvases() {
-            const width = canvasWrapper.offsetWidth;
-            const height = canvasWrapper.offsetHeight;
+            let width, height;
+            if (isAnimationMode) {
+                const rect = canvasWrapper.getBoundingClientRect();
+                width = rect.width;
+                height = rect.height;
+            } else {
+                width = canvasWrapper.offsetWidth;
+                height = canvasWrapper.offsetHeight;
+            }
             
-            // Háttér réteg
-            bgLayer.width = width; bgLayer.height = height;
-            changeCanvasBg(canvasBgColor); // Újrarajzolás
+            function resizeCtx(ctx, cvs) {
+                const tempCvs = document.createElement('canvas'); 
+                tempCvs.width = cvs.width; tempCvs.height = cvs.height; 
+                tempCvs.getContext('2d').drawImage(cvs,0,0);
+                cvs.width = width; cvs.height = height;
+                ctx.drawImage(tempCvs, 0, 0);
+            }
 
-            // Rajz rétegek
+            bgLayer.width = width; bgLayer.height = height;
+            changeCanvasBg(canvasBgColor);
+
+            previewLayer.width = width; previewLayer.height = height;
+            onionLayer.width = width; onionLayer.height = height;
+
             layers.forEach(layer => {
-                // Mentés átméretezés előtt
-                const tempCvs = document.createElement('canvas'); tempCvs.width = layer.canvas.width; tempCvs.height = layer.canvas.height; tempCvs.getContext('2d').drawImage(layer.canvas,0,0);
-                layer.canvas.width = width; layer.canvas.height = height;
-                layer.ctx.drawImage(tempCvs, 0, 0); // Visszatöltés
+                resizeCtx(layer.ctx, layer.canvas);
             });
             
-            // Átméretezéskor érdemes törölni a history-t, mert a képméretek nem fognak egyezni
-            undoStack = [];
-            redoStack = [];
-            updateUndoRedoButtons();
+            undoStack = []; redoStack = []; updateUndoRedoButtons();
         }
-        window.addEventListener('resize', resizeCanvases);
+        window.addEventListener('resize', () => setTimeout(resizeCanvases, 100));
 
         function startDraw(e) {
             if(!activeLayerId) return;
-            
-            // MENTÉS RAJZOLÁS ELŐTT (Undo funkcióhoz)
-            // Csak akkor mentünk, ha új vonalat kezdünk
-            saveStateForUndo();
+            const rect = canvasWrapper.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // KITÖLTÉS (FILL TOOL)
+            if (currentTool === 'fill') {
+                saveStateForUndo();
+                const activeLayer = layers.find(l => l.id === activeLayerId);
+                if (activeLayer) {
+                    floodFill(activeLayer.ctx, Math.floor(x), Math.floor(y), penColor);
+                    // P2P
+                    if(isHost || (conn && conn.open)) {
+                         broadcastDrawEvent({ type: 'fill', layerId: activeLayerId, x: Math.floor(x), y: Math.floor(y), color: penColor });
+                    }
+                    if(isAnimationMode) saveFrameToMemory(currentFrameIndex);
+                }
+                return; // Nem folytatjuk a "húzást"
+            }
 
             isDrawing = true;
-            [lastX, lastY] = [e.offsetX, e.offsetY];
+            startX = x; startY = y;
+            [lastX, lastY] = [x, y];
+            saveStateForUndo();
         }
 
         function draw(e) {
             if (!isDrawing || !activeLayerId) return;
+            const rect = canvasWrapper.getBoundingClientRect();
+            const newX = e.clientX - rect.left;
+            const newY = e.clientY - rect.top;
+            
             const activeLayer = layers.find(l => l.id === activeLayerId);
             if(!activeLayer) return;
 
-            const newX = e.offsetX; const newY = e.offsetY;
-            const colorToUse = currentTool === 'eraser' ? 'rgba(0,0,0,1)' : penColor; // Radír trükk: feketével festünk, majd kompozittal törlünk
-            
-            // Helyi rajzolás
-            drawLine(activeLayer.ctx, lastX, lastY, newX, newY, colorToUse, penWidth, currentTool === 'eraser');
-            
-            // P2P Küldés
-            broadcastDrawEvent({
-                type: 'draw', layerId: activeLayerId,
-                x0: lastX, y0: lastY, x1: newX, y1: newY,
-                color: colorToUse, width: penWidth, isEraser: currentTool === 'eraser'
-            });
+            let colorToUse = penColor;
+            let isEraser = currentTool === 'eraser';
+            if (isEraser) colorToUse = 'rgba(0,0,0,1)';
 
-            [lastX, lastY] = [newX, newY];
+            if (currentTool === 'brush' || currentTool === 'eraser') {
+                drawLine(activeLayer.ctx, lastX, lastY, newX, newY, colorToUse, penWidth, isEraser);
+                broadcastDrawEvent({ type: 'draw', layerId: activeLayerId, x0: lastX, y0: lastY, x1: newX, y1: newY, color: colorToUse, width: penWidth, isEraser: isEraser });
+                [lastX, lastY] = [newX, newY];
+            } 
+            else if (currentTool === 'rect' || currentTool === 'circle') {
+                previewCtx.clearRect(0, 0, previewLayer.width, previewLayer.height);
+                drawShape(previewCtx, startX, startY, newX, newY, currentTool, penColor, penWidth);
+            }
         }
 
-        function stopDraw() { isDrawing = false; }
+        function stopDraw(e) { 
+            if (!isDrawing) return;
+            isDrawing = false;
+            
+            if (currentTool === 'rect' || currentTool === 'circle') {
+                const rect = canvasWrapper.getBoundingClientRect();
+                let endX = lastX;
+                let endY = lastY;
+                if(e.clientX) { endX = e.clientX - rect.left; endY = e.clientY - rect.top; }
+
+                const activeLayer = layers.find(l => l.id === activeLayerId);
+                if(activeLayer) {
+                    drawShape(activeLayer.ctx, startX, startY, endX, endY, currentTool, penColor, penWidth);
+                    previewCtx.clearRect(0, 0, previewLayer.width, previewLayer.height);
+                    if(isHost || (conn && conn.open)) {
+                        broadcastDrawEvent({ type: 'shape', tool: currentTool, x0: startX, y0: startY, x1: endX, y1: endY, color: penColor, width: penWidth, layerId: activeLayerId });
+                    }
+                }
+            }
+            if(isAnimationMode) saveFrameToMemory(currentFrameIndex);
+        }
 
         function drawLine(targetCtx, x0, y0, x1, y1, color, width, isEraser) {
             targetCtx.beginPath(); targetCtx.moveTo(x0, y0); targetCtx.lineTo(x1, y1);
@@ -566,26 +741,334 @@
             if(isEraser) targetCtx.globalCompositeOperation = 'source-over';
         }
 
+        function drawShape(ctx, x0, y0, x1, y1, type, color, width) {
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            const w = x1 - x0;
+            const h = y1 - y0;
+
+            if (type === 'rect') {
+                ctx.rect(x0, y0, w, h);
+            } else if (type === 'circle') {
+                const centerX = x0 + w/2;
+                const centerY = y0 + h/2;
+                const radiusX = Math.abs(w/2);
+                const radiusY = Math.abs(h/2);
+                ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+            }
+            ctx.stroke();
+            ctx.closePath();
+        }
+
+        // --- FLOOD FILL LOGIKA (Stack-based) ---
+        function floodFill(ctx, startX, startY, fillColorHex) {
+            const r = parseInt(fillColorHex.slice(1, 3), 16);
+            const g = parseInt(fillColorHex.slice(3, 5), 16);
+            const b = parseInt(fillColorHex.slice(5, 7), 16);
+            const a = 255;
+            
+            const w = ctx.canvas.width;
+            const h = ctx.canvas.height;
+            if(startX < 0 || startY < 0 || startX >= w || startY >= h) return;
+
+            const imgData = ctx.getImageData(0, 0, w, h);
+            const data = imgData.data;
+            const startPos = (startY * w + startX) * 4;
+            
+            const startR = data[startPos];
+            const startG = data[startPos + 1];
+            const startB = data[startPos + 2];
+            const startA = data[startPos + 3];
+
+            if (startR === r && startG === g && startB === b && startA === a) return;
+
+            const stack = [[startX, startY]];
+            
+            while (stack.length) {
+                const [x, y] = stack.pop();
+                const pos = (y * w + x) * 4;
+
+                if (data[pos] === startR && data[pos+1] === startG && data[pos+2] === startB && data[pos+3] === startA) {
+                    data[pos] = r;
+                    data[pos+1] = g;
+                    data[pos+2] = b;
+                    data[pos+3] = a;
+
+                    if (x > 0) stack.push([x - 1, y]);
+                    if (x < w - 1) stack.push([x + 1, y]);
+                    if (y > 0) stack.push([x, y - 1]);
+                    if (y < h - 1) stack.push([x, y + 1]);
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        // --- ANIMÁCIÓS LOGIKA ---
+        function toggleAnimationMode() {
+            isAnimationMode = !isAnimationMode;
+            const btn = document.getElementById('btn-anim-toggle');
+            const panel = document.getElementById('animation-panel');
+            const layerPanel = document.querySelector('.layer-panel-right');
+
+            if (isAnimationMode) {
+                btn.classList.add('active-mode');
+                canvasWrapper.classList.add('square-mode');
+                panel.classList.add('active');
+                layerPanel.classList.add('hidden'); 
+                initAnimation();
+            } else {
+                stopAnimation(); // Biztos ami biztos
+                btn.classList.remove('active-mode');
+                canvasWrapper.classList.remove('square-mode');
+                panel.classList.remove('active');
+                layerPanel.classList.remove('hidden');
+                onionCtx.clearRect(0,0,onionLayer.width, onionLayer.height);
+                resizeCanvases();
+            }
+            setTimeout(resizeCanvases, 50); 
+        }
+
+        function initAnimation() {
+            layers.forEach(l => { if(l.id !== activeLayerId) deleteLayer(l.id); }); 
+            if(layers.length === 0) addNewLayer("FrameLayer");
+            const activeLayer = layers[0];
+            activeLayer.ctx.clearRect(0,0,activeLayer.canvas.width, activeLayer.canvas.height);
+            
+            frames = [];
+            currentFrameIndex = 0;
+            animAddFrame(true); 
+            updateTimelineUI();
+        }
+
+        function animAddFrame(isInit = false) {
+            if (!isInit) saveFrameToMemory(currentFrameIndex);
+            const width = Math.floor(bgLayer.width);
+            const height = Math.floor(bgLayer.height);
+            const emptyData = new ImageData(width > 0 ? width : 100, height > 0 ? height : 100); 
+            
+            if (frames.length > 0) {
+                 frames.splice(currentFrameIndex + 1, 0, { imageData: emptyData });
+                 currentFrameIndex++;
+            } else {
+                frames.push({ imageData: emptyData });
+                currentFrameIndex = 0;
+            }
+
+            const activeLayer = layers.find(l => l.id === activeLayerId);
+            if(activeLayer) activeLayer.ctx.clearRect(0, 0, activeLayer.canvas.width, activeLayer.canvas.height);
+            
+            undoStack = []; redoStack = []; updateUndoRedoButtons();
+            updateTimelineUI();
+            updateOnionSkin();
+        }
+
+        function saveFrameToMemory(index) {
+            const activeLayer = layers.find(l => l.id === activeLayerId);
+            if(!activeLayer || !frames[index]) return;
+            frames[index].imageData = activeLayer.ctx.getImageData(0, 0, activeLayer.canvas.width, activeLayer.canvas.height);
+        }
+
+        function loadFrameFromMemory(index) {
+            const activeLayer = layers.find(l => l.id === activeLayerId);
+            if(!activeLayer || !frames[index]) return;
+            activeLayer.ctx.putImageData(frames[index].imageData, 0, 0);
+            currentFrameIndex = index;
+            updateTimelineUI();
+            updateOnionSkin();
+        }
+
+        function animNextFrame() {
+            if(isPlaying) return; // Lejátszás közben ne piszkáljuk
+            saveFrameToMemory(currentFrameIndex);
+            if (currentFrameIndex < frames.length - 1) {
+                loadFrameFromMemory(currentFrameIndex + 1);
+            }
+        }
+
+        function animPrevFrame() {
+            if(isPlaying) return;
+            saveFrameToMemory(currentFrameIndex);
+            if (currentFrameIndex > 0) {
+                loadFrameFromMemory(currentFrameIndex - 1);
+            }
+        }
+        
+        function animDeleteFrame() {
+            if (frames.length <= 1) return;
+            frames.splice(currentFrameIndex, 1);
+            if (currentFrameIndex >= frames.length) currentFrameIndex = frames.length - 1;
+            loadFrameFromMemory(currentFrameIndex);
+        }
+
+        function animToggleOnion() {
+            isOnionSkin = !isOnionSkin;
+            document.getElementById('onion-icon').style.opacity = isOnionSkin ? '1' : '0.4';
+            updateOnionSkin();
+        }
+
+        function updateOnionSkin() {
+            onionCtx.clearRect(0, 0, onionLayer.width, onionLayer.height);
+            if (isPlaying || !isOnionSkin || currentFrameIndex === 0) return; // Lejátszásnál nincs onion
+
+            const prevFrame = frames[currentFrameIndex - 1];
+            if (prevFrame) {
+                const tempCvs = document.createElement('canvas');
+                tempCvs.width = onionLayer.width;
+                tempCvs.height = onionLayer.height;
+                tempCvs.getContext('2d').putImageData(prevFrame.imageData, 0, 0);
+                onionCtx.globalAlpha = 0.3;
+                onionCtx.drawImage(tempCvs, 0, 0);
+                onionCtx.globalAlpha = 1.0;
+            }
+        }
+
+        // --- ANIMÁCIÓ LEJÁTSZÁS (PLAYBACK) ---
+        function togglePlayAnimation() {
+            if (isPlaying) {
+                stopAnimation();
+            } else {
+                playAnimation();
+            }
+        }
+
+        function playAnimation() {
+            if (frames.length < 2) return;
+            
+            // Mentjük az aktuális állapotot, hogy stop-nál ide térjünk vissza
+            saveFrameToMemory(currentFrameIndex);
+            const savedIndex = currentFrameIndex;
+
+            isPlaying = true;
+            document.getElementById('btn-play').innerHTML = '<span class="material-icons">stop</span> Stop';
+            document.getElementById('btn-play').classList.add('playing');
+            
+            // Onion skin kikapcsolása lejátszás alatt
+            onionCtx.clearRect(0, 0, onionLayer.width, onionLayer.height);
+
+            let playIndex = 0;
+            const fps = parseInt(document.getElementById('fps-input').value) || 5;
+            const intervalTime = 1000 / fps;
+
+            playbackInterval = setInterval(() => {
+                const activeLayer = layers.find(l => l.id === activeLayerId);
+                if(activeLayer && frames[playIndex]) {
+                    activeLayer.ctx.putImageData(frames[playIndex].imageData, 0, 0);
+                    // UI update (de nem scrollolunk, hogy ne legyen zavaró)
+                    document.getElementById('frame-counter').innerText = `${playIndex + 1} / ${frames.length}`;
+                }
+                
+                playIndex++;
+                if (playIndex >= frames.length) playIndex = 0;
+            }, intervalTime);
+        }
+
+        function stopAnimation() {
+            isPlaying = false;
+            clearInterval(playbackInterval);
+            document.getElementById('btn-play').innerHTML = '<span class="material-icons">play_arrow</span> Lejátszás';
+            document.getElementById('btn-play').classList.remove('playing');
+            
+            // Visszatöltjük azt a frame-et, ahol a user volt
+            loadFrameFromMemory(currentFrameIndex);
+        }
+
+        function updateTimelineUI() {
+            const container = document.getElementById('timeline-container');
+            container.innerHTML = '';
+            document.getElementById('frame-counter').innerText = `${currentFrameIndex + 1} / ${frames.length}`;
+
+            frames.forEach((frame, idx) => {
+                const div = document.createElement('div');
+                div.className = `frame-thumb ${idx === currentFrameIndex ? 'active' : ''}`;
+                div.onclick = () => { if(!isPlaying) { saveFrameToMemory(currentFrameIndex); loadFrameFromMemory(idx); } };
+                
+                const miniCvs = document.createElement('canvas');
+                miniCvs.width = bgLayer.width; miniCvs.height = bgLayer.height;
+                const ctx = miniCvs.getContext('2d');
+                ctx.fillStyle = canvasBgColor; ctx.fillRect(0,0, miniCvs.width, miniCvs.height);
+                ctx.putImageData(frame.imageData, 0, 0);
+                
+                div.appendChild(miniCvs);
+                div.innerHTML += `<div class="frame-number">${idx + 1}</div>`;
+                container.appendChild(div);
+            });
+            const activeThumb = container.children[currentFrameIndex];
+            if(activeThumb) activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+
+        // --- GIF EXPORT ---
+        function renderGIF() {
+            if(frames.length === 0) return;
+            if(isPlaying) stopAnimation(); // Ha megy a lejátszás, állítsuk meg
+            saveFrameToMemory(currentFrameIndex);
+
+            const overlay = document.getElementById('loading-overlay');
+            overlay.style.display = 'flex';
+            document.getElementById('loading-text').innerText = "GIF Generálása...";
+
+            try {
+                const gif = new GIF({
+                    workers: 2,
+                    quality: 10,
+                    width: bgLayer.width,
+                    height: bgLayer.height,
+                    workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js'
+                });
+
+                const fps = parseInt(document.getElementById('fps-input').value) || 5;
+                const delay = 1000 / fps;
+
+                frames.forEach(frame => {
+                    const tempCvs = document.createElement('canvas');
+                    tempCvs.width = bgLayer.width; tempCvs.height = bgLayer.height;
+                    const ctx = tempCvs.getContext('2d');
+                    ctx.fillStyle = canvasBgColor;
+                    ctx.fillRect(0, 0, tempCvs.width, tempCvs.height);
+                    ctx.putImageData(frame.imageData, 0, 0);
+                    gif.addFrame(tempCvs, {delay: delay});
+                });
+
+                gif.on('finished', function(blob) {
+                    overlay.style.display = 'none';
+                    const link = document.createElement('a');
+                    link.download = `AeroDraw_Anim_${Date.now()}.gif`;
+                    link.href = URL.createObjectURL(blob);
+                    link.click();
+                });
+
+                gif.render();
+
+            } catch (err) {
+                console.error(err);
+                alert("Hiba a GIF generálásakor.");
+                overlay.style.display = 'none';
+            }
+        }
+
         // --- UI ESEMÉNYEK ---
         function pickColor(color, element) {
             penColor = color;
             document.getElementById('pen-color-input').value = color;
-            document.querySelectorAll('.color-swatch').forEach(el => el.classList.remove('active'));
+            // ÚJ SELEKTOR: .hex-swatch
+            document.querySelectorAll('.hex-swatch').forEach(el => el.classList.remove('active'));
             element.classList.add('active');
             if(currentTool === 'eraser') setTool('brush');
         }
-        document.getElementById('pen-color-input').addEventListener('input', (e) => { penColor = e.target.value; document.querySelectorAll('.color-swatch').forEach(el => el.classList.remove('active')); if(currentTool === 'eraser') setTool('brush'); });
+        // ÚJ SELEKTOR AZ INPUT ESEMÉNYNÉL IS
+        document.getElementById('pen-color-input').addEventListener('input', (e) => { penColor = e.target.value; document.querySelectorAll('.hex-swatch').forEach(el => el.classList.remove('active')); if(currentTool === 'eraser') setTool('brush'); });
         document.getElementById('pen-width').addEventListener('input', (e) => penWidth = e.target.value);
-        function setTool(tool) { currentTool = tool; document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active')); document.getElementById(`btn-${tool}`).classList.add('active'); }
+        function setTool(tool) { 
+            currentTool = tool; 
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active')); 
+            document.getElementById(`btn-${tool}`).classList.add('active'); 
+        }
 
         function downloadImage() {
-            // Képek összefésülése egy ideiglenes canvasra
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = bgLayer.width; tempCanvas.height = bgLayer.height;
             const tempCtx = tempCanvas.getContext('2d');
-            // 1. Háttér
             tempCtx.drawImage(bgLayer, 0, 0);
-            // 2. Rétegek sorban
             layers.forEach(layer => { tempCtx.drawImage(layer.canvas, 0, 0); });
             
             const link = document.createElement('a');
@@ -604,21 +1087,19 @@
         function gapiLoaded(){gapi.load('client',async()=>{await gapi.client.init({apiKey:API_KEY,discoveryDocs:[DISCOVERY_DOC]});gapiInited=true;});}
         function gisLoaded(){tokenClient=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPES,callback:(resp)=>{}});gisInited=true;}
 
-        // --- P2P RÉTEG SZINKRONIZÁCIÓ ---
+        // --- P2P SZINKRONIZÁCIÓ ---
         function broadcastDrawEvent(data) {
             if(isHost) connectedUsers.forEach(u => u.conn.send(data));
             else if(conn && conn.open) conn.send(data);
         }
 
         function broadcastLayerStructure() {
-            // Csak a Host küldi a struktúrát
-            if(!isHost) return;
+            if(!isHost || isAnimationMode) return;
             const structure = layers.map(l => ({ id: l.id, name: l.name }));
             connectedUsers.forEach(u => u.conn.send({ type: 'layer_structure', layers: structure, bg: canvasBgColor }));
         }
 
         function sendFullSnapshot(targetConn) {
-            // Háttér + Minden réteg képként
             const snapshot = { type: 'full_snapshot', bg: canvasBgColor, layers: [] };
             layers.forEach(l => {
                 snapshot.layers.push({ id: l.id, image: l.canvas.toDataURL() });
@@ -627,63 +1108,56 @@
         }
 
         function handleP2PData(data) {
-            // --- RAJZ ESEMÉNYEK ---
             if (data.type === 'draw') {
                 const targetLayer = layers.find(l => l.id === data.layerId);
                 if(targetLayer) drawLine(targetLayer.ctx, data.x0, data.y0, data.x1, data.y1, data.color, data.width, data.isEraser);
+            }
+            else if (data.type === 'shape') {
+                const targetLayer = layers.find(l => l.id === data.layerId);
+                if(targetLayer) drawShape(targetLayer.ctx, data.x0, data.y0, data.x1, data.y1, data.tool, data.color, data.width);
+            }
+            else if (data.type === 'fill') {
+                const targetLayer = layers.find(l => l.id === data.layerId);
+                if(targetLayer) floodFill(targetLayer.ctx, data.x, data.y, data.color);
             }
             else if(data.type === 'clear_layer') {
                 const targetLayer = layers.find(l => l.id === data.layerId);
                 if(targetLayer) targetLayer.ctx.clearRect(0,0,targetLayer.canvas.width, targetLayer.canvas.height);
             }
             else if(data.type === 'bg_change') { changeCanvasBg(data.color); }
-
-            // --- STRUKTÚRA & SNAPSHOT (Vendég fogadja) ---
             else if(data.type === 'layer_structure') {
-                // Vendég oldal: Töröljük a jelenlegi rétegeket és felépítjük az újat
-                canvasWrapper.innerHTML = '<canvas id="background-layer" class="drawing-layer"></canvas>';
+                if(isAnimationMode) return;
+                canvasWrapper.innerHTML = '<canvas id="background-layer" class="drawing-layer"></canvas><canvas id="onion-layer" class="drawing-layer"></canvas><canvas id="preview-layer" class="drawing-layer"></canvas>'; 
                 const newBg = document.getElementById('background-layer'); bgCtx = newBg.getContext('2d');
-                layers = [];
-                // Reset history vendég oldalon struktúra váltáskor
-                undoStack = []; redoStack = []; updateUndoRedoButtons();
-                
+                layers = []; undoStack = []; redoStack = []; updateUndoRedoButtons();
                 changeCanvasBg(data.bg);
                 data.layers.forEach(lData => {
                     const newCanvas = createLayerCanvas(lData.id);
-                    canvasWrapper.appendChild(newCanvas);
+                    canvasWrapper.insertBefore(newCanvas, previewLayer);
                     layers.push({ id: lData.id, canvas: newCanvas, ctx: newCanvas.getContext('2d'), name: lData.name });
                 });
                 resizeCanvases();
                 if(layers.length > 0) setActiveLayer(layers[0].id);
             }
             else if(data.type === 'full_snapshot') {
-                // Képek betöltése a rétegekre
                 changeCanvasBg(data.bg);
                 data.layers.forEach(lData => {
                     const targetLayer = layers.find(l => l.id === lData.id);
                     if(targetLayer) {
-                        const img = new Image();
-                        img.onload = () => targetLayer.ctx.drawImage(img, 0, 0);
-                        img.src = lData.image;
+                        const img = new Image(); img.onload = () => targetLayer.ctx.drawImage(img, 0, 0); img.src = lData.image;
                     }
                 });
             }
-            // --- EGYÉB (User lista, Kick) ---
             else if(data.type==='user_list') { connectedUsers=data.users; updateActiveUsersUI(); }
             else if(data.type==='kick') { alert("Kirúgtak."); disconnectPeer(); }
         }
 
-        // --- P2P CORE FUNKCIÓK ---
+        // --- P2P CORE ---
         function startAsHost() { 
             if(!currentUser){openLoginModal();return;} 
             if(peer)return; 
-            isHost=true; 
-            connectedUsers=[]; 
-            maxParticipants=parseInt(document.getElementById('room-size-limit').value)||3; 
-            
-            // --- UPDATED CONFIG ---
+            isHost=true; connectedUsers=[]; maxParticipants=parseInt(document.getElementById('room-size-limit').value)||3; 
             peer=new Peer(ROOM_MAPPING[document.getElementById('channel-select').value], peerConfig); 
-            
             peer.on('open',id=>{document.getElementById('live-indicator').style.display='block';updateP2PUI(true);}); 
             peer.on('connection',c=>{if(connectedUsers.length+1>=maxParticipants){c.on('open',()=>{c.send({type:'error',message:'Tele'});setTimeout(()=>c.close(),500);});return;} c.on('data',d=>{if(d.type==='handshake'){connectedUsers.push({id:c.peer,conn:c,username:d.username}); broadcastUserList(); sendFullSnapshot(c); } else handleP2PData(d);}); c.on('close',()=>{connectedUsers=connectedUsers.filter(u=>u.id!==c.peer);broadcastUserList();updateActiveUsersUI();});}); 
         }
@@ -692,10 +1166,7 @@
             if(!currentUser){openLoginModal();return;} 
             if(peer)return; 
             isHost=false; 
-            
-            // --- UPDATED CONFIG ---
             peer=new Peer(null, peerConfig); 
-            
             peer.on('open',()=>{conn=peer.connect(ROOM_MAPPING[document.getElementById('channel-select').value]); conn.on('open',()=>{conn.send({type:'handshake',username:currentUser}); document.getElementById('live-indicator').style.display='block';updateP2PUI(true);}); conn.on('data',handleP2PData); conn.on('close',resetP2PUI);}); 
         }
 
@@ -706,8 +1177,8 @@
         function resetP2PUI(){peer=null;conn=null;isHost=false;connectedUsers=[];document.getElementById('live-indicator').style.display='none';updateP2PUI(false);}
         function updateP2PUI(online){document.getElementById('connect-ui').style.display=online?'none':'block';document.getElementById('disconnect-ui').style.display=online?'block':'none';document.getElementById('p2p-log').innerText=online?(isHost?"HOST ONLINE":"ONLINE"):"Offline";document.getElementById('p2p-log').style.color=online?"#50fa7b":"#888";}
 
-        // --- DRIVE SAVE (Képként) ---
-        async function handleDriveSave() { document.getElementById('loading-overlay').style.display='flex'; if(!currentUser||!gapi.client.getToken()){alert("Jelentkezz be!");document.getElementById('loading-overlay').style.display='none';return;}
+        // --- DRIVE SAVE ---
+        async function handleDriveSave() { document.getElementById('loading-overlay').style.display='flex'; document.getElementById('loading-text').innerText="Felhő mentés..."; if(!currentUser||!gapi.client.getToken()){alert("Jelentkezz be!");document.getElementById('loading-overlay').style.display='none';return;}
             const tempCanvas=document.createElement('canvas'); tempCanvas.width=bgLayer.width; tempCanvas.height=bgLayer.height; const ctx=tempCanvas.getContext('2d'); ctx.drawImage(bgLayer,0,0); layers.forEach(l=>ctx.drawImage(l.canvas,0,0));
             tempCanvas.toBlob(async blob=>{ const meta={'name':`AeroDraw_${currentUser}_${Date.now()}.png`,'mimeType':'image/png'}; const form=new FormData(); form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'})); form.append('file',blob);
             try{await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:new Headers({'Authorization':'Bearer '+gapi.client.getToken().access_token}),body:form});alert("Mentve!");}catch(e){alert("Hiba!");} document.getElementById('loading-overlay').style.display='none'; }); }
@@ -716,9 +1187,8 @@
         let isDark=true; function toggleTheme(){isDark=!isDark;document.body.className=isDark?"":"light-mode";}
         function openSettings(){document.getElementById('settingsModal').style.display='flex';}
         
-        // Indítás
         const savedUser = localStorage.getItem('saved_user'); if(savedUser){currentUser=savedUser;document.getElementById('user-btn').innerText=savedUser;}
-        setTimeout(initLayers, 100); // Inicializálás kis késleltetéssel
+        setTimeout(initLayers, 100); 
     </script>
 </body>
 </html>
