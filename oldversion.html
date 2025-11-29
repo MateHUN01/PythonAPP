@@ -3,1083 +3,1143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroCode PRO v16.1 - External Data Edition</title>
+    <title>AeroDraw PRO v3.5 - Animation Playback & Fill</title>
     
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/eclipse.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/material.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldgutter.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/dialog/dialog.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/search/matchesonscrollbar.css">
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldgutter.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/indent-fold.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/search/searchcursor.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/search/search.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/dialog/dialog.js"></script>
-
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
 
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
     <style>
         :root {
-            /* --- TÉMA DEFINÍCIÓK --- */
-            --bg-color: #050505;
-            --side-panel-bg: #0a0a0a;
+            --bg-color: #121212;
             --text-color: #e0e0e0;
             --border-color: #333333;
-            --accent-color: #00E676; /* Hacker Green accent */
-            --accent-secondary: #2196F3;
-            --output-bg: #111;
+            --accent-color: #2196F3;
             
-            /* ÜVEG HATÁS */
-            --glass-bg: rgba(10, 10, 10, 0.85);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.7);
-            --glass-blur: 12px;
+            /* --- ÜVEG HATÁS --- */
+            --glass-bg: rgba(20, 20, 20, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+            --glass-blur: 15px;
             
-            --modal-bg: #141414;
-            --input-field-bg: #1f1f1f;
-            
-            --btn-hover: rgba(255, 255, 255, 0.1);
-            --run-color: #00E676;
-            --run-glow: rgba(0, 230, 118, 0.4);
-
-            --hint-bg: #252526;
-            --hint-text: #e0e0e0;
-            --hint-select-bg: #004d2a;
-            --hint-select-text: #ffffff;
-            
-            --system-msg-color: #888;
-            --p2p-msg-color: #ffab40;
-            
-            --panel-width: 380px;
-            
-            /* SCROLLBAR */
-            --scrollbar-width: 8px;
-            --scrollbar-track: #000;
-            --scrollbar-thumb: #444;
-            --scrollbar-thumb-hover: #666;
+            --modal-bg: #1a1a1a;
+            --input-field-bg: #252525;
+            --btn-hover: rgba(255, 255, 255, 0.15);
+            --run-color: #2196F3;
         }
 
         body.light-mode {
             --bg-color: #f5f5f7;
-            --side-panel-bg: #ffffff;
             --text-color: #333333;
             --border-color: #d1d1d1;
-            --output-bg: #ffffff;
-            --accent-color: #1976D2; 
-            --accent-secondary: #00E676;
-            
-            --glass-bg: rgba(255, 255, 255, 0.95);
+            --glass-bg: rgba(255, 255, 255, 0.8);
             --glass-border: rgba(0, 0, 0, 0.05);
             --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
-            --glass-blur: 15px;
-
             --modal-bg: #ffffff;
             --input-field-bg: #e6e6e6;
             --btn-hover: rgba(0, 0, 0, 0.05);
             --run-color: #1976D2;
-            --run-glow: rgba(25, 118, 210, 0.4);
-
-            --hint-bg: #f3f3f3;
-            --hint-text: #333333;
-            --hint-select-bg: #b4d7ff;
-            --hint-select-text: #000000;
-            
-            --scrollbar-track: #f0f0f0;
-            --scrollbar-thumb: #ccc;
-            --scrollbar-thumb-hover: #bbb;
         }
 
         * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); height: 100vh; overflow: hidden; }
 
-        /* SCROLLBAR */
-        ::-webkit-scrollbar { width: var(--scrollbar-width); height: var(--scrollbar-width); }
-        ::-webkit-scrollbar-track { background: var(--scrollbar-track); }
-        ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
-
-        body {
-            margin: 0; padding: 0;
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            height: 100vh;
-            overflow: hidden;
-            position: relative;
-            transition: background 0.3s ease;
-            user-select: none;
-        }
-        
-        /* MATRIX CANVAS */
-        #matrix-canvas {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 0; opacity: 0.3; pointer-events: none;
-        }
-
-        /* --- CODE MIRROR --- */
-        .CodeMirror { 
-            flex: 1; 
-            font-family: 'JetBrains Mono', monospace; 
-            font-size: 14px; 
-            background-color: transparent !important; 
-            height: 100%; 
-            position: relative;
-            color: #f8f8f2;
-            z-index: 1; 
-            user-select: text; 
-            line-height: 1.6;
-        }
-        .CodeMirror-gutters { 
-            background-color: var(--bg-color) !important;
-            border-right: 1px solid var(--border-color); 
-        }
-        .CodeMirror-linenumber { color: #555; }
-        .CodeMirror-cursor { border-left: 2px solid var(--accent-color) !important; }
-        
-        /* Hint Styles */
-        .CodeMirror-hints {
-            position: absolute; z-index: 100000; overflow: hidden; list-style: none; margin: 0; padding: 2px;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.6); border-radius: 6px; border: 1px solid var(--border-color);
-            background: var(--hint-bg); font-family: 'JetBrains Mono', monospace; font-size: 13px; max-height: 250px; overflow-y: auto;
-        }
-        .CodeMirror-hint { 
-            margin: 0; padding: 5px 10px; border-radius: 3px; white-space: pre; color: var(--hint-text); cursor: pointer; 
-            display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-        li.CodeMirror-hint-active { background: var(--hint-select-bg); color: var(--hint-select-text); }
-        
-        /* UI HEADER */
-        .header-wrapper {
-            position: fixed; top: 20px; left: 0; width: 100%;
-            display: flex; justify-content: space-between; padding: 0 30px;
-            z-index: 2000; pointer-events: none; 
-        }
-
-        .glass-bubble {
-            pointer-events: auto; 
-            background: var(--glass-bg); 
-            backdrop-filter: blur(var(--glass-blur)); 
-            border: 1px solid var(--glass-border); 
-            box-shadow: var(--glass-shadow); 
-            border-radius: 12px; 
-            padding: 8px 12px;
-            display: flex; align-items: center; gap: 10px; 
+        /* --- CANVAS LAYERS --- */
+        #canvas-wrapper {
+            position: relative; width: 100%; height: 100%; background: var(--bg-color); overflow: hidden; cursor: crosshair;
             transition: all 0.3s ease;
         }
-        .glass-bubble:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-color: var(--accent-color); }
+        /* NÉGYZETES NÉZET (ANIMÁCIÓHOZ) */
+        #canvas-wrapper.square-mode {
+            width: auto;
+            aspect-ratio: 1 / 1;
+            margin: 0 auto;
+            border: 2px solid var(--accent-color);
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            max-height: calc(100vh - 160px); /* Hely a timeline-nak */
+            margin-top: 80px;
+        }
 
-        .app-title { font-weight: 800; font-size: 15px; padding: 0 10px; letter-spacing: 0.5px; color: var(--text-color); display: flex; align-items: center; gap: 8px; }
-        .vertical-divider { width: 1px; height: 24px; background-color: var(--border-color); margin: 0 5px; }
+        .drawing-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
+        }
+        .drawing-layer.active { pointer-events: auto; }
+        #background-layer { z-index: 0; background-color: #000000; transition: background-color 0.3s; }
+        
+        /* PREVIEW LAYER (Alakzatokhoz) */
+        #preview-layer { z-index: 50; pointer-events: none; }
+        /* ONION SKIN LAYER (Animációhoz) */
+        #onion-layer { z-index: 1; pointer-events: none; opacity: 0.3; filter: grayscale(100%); }
 
-        button.icon-btn { background: transparent; border: none; color: var(--text-color); width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; position: relative;}
-        button.icon-btn:hover { background: var(--btn-hover); color: var(--accent-color); }
+        /* --- LEBEGŐ PANELEK --- */
+        .floating-panel {
+            position: absolute; background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border); padding: 10px; border-radius: 12px; display: flex; flex-direction: column; gap: 10px; z-index: 100; box-shadow: var(--glass-shadow);
+        }
+        
+        /* Eszköztár (Bal) */
+        .toolbar-left { top: 100px; left: 20px; }
 
-        button.run-btn { background: var(--run-color); color: #000; border: none; width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-right: 2px; box-shadow: 0 0 15px var(--run-glow); transition: all 0.2s; font-weight: bold;}
-        button.run-btn:hover { transform: scale(1.05); box-shadow: 0 0 25px var(--run-glow); filter: brightness(1.2); }
+        /* Rétegkezelő (Jobb) - Animáció módban elrejtjük */
+        .layer-panel-right { top: 100px; right: 20px; width: 200px; max-height: 60vh; transition: opacity 0.3s; }
+        .layer-panel-right.hidden { opacity: 0; pointer-events: none; }
 
-        #user-btn { cursor: pointer; font-size:12px; opacity:0.9; margin-right:5px; padding: 6px 14px; border-radius: 6px; background: var(--btn-hover); transition: background 0.2s; font-weight:600; letter-spacing:0.5px; }
-        #user-btn:hover { background: var(--accent-color); color: #000; }
+        .tool-btn { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .tool-btn:hover, .tool-btn.active { background: var(--accent-color); color: white; border-color: transparent; }
+        
+        /* Színpaletta */
+        .color-palette { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; }
+        .color-swatch { width: 30px; height: 30px; border-radius: 6px; cursor: pointer; border: 2px solid transparent; }
+        .color-swatch.active { border-color: white; box-shadow: 0 0 5px var(--accent-color); }
+        input[type="color"] { -webkit-appearance: none; padding: 0; height: 36px; width: 36px; cursor: pointer; border: 2px solid var(--border-color); background: transparent; border-radius: 8px; overflow: hidden; }
 
-        /* DROPDOWN */
+        /* Réteg lista */
+        .layer-list { display: flex; flex-direction: column-reverse; gap: 5px; overflow-y: auto; flex: 1; }
+        .layer-item { display: flex; align-items: center; justify-content: space-between; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid transparent; cursor: pointer; font-size: 13px; }
+        .layer-item.active { border-color: var(--accent-color); background: rgba(33, 150, 243, 0.1); }
+        .layer-item .layer-name { flex: 1; margin-left: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .layer-actions button { padding: 2px; background: transparent; border: none; color: #ff5555; opacity: 0.6; cursor: pointer; }
+        .layer-actions button:hover { opacity: 1; }
+
+        input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: #444; outline: none; margin-top: 5px; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--accent-color); cursor: pointer; }
+
+        /* ANIMATION TIMELINE (Bottom) */
+        #animation-panel {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 80%; height: 110px; /* Megnövelve a Play gomb miatt */
+            background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border); border-radius: 16px;
+            display: none; /* Alapból rejtett */
+            flex-direction: column; padding: 10px; z-index: 100;
+            box-shadow: var(--glass-shadow);
+        }
+        #animation-panel.active { display: flex; }
+        
+        .timeline-controls { display: flex; justify-content: center; gap: 10px; margin-bottom: 10px; align-items: center; flex-wrap: wrap;}
+        .timeline-frames { display: flex; overflow-x: auto; gap: 5px; padding-bottom: 5px; align-items: center; }
+        .timeline-frames::-webkit-scrollbar { height: 6px; }
+        .timeline-frames::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+
+        .frame-thumb {
+            min-width: 50px; height: 50px; background: #000; border: 2px solid #444; border-radius: 6px; cursor: pointer; position: relative; overflow: hidden;
+        }
+        .frame-thumb.active { border-color: var(--accent-color); box-shadow: 0 0 10px var(--accent-color); }
+        .frame-thumb canvas { width: 100%; height: 100%; object-fit: contain; }
+        .frame-number { position: absolute; bottom: 2px; right: 2px; font-size: 9px; color: white; background: rgba(0,0,0,0.6); padding: 1px 3px; border-radius: 4px; }
+
+        .anim-btn { padding: 5px 10px; background: var(--btn-hover); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 6px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 5px; }
+        .anim-btn:hover { background: var(--accent-color); color: white; }
+        .anim-btn.record { color: #ff5555; border-color: #ff5555; }
+        .anim-btn.play { color: #50fa7b; border-color: #50fa7b; font-weight: bold; }
+        .anim-btn.play.playing { background: #50fa7b; color: #121212; }
+
+        /* LIVE jelző */
+        #live-indicator { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); background: rgba(80, 250, 123, 0.1); color: #50fa7b; border: 1px solid #50fa7b; padding: 2px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; pointer-events: none; z-index: 50; display: none; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
+
+        /* --- HEADER --- */
+        .header-wrapper { position: fixed; top: 25px; left: 0; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; z-index: 1000; pointer-events: none; }
+        .glass-bubble { pointer-events: auto; background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); border-radius: 100px; padding: 6px 10px; display: flex; align-items: center; gap: 10px; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .glass-bubble:hover { transform: translateY(-2px); box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.8); }
+        .app-title { font-weight: 700; font-size: 14px; padding-left: 15px; padding-right: 10px; letter-spacing: 0.5px; color: var(--text-color); display: flex; align-items: center; gap: 8px; }
+        .vertical-divider { width: 1px; height: 24px; background-color: rgba(255,255,255,0.2); margin: 0 5px; }
+        button.icon-btn { background: transparent; border: none; color: var(--text-color); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; position: relative;}
+        button.icon-btn:hover { background: var(--btn-hover); transform: scale(1.1); }
+        button.icon-btn.active-mode { background: var(--accent-color); color: white; box-shadow: 0 0 10px var(--accent-color); }
+        button.icon-btn:disabled { opacity: 0.3; cursor: default; transform: none; }
+        
+        #user-btn { cursor: pointer; font-size:12px; opacity:0.8; margin-right:5px; padding: 6px 12px; border-radius: 20px; transition: background 0.2s; font-weight:600; letter-spacing:0.5px; }
+        #user-btn:hover { background: var(--btn-hover); opacity: 1; }
+
+        /* --- DROPDOWN --- */
         .dropdown { position: relative; display: inline-block; }
-        .dropdown-content {
-            opacity: 0; visibility: hidden; position: absolute; right: 0; top: 50px;
-            background-color: #1a1a1a;
-            min-width: 300px; box-shadow: 0px 10px 40px rgba(0,0,0,0.8);
-            border-radius: 12px; border: 1px solid var(--border-color);
-            z-index: 3000; overflow: hidden;
-            transition: all 0.2s cubic-bezier(0.165, 0.84, 0.44, 1); transform: translateY(-10px) scale(0.98);
-            padding: 8px; cursor: default;
-        }
+        .dropdown-content { opacity: 0; visibility: hidden; position: absolute; right: 0; top: 50px; background-color: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)); min-width: 280px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.6); border-radius: 12px; border: 1px solid var(--glass-border); z-index: 2000; overflow: hidden; transition: all 0.2s ease-in-out; transform: translateY(-10px) scale(0.98); padding: 10px; cursor: default; }
         .dropdown:hover .dropdown-content { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
-        .menu-item {
-            color: var(--text-color); padding: 10px 14px; text-decoration: none;
-            display: flex; align-items: center; gap: 12px; font-size: 13px;
-            transition: background 0.2s; cursor: pointer; border-radius: 6px;
-        }
-        .menu-item:hover { background-color: var(--btn-hover); color: var(--accent-color); }
+        .menu-item { color: var(--text-color); padding: 12px 16px; text-decoration: none; display: flex; align-items: center; gap: 10px; font-size: 13px; transition: background 0.2s; cursor: pointer; border-radius: 6px; }
+        .menu-item:hover { background-color: var(--accent-color); color: white; }
 
-        /* LAYOUT */
-        .main-container { display: flex; height: 100vh; width: 100%; position: relative; overflow: hidden; padding-top: 0; }
-        .editor-container { 
-            flex: 1; display: flex; flex-direction: column; 
-            background: rgba(0,0,0,0.2); min-width: 0; position: relative; z-index: 1;
-            backdrop-filter: blur(5px);
-        }
-        .CodeMirror-scroll { padding-top: 90px; padding-bottom: 50px; }
-        
-        /* SIDE PANEL */
-        .side-panel { 
-            position: fixed; top: 0; right: 0; bottom: 0;
-            width: var(--panel-width);
-            background-color: var(--side-panel-bg); 
-            border-left: 1px solid var(--border-color);
-            padding-top: 90px; display: flex; flex-direction: column;
-            z-index: 1500; transform: translateX(100%); 
-            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
-        }
-        .side-panel.open { transform: translateX(0); }
-        
-        #panel-close-btn {
-            position: absolute; left: 0; top: 50%; transform: translateY(-50%) translateX(-100%); 
-            width: 24px; height: 60px; background: var(--side-panel-bg);
-            border: 1px solid var(--border-color); border-right: none;
-            border-radius: 8px 0 0 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-            color: var(--text-color); z-index: 1501; opacity: 0; pointer-events: none; transition: opacity 0.3s;
-        }
-        .side-panel.open #panel-close-btn { opacity: 1; pointer-events: auto; }
-        #panel-close-btn:hover { color: var(--accent-color); }
+        /* P2P UI */
+        .user-chip-container { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; margin-bottom: 10px; }
+        .user-chip { background: rgba(255, 255, 255, 0.1); padding: 6px 10px; border-radius: 20px; font-size: 12px; display: flex; align-items: center; justify-content: space-between; border: 1px solid transparent; }
+        .user-chip.self { border-color: var(--accent-color); }
+        .user-chip .username { font-weight: 600; }
+        .user-chip .kick-btn { background: transparent; border: none; color: #ff5555; cursor: pointer; display: flex; align-items: center; padding: 2px; border-radius: 50%; }
 
-        #panel-trigger { position: fixed; top: 0; right: 0; bottom: 0; width: 20px; z-index: 1400; }
-
-        .panel-header { padding: 10px 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.5; margin-bottom: 5px; color: var(--accent-color); }
+        /* --- MAIN CONTAINER --- */
+        .main-container { display: flex; height: 100vh; width: 100%; }
+        .editor-container { flex: 1; display: flex; flex-direction: column; background: var(--bg-color); min-width: 0; position: relative; }
         
-        /* TERMINAL & CHAT */
-        .terminal-wrapper { 
-            flex: 2; display: flex; flex-direction: column; 
-            background-color: var(--output-bg); border-radius: 8px; 
-            margin: 0 20px 20px 20px; overflow: hidden; 
-            border: 1px solid var(--border-color);
-        }
-        .avatar-panel-wrapper {
-            flex: 0 0 auto; min-height: 90px; background-color: var(--output-bg); border-radius: 8px;
-            margin: 0 20px 20px 20px; border: 1px solid var(--border-color);
-            padding: 10px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; align-items: center;
-        }
-        .avatar-circle {
-            width: 36px; height: 36px; border-radius: 50%; border: 2px solid transparent;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center;
-            font-weight: bold; color: #000; font-size: 13px;
-        }
-        .chat-wrapper {
-            flex: 2; display: flex; flex-direction: column;
-            background-color: var(--output-bg); border-radius: 8px;
-            margin: 0 20px 20px 20px; overflow: hidden; border: 1px solid var(--border-color); position: relative;
-        }
-
-        #output { flex: 1; padding: 15px; font-family: 'JetBrains Mono', monospace; font-size: 13px; white-space: pre-wrap; overflow-y: auto; color: var(--text-color); }
-        
-        /* LOADING */
-        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; z-index: 9998; display: none; flex-direction: column; justify-content: center; align-items: center; }
-        .loader-ring { display: inline-block; position: relative; width: 80px; height: 80px; }
-        .loader-ring div { box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 8px; border: 4px solid var(--accent-color); border-radius: 50%; animation: loader-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; border-color: var(--accent-color) transparent transparent transparent; }
-        .loader-ring div:nth-child(1) { animation-delay: -0.45s; }
-        .loader-ring div:nth-child(2) { animation-delay: -0.3s; }
-        .loader-ring div:nth-child(3) { animation-delay: -0.15s; }
-        @keyframes loader-ring { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* MODALS */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10001; backdrop-filter: blur(10px); justify-content: center; align-items: center; }
-        .modal { background: var(--modal-bg); width: 600px; max-width: 90%; max-height: 85vh; padding: 0; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8); display: flex; flex-direction: column; overflow: hidden; }
-        
-        .modal-header { padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); }
-        .modal-header h3 { margin: 0; font-size: 18px; color: var(--text-color); display: flex; align-items: center; gap: 10px; }
-        .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
-        .modal-footer { padding: 15px 20px; border-top: 1px solid var(--border-color); text-align: right; background: rgba(0,0,0,0.2); }
-        
-        .modal input[type="text"], .modal input[type="password"], .modal select { width: 100%; padding: 12px; background: var(--input-field-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 6px; margin-bottom: 10px; font-family: 'Inter'; outline: none; transition: border 0.2s; }
-        .modal input:focus { border-color: var(--accent-color); }
-        
-        .modal button.primary { background: var(--accent-color); color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 700; cursor: pointer; }
-        .modal button.secondary { background: transparent; color: var(--text-color); border: 1px solid var(--border-color); padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-right: 10px; }
-        .modal button:hover { opacity: 0.9; }
-
-        /* --- DOCS SEARCH STYLES --- */
-        #docSearch {
-            width: 100%; padding: 14px; background: #000; border: 2px solid var(--border-color);
-            color: var(--accent-color); font-family: 'JetBrains Mono'; font-size: 14px; border-radius: 8px;
-            margin-bottom: 20px; outline: none;
-        }
-        #docSearch:focus { border-color: var(--accent-color); box-shadow: 0 0 15px rgba(0, 230, 118, 0.1); }
-        
-        #docResults { display: flex; flex-direction: column; gap: 15px; }
-        
-        .doc-card {
-            background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);
-            border-radius: 8px; padding: 15px; transition: transform 0.2s;
-        }
-        .doc-card:hover { background: rgba(255,255,255,0.05); transform: translateX(5px); border-left: 3px solid var(--accent-color); }
-        
-        .doc-card-title { font-weight: bold; color: var(--accent-color); margin-bottom: 8px; display: flex; justify-content: space-between; }
-        .doc-card-match-score { font-size: 10px; opacity: 0.5; font-family: monospace; border: 1px solid #444; padding: 2px 4px; border-radius: 4px; }
-        .doc-card-desc { font-size: 13px; color: #ccc; margin-bottom: 10px; line-height: 1.4; }
-        
-        .code-block {
-            background: #111; padding: 10px; border-radius: 4px; border: 1px solid #333;
-            font-family: 'JetBrains Mono'; font-size: 12px; color: #a9b7c6; overflow-x: auto;
-            position: relative;
-        }
-        /* Syntax highlighting simple simulation for docs */
-        .kw { color: #cc7832; font-weight: bold; } /* keyword */
-        .str { color: #6a8759; } /* string */
-        .num { color: #6897bb; } /* number */
-        .func { color: #ffc66d; } /* function */
-        .cmt { color: #808080; font-style: italic; } /* comment */
-        
-        .copy-btn-mini {
-            position: absolute; top: 5px; right: 5px; background: rgba(255,255,255,0.1); border: none; color: #fff;
-            padding: 4px; border-radius: 4px; cursor: pointer; font-size: 10px; opacity: 0.5;
-        }
-        .copy-btn-mini:hover { opacity: 1; background: var(--accent-color); color: #000; }
-
-        /* Dynamic classes */
-        .system-msg { color: #888; font-style: italic; }
-        .error { color: #ff5555; }
-        .p2p-msg { color: var(--p2p-msg-color); }
-        
+        /* --- MODALS --- */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10001; backdrop-filter: blur(8px); justify-content: center; align-items: center; }
+        .modal { background: var(--modal-bg); width: 350px; padding: 25px; border-radius: 24px; border: 1px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.7); }
+        .modal button { background: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; float: right; margin-top: 15px; font-weight: 600; }
+        .modal input { width: 100%; padding: 12px; background: var(--input-field-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 8px; margin-bottom: 10px; outline: none;}
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-color); z-index: 9998; display: none; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s ease; }
+        .gear { width: 60px; height: 60px; fill: var(--accent-color); animation: spin 2s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <canvas id="matrix-canvas"></canvas>
-
     <div id="loading-overlay">
-        <div class="loader-ring"><div></div><div></div><div></div><div></div></div>
-        <div style="margin-top:20px; color:#fff; font-family:'JetBrains Mono'">Rendszer inicializálása...</div>
+        <svg class="gear" viewBox="0 0 512 512"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>
+        <div id="loading-text" style="margin-top:20px; color:#666">Mentés...</div>
     </div>
-
-    <div id="panel-trigger"></div>
-    <div id="tutorial-toast"></div>
-    <div id="avatar-popup" class="avatar-popup-menu"></div>
 
     <div class="header-wrapper">
         <div class="glass-bubble left-bubble">
             <div class="app-title">
-                <span class="material-icons" style="color:var(--accent-color)">code</span>
-                AeroCode <span style="font-weight:400; opacity:0.7">PRO</span>
+                <span class="material-icons" style="color:var(--accent-color)">draw</span>
+                AeroDraw PRO v3.5
             </div>
             <div class="vertical-divider"></div>
-            <button class="run-btn" onclick="runPython()" title="Futtatás (Ctrl+Enter)">
-                <span class="material-icons">play_arrow</span>
-            </button>
+            
+            <button class="icon-btn" id="btn-undo" onclick="undoLastAction()" title="Visszavonás"><span class="material-icons">undo</span></button>
+            <button class="icon-btn" id="btn-redo" onclick="redoLastAction()" title="Visszavonás visszavonása"><span class="material-icons">redo</span></button>
+            <div class="vertical-divider" style="height: 16px; margin: 0 2px; opacity: 0.5;"></div>
+            
+            <button class="icon-btn" onclick="clearCurrentLayer()" title="Réteg Törlése"><span class="material-icons">delete</span></button>
+            <button class="icon-btn" onclick="downloadImage()" title="Mentés képként"><span class="material-icons">image</span></button>
+            
+            <div class="vertical-divider" style="height: 16px; margin: 0 2px; opacity: 0.5;"></div>
+            <button class="icon-btn" id="btn-anim-toggle" onclick="toggleAnimationMode()" title="Animációs Mód (GIF)"><span class="material-icons">movie_creation</span></button>
         </div>
 
         <div class="glass-bubble right-bubble">
-            <div id="user-btn" onclick="openLoginModal()">Belépés</div>
-            
+            <div id="user-btn" onclick="openLoginModal()">Log in</div>
             <div class="dropdown">
-                <button class="icon-btn" title="Közös Munka (P2P)">
+                <button class="icon-btn" title="Közös Rajzolás (P2P)" onclick="resetP2PUI()">
                     <span class="material-icons">group</span>
                 </button>
                 <div class="dropdown-content">
-                    <h4 style="margin:0 0 10px 0; border-bottom:1px solid #333; padding-bottom:10px; color:var(--text-color)">Közös Munka (P2P)</h4>
+                    <h4 style="margin:0 0 10px 0; border-bottom:1px solid #444; padding-bottom:5px;">Közös Rajzolás</h4>
                     <div id="connect-ui">
-                        <select id="channel-select" style="width:100%; padding:8px; background:var(--input-field-bg); border:1px solid var(--border-color); color:var(--text-color); border-radius:6px; margin-bottom:10px;">
+                        <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Válassz egy csatornát:</div>
+                        <select id="channel-select" style="width:100%; padding:8px; background:var(--input-field-bg); border:1px solid var(--border-color); color:var(--text-color); border-radius:4px; margin-bottom:10px; font-family:'Inter'">
                             <option value="1">1. Csatorna (Alpha)</option>
                             <option value="2">2. Csatorna (Beta)</option>
                             <option value="3">3. Csatorna (Gamma)</option>
-                            <option value="random">Egyedi Szoba (Privát)</option>
                         </select>
-                        
-                        <div id="custom-code-ui" style="display:none; margin-bottom:10px; background:#111; padding:10px; border-radius:6px;">
-                             <label style="font-size:11px; color:#888;">Generált Kód (Küldd el!):</label>
-                             <input type="text" id="generated-room-id" readonly style="width:100%; color:var(--accent-color); font-weight:bold; text-align:center; border:none; background:transparent;">
-                             <label style="font-size:11px; color:#888; margin-top:5px; display:block;">Vagy írd be a kapott kódot:</label>
-                             <input type="text" id="input-room-id" placeholder="Szoba kód..." style="width:100%;">
+                        <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:10px;">
+                            <span style="font-size:11px; opacity:0.7;">Max létszám:</span>
+                            <input type="number" id="room-size-limit" min="2" max="10" value="3" style="width:60px; padding:4px; font-size:11px; margin-bottom:0;">
                         </div>
-
-                        <div style="display:flex; gap:10px; margin-top:10px;">
-                            <button onclick="startAsHost()" style="flex:1; padding:8px; background:var(--accent-color); color:#000; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">HOST</button>
-                            <button onclick="joinAsGuest()" style="flex:1; padding:8px; background:#2196F3; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">JOIN</button>
+                        <div style="font-size:10px; color:#ff5555; margin-bottom:10px; display:none;" id="login-warning">Jelentkezz be a csatlakozáshoz!</div>
+                        <div style="display:flex; gap:5px;">
+                            <button onclick="startAsHost()" style="flex:1; padding:8px; background:var(--run-color); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">HOST</button>
+                            <button onclick="joinAsGuest()" style="flex:1; padding:8px; background:#50fa7b; color:#222; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">JOIN</button>
                         </div>
                     </div>
                     <div id="disconnect-ui" style="display:none;">
-                        <div style="background:rgba(0, 230, 118, 0.1); color:#00E676; padding:8px; border-radius:6px; margin-bottom:10px; text-align:center; font-size:12px;">
-                            <span class="material-icons" style="font-size:12px; vertical-align:middle;">wifi</span> Kapcsolódva
+                        <div style="background:rgba(80, 250, 123, 0.1); color:#50fa7b; padding:8px; border-radius:4px; margin-bottom:10px; text-align:center; font-size:12px;">
+                            <span class="material-icons" style="font-size:12px; vertical-align:middle;">link</span> Kapcsolódva
                         </div>
-                        <div id="active-users-list" style="margin-bottom:10px;"></div>
-                        <button onclick="disconnectPeer()" style="width:100%; padding:8px; background:#ff5555; color:white; border:none; border-radius:6px; cursor:pointer;">Kilépés</button>
+                        <div id="active-users-list" class="user-chip-container"></div>
+                        <button onclick="disconnectPeer()" style="width:100%; padding:8px; background:#ff5555; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Szétkapcsolás</button>
                     </div>
-                    <div id="p2p-log" style="font-size:10px; color:#666; margin-top:8px; text-align:center;">Offline</div>
+                    <div id="p2p-log" style="font-size:10px; color:#888; margin-top:10px; font-style:italic;">Offline</div>
                 </div>
             </div>
-
-            <button class="icon-btn" onclick="askGemini()" title="Gemini AI Asszisztens"><span class="material-icons">auto_awesome</span></button>
-            <button class="icon-btn" onclick="openDocs()" title="Tudásbázis & Puska"><span class="material-icons">school</span></button>
-            <button class="icon-btn" onclick="toggleTheme()" title="Téma"><span class="material-icons">contrast</span></button>
-            <button class="icon-btn" onclick="downloadCode()" title="Mentés"><span class="material-icons">save_alt</span></button>
+            <div class="dropdown">
+                <button class="icon-btn" title="Felhő Mentés">
+                    <span class="material-icons">cloud_queue</span>
+                </button>
+                <div class="dropdown-content">
+                    <a class="menu-item" onclick="handleDriveSave()"><span class="material-icons">save</span> Mentés Drive-ra (Kép)</a>
+                </div>
+            </div>
+            <button class="icon-btn" onclick="toggleTheme()" title="Téma"><span class="material-icons">dark_mode</span></button>
             <button class="icon-btn" onclick="openSettings()" title="Beállítások"><span class="material-icons">settings</span></button>
         </div>
     </div>
 
     <div class="main-container">
         <div class="editor-container">
-            <textarea id="code-editor">
-# AeroCode PRO v16.1
-# Tudásbázis Edition (External File Support)
-#
-# A "Puska" gombra kattintva betöltődik a documents.txt
-#
-# Próbáld ki: írd be, hogy "lista = []"
-# majd a következő sorba: "lista.a" -> és nyomj Ctrl+Space-t!
-
-def udvozles(nev):
-    print(f"Szia, {nev}!")
-    print("A rendszer készen áll.")
-
-udvozles("Felhasználó")
-            </textarea>
-        </div>
-
-        <div class="side-panel" id="sidePanel">
-            <div id="panel-close-btn" onclick="closeSidePanel()"><span class="material-icons">chevron_right</span></div>
-
-            <div class="panel-header">Kimenet</div>
-            <div class="terminal-wrapper">
-                <div id="output"></div>
-                <div id="terminal-input-bar" style="display:none; padding:10px; background:#111; border-top:1px solid #333; display:flex;">
-                    <span style="color:var(--accent-color); margin-right:5px;">&gt;</span>
-                    <input type="text" id="term-input" style="flex:1; background:transparent; border:none; color:#fff; font-family:'JetBrains Mono'; outline:none;" autocomplete="off">
-                </div>
-            </div>
+            <div id="live-indicator">● LIVE P2P</div>
             
-            <div class="panel-header">Csapat</div>
-            <div id="avatar-panel" class="avatar-panel-wrapper">
-                <div style="font-size:12px; color:#666;">Nincs aktív kapcsolat.</div>
+            <div id="canvas-wrapper">
+                <canvas id="background-layer" class="drawing-layer"></canvas>
+                <canvas id="onion-layer" class="drawing-layer"></canvas>
+                <canvas id="preview-layer" class="drawing-layer"></canvas>
             </div>
 
-            <div class="panel-header">Chat</div>
-            <div class="chat-wrapper">
-                <div id="chat-history"></div>
-                <div id="chat-input-bar">
-                    <input type="text" id="chat-input" placeholder="Írj üzenetet..." autocomplete="off">
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="docsModal" class="modal-overlay">
-        <div class="modal" style="width:800px; height:80vh;">
-            <div class="modal-header">
-                <h3><span class="material-icons" style="color:var(--accent-color)">school</span> Tudásbázis & Puska</h3>
-                <button onclick="document.getElementById('docsModal').style.display='none'" style="background:transparent; border:none; color:#666; cursor:pointer;"><span class="material-icons">close</span></button>
-            </div>
-            <div class="modal-body" style="background: #0e0e0e;">
-                <div style="margin-bottom:10px; font-size:11px; color:#666;">
-                    Forrás: <span id="doc-source-indicator" style="color:var(--accent-color)">Inicializálás...</span>
-                </div>
-                <input type="text" id="docSearch" placeholder="Keresés... (Pl.: 'szöveg megfordítása', 'ciklus', 'fájl olvasás')" onkeyup="searchDocs()">
+            <div class="floating-panel toolbar-left">
+                <div style="text-align:center; font-size:10px; opacity:0.7;">Vászon Háttér</div>
+                <input type="color" id="canvas-bg-picker" value="#000000" title="Vászon háttérszíne" onchange="changeCanvasBg(this.value)">
                 
-                <div id="docResults">
-                    <div style="text-align:center; color:#666; margin-top:50px;">
-                        <span class="material-icons" style="font-size:48px; opacity:0.2">search</span><br>
-                        Írj be valamit a keresőbe a találatokhoz!<br>
-                    </div>
+                <div style="width:100%; height:1px; background:var(--border-color); margin:5px 0;"></div>
+                
+                <div class="color-palette">
+                    <div class="color-swatch active" style="background:#ffffff" onclick="pickColor('#ffffff', this)"></div>
+                    <div class="color-swatch" style="background:#000000" onclick="pickColor('#000000', this)"></div>
+                    <div class="color-swatch" style="background:#ff5555" onclick="pickColor('#ff5555', this)"></div>
+                    <div class="color-swatch" style="background:#50fa7b" onclick="pickColor('#50fa7b', this)"></div>
+                    <div class="color-swatch" style="background:#2196F3" onclick="pickColor('#2196F3', this)"></div>
+                    <div class="color-swatch" style="background:#f1fa8c" onclick="pickColor('#f1fa8c', this)"></div>
+                </div>
+                <input type="color" id="pen-color-input" value="#ffffff" title="Egyedi szín">
+                
+                <div style="width:100%; height:1px; background:var(--border-color); margin:5px 0;"></div>
+                
+                <button class="tool-btn active" id="btn-brush" onclick="setTool('brush')" title="Ecset"><span class="material-icons">brush</span></button>
+                <button class="tool-btn" id="btn-eraser" onclick="setTool('eraser')" title="Radír"><span class="material-icons">auto_fix_normal</span></button>
+                <button class="tool-btn" id="btn-fill" onclick="setTool('fill')" title="Kitöltés"><span class="material-icons">format_color_fill</span></button>
+                
+                <div style="width:100%; height:1px; background:var(--border-color); margin:5px 0;"></div>
+                <button class="tool-btn" id="btn-rect" onclick="setTool('rect')" title="Kocka"><span class="material-icons">crop_square</span></button>
+                <button class="tool-btn" id="btn-circle" onclick="setTool('circle')" title="Kör"><span class="material-icons">radio_button_unchecked</span></button>
+                
+                <div style="padding:0 5px;">
+                    <label style="font-size:9px; opacity:0.7;">Méret</label>
+                    <input type="range" id="pen-width" min="1" max="50" value="5">
                 </div>
             </div>
+
+            <div class="floating-panel layer-panel-right">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:5px;">
+                    <span style="font-weight:600; font-size:12px;">RÉTEGEK</span>
+                    <button class="icon-btn" style="width:24px; height:24px;" onclick="addNewLayer()" title="Új réteg">+</button>
+                </div>
+                <div id="layer-list-container" class="layer-list">
+                </div>
+            </div>
+
+            <div id="animation-panel">
+                <div class="timeline-controls">
+                    <button class="anim-btn play" id="btn-play" onclick="togglePlayAnimation()"><span class="material-icons">play_arrow</span> Lejátszás</button>
+                    <div style="display:flex; align-items:center; gap:5px; margin-left:5px;">
+                        <span style="font-size:10px; opacity:0.7;">FPS:</span>
+                        <input type="number" id="fps-input" value="5" min="1" max="24" style="width:40px; padding:3px; background:var(--input-field-bg); color:var(--text-color); border:1px solid var(--border-color); border-radius:4px;">
+                    </div>
+
+                    <div style="width:1px; height:20px; background:var(--border-color); margin:0 10px;"></div>
+
+                    <button class="anim-btn" onclick="animPrevFrame()"><span class="material-icons" style="font-size:16px">chevron_left</span></button>
+                    <span id="frame-counter" style="font-size:12px; font-weight:600; min-width:50px; text-align:center;">1 / 1</span>
+                    <button class="anim-btn" onclick="animNextFrame()"><span class="material-icons" style="font-size:16px">chevron_right</span></button>
+                    
+                    <div style="width:1px; height:20px; background:var(--border-color); margin:0 10px;"></div>
+                    
+                    <button class="anim-btn" onclick="animAddFrame()"><span class="material-icons" style="font-size:16px">add_box</span> Új Kép</button>
+                    <button class="anim-btn" onclick="animDeleteFrame()"><span class="material-icons" style="font-size:16px">delete</span></button>
+                    <button class="anim-btn" onclick="animToggleOnion()"><span class="material-icons" style="font-size:16px" id="onion-icon">layers</span> Hagymahéj</button>
+                    
+                    <div style="width:1px; height:20px; background:var(--border-color); margin:0 10px;"></div>
+
+                    <button class="anim-btn record" onclick="renderGIF()"><span class="material-icons" style="font-size:16px">download</span> GIF Mentés</button>
+                </div>
+                <div class="timeline-frames" id="timeline-container">
+                    </div>
+            </div>
+
         </div>
     </div>
 
     <div id="settingsModal" class="modal-overlay">
         <div class="modal">
-            <div class="modal-header">
-                <h3>Beállítások</h3>
-            </div>
-            <div class="modal-body">
-                <label>Gemini API Kulcs</label>
-                <input type="password" id="apiKeyInput" placeholder="API Key...">
-                
-                <label>Háttér Effekt</label>
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
-                    <input type="checkbox" id="matrixEffectToggle" checked onchange="toggleMatrix()">
-                    <span style="font-size:13px; color:#aaa;">Mátrix eső effekt engedélyezése</span>
-                </div>
-
-                <label>Betűméret (px)</label>
-                <input type="number" id="fontSizeInput" value="14" min="10" max="30">
-            </div>
-            <div class="modal-footer">
-                <button class="secondary" onclick="document.getElementById('settingsModal').style.display='none'">Mégse</button>
-                <button class="primary" onclick="saveSettings()">Mentés</button>
-            </div>
+            <h3 style="margin-top:0; color:var(--text-color)">Beállítások</h3>
+            <p style="font-size:12px; opacity:0.7">Jelenleg nincs további beállítás.</p>
+            <button onclick="document.getElementById('settingsModal').style.display='none'">Bezárás</button>
         </div>
     </div>
 
     <div id="loginModal" class="modal-overlay">
-        <div class="modal" style="width:400px; height:auto;">
-            <div class="modal-header">
-                <h3>Belépés</h3>
-            </div>
-            <div class="modal-body">
-                <p style="font-size:13px; color:#888; margin-bottom:15px;">A közös munkához (P2P) és a mentéshez szükséges egy felhasználónév.</p>
-                <input type="text" id="loginNameInput" placeholder="Felhasználónév...">
-            </div>
-            <div class="modal-footer">
-                <button class="secondary" onclick="document.getElementById('loginModal').style.display='none'">Mégse</button>
-                <button class="primary" onclick="performLogin()">Belépés</button>
-            </div>
+        <div class="modal">
+            <h3 style="margin-top:0; color:var(--text-color)">Bejelentkezés</h3>
+            <input type="text" id="loginNameInput" placeholder="Felhasználónév...">
+            <button onclick="performLogin()">Belépés</button>
+            <button onclick="document.getElementById('loginModal').style.display='none'" style="background:transparent; margin-right:10px; color:var(--text-color)">Mégse</button>
         </div>
     </div>
 
     <script>
-        // --- 0. MATRIX BACKGROUND EFFECT ---
-        const canvas = document.getElementById('matrix-canvas');
-        const ctx = canvas.getContext('2d');
-        let matrixInterval;
-        let matrixEnabled = true;
+        // --- KONFIGURÁCIÓ ---
+        const CLIENT_ID = '138100233309-v575n23j2b6pdek9t9clvkg3immlkrdi.apps.googleusercontent.com'; 
+        const API_KEY = 'AIzaSyAfC2viqoOsVVjcShnqY2rrRsxdV7WHMEg'; 
+        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        const katakana = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン';
-        const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        const nums = '0123456789';
-        const alphabet = katakana + latin + nums;
-
-        const fontSize = 16;
-        const columns = canvas.width / fontSize;
-        const rainDrops = [];
-
-        for( let x = 0; x < columns; x++ ) { rainDrops[x] = 1; }
-
-        function drawMatrix() {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.fillStyle = '#0F0'; // Green text
-            ctx.font = fontSize + 'px monospace';
-
-            for(let i = 0; i < rainDrops.length; i++) {
-                const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
-                // Randomly brighter characters
-                ctx.fillStyle = Math.random() > 0.95 ? '#FFF' : '#00E676';
-                ctx.fillText(text, i*fontSize, rainDrops[i]*fontSize);
-
-                if(rainDrops[i]*fontSize > canvas.height && Math.random() > 0.975){
-                    rainDrops[i] = 0;
-                }
-                rainDrops[i]++;
+        // --- PEER CONFIG ---
+        const peerConfig = {
+            debug: 1,
+            config: {
+                'iceServers': [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
+                    { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
+                    { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" }
+                ]
             }
-        }
-
-        function startMatrix() {
-            if(matrixInterval) clearInterval(matrixInterval);
-            matrixInterval = setInterval(drawMatrix, 30);
-        }
-        function stopMatrix() {
-            if(matrixInterval) clearInterval(matrixInterval);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-        function toggleMatrix() {
-            matrixEnabled = document.getElementById('matrixEffectToggle').checked;
-            if(matrixEnabled) startMatrix(); else stopMatrix();
-        }
-        
-        window.addEventListener('resize', () => { 
-            canvas.width = window.innerWidth; canvas.height = window.innerHeight; 
-        });
-        startMatrix(); // Init
-
-
-        // --- 1. GLOBAL VARIABLES & INIT ---
-        const outputElement = document.getElementById("output");
-        let currentUser = null;
-        let isSuperUser = false;
-        
-        // --- 2. EDITOR SETUP ---
-        // Ez a lista tartalmazza az autocomplete javaslatokat
-        const PYTHON_KEYWORDS_AND_BUILTINS = [
-            "and", "as", "assert", "break", "class", "continue", "def", "del", "elif", "else", 
-            "except", "finally", "for", "from", "global", "if", "import", "in", "is", "lambda", 
-            "nonlocal", "not", "or", "pass", "raise", "return", "try", "while", "with", "yield",
-            "True", "False", "None", "abs", "all", "any", "ascii", "bin", "bool", "breakpoint", 
-            "bytearray", "bytes", "callable", "chr", "classmethod", "compile", "complex", "delattr", 
-            "dict", "dir", "divmod", "enumerate", "eval", "exec", "filter", "float", "format", 
-            "frozenset", "getattr", "globals", "hasattr", "hash", "help", "hex", "id", "input", 
-            "int", "isinstance", "issubclass", "iter", "len", "list", "locals", "map", "max", 
-            "memoryview", "min", "next", "object", "oct", "open", "ord", "pow", "print", "property", 
-            "range", "repr", "reversed", "round", "set", "setattr", "slice", "sorted", "staticmethod", 
-            "str", "sum", "super", "tuple", "type", "vars", "zip", "__import__", "append", "clear", 
-            "copy", "count", "extend", "index", "insert", "pop", "remove", "reverse", "sort", 
-            "fromkeys", "get", "items", "keys", "popitem", "setdefault", "update", "values", 
-            "capitalize", "casefold", "center", "encode", "endswith", "expandtabs", "find", "format_map", 
-            "isalnum", "isalpha", "isascii", "isdecimal", "isdigit", "isidentifier", "islower", 
-            "isnumeric", "isprintable", "isspace", "istitle", "isupper", "join", "ljust", "lower", 
-            "lstrip", "maketrans", "partition", "replace", "rfind", "rindex", "rjust", "rpartition", 
-            "rsplit", "rstrip", "split", "splitlines", "startswith", "strip", "swapcase", "title", 
-            "translate", "upper", "zfill", "add", "difference", "difference_update", "discard", 
-            "intersection", "intersection_update", "isdisjoint", "issubset", "issuperset", 
-            "symmetric_difference", "symmetric_difference_update", "union", "pi", "e", "tau", 
-            "inf", "nan", "sin", "cos", "tan", "sqrt", "log", "exp", "ceil", "floor"
-        ];
-        
-        // Remove duplicates and sort
-        const UNIQUE_PYTHON_HINTS = [...new Set(PYTHON_KEYWORDS_AND_BUILTINS)].sort();
-
-        // Custom Hint Helper for CodeMirror
-        CodeMirror.registerHelper("hint", "python", function(editor) {
-            var cur = editor.getCursor();
-            var token = editor.getTokenAt(cur);
-            var start = token.start;
-            var end = cur.ch;
-            var currentWord = token.string;
-            
-            if (token.string === ".") {
-                start = end;
-                currentWord = "";
-            } else if (token.type === "property") {
-                 // Ha már metódust írunk (pl. .app)
-            }
-            
-            var list = UNIQUE_PYTHON_HINTS.filter(function(item) {
-                return item.startsWith(currentWord);
-            });
-
-            return {
-                list: list.length ? list : [],
-                from: CodeMirror.Pos(cur.line, start),
-                to: CodeMirror.Pos(cur.line, end)
-            };
-        });
-
-        let editor = CodeMirror.fromTextArea(document.getElementById("code-editor"), {
-            mode: {name: "python", version: 3}, 
-            theme: "dracula",
-            lineNumbers: true, 
-            indentUnit: 4, 
-            smartIndent: true, 
-            matchBrackets: true, 
-            autoCloseBrackets: true,
-            extraKeys: { 
-                "Ctrl-Space": "autocomplete", 
-                "Ctrl-Enter": function() { runPython(); } 
-            },
-            hintOptions: { completeSingle: false, hint: CodeMirror.hint.python }, 
-            lineWrapping: false,
-            foldGutter: true,
-            gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"]
-        });
-
-        // --- 3. DOCUMENTATION DATABASE (EXTERNAL + FALLBACK) ---
-        let DOC_DATABASE = [];
-
-        // Biztonsági tartalék (Fallback), ha a documents.txt nem tölthető be
-        const FALLBACK_DB = [
-            {
-                title: "Biztonsági Tartalék Adatbázis",
-                keywords: "hiba fallback error dokumentáció nem található",
-                code: "# A documents.txt nem tölthető be.\n# Ellenőrizd, hogy fut-e a szerver (file:// protokoll korlát).",
-                desc: "Ez az alapértelmezett adatbázis, ami akkor jelenik meg, ha a külső fájl nem elérhető a böngésző biztonsági beállításai miatt."
-            },
-            {
-                title: "Ciklus (For Loop)",
-                keywords: "for ciklus loop iteráció",
-                code: "for i in range(5):\n    print(i)",
-                desc: "Fallback példa ciklusra."
-            }
-        ];
-
-        async function loadDocsDatabase() {
-            const indicator = document.getElementById('doc-source-indicator');
-            try {
-                // Megpróbáljuk betölteni a documents.txt-t
-                const response = await fetch('documents.txt');
-                if (!response.ok) throw new Error("Fájl nem található");
-                
-                const text = await response.text();
-                parseExternalDocs(text);
-                
-                indicator.textContent = "documents.txt (Külső fájl)";
-                indicator.style.color = "#00E676";
-                logSystem("Tudásbázis betöltve a documents.txt-ből.");
-            } catch (e) {
-                console.warn("Docs betöltési hiba (CORS vagy hiányzó fájl):", e);
-                DOC_DATABASE = FALLBACK_DB;
-                indicator.textContent = "Belső Tartalék (Fallback)";
-                indicator.style.color = "#ffab40";
-                logSystem("Figyelem: A documents.txt nem elérhető. Belső adatbázis aktív.");
-            }
-        }
-
-        // PARSER: Ez alakítja át a szöveges fájlt objektumokká
-        function parseExternalDocs(text) {
-            DOC_DATABASE = [];
-            // Szétvágjuk a bejegyzéseket a ===ENTRY=== mentén
-            const rawEntries = text.split("===ENTRY===");
-            
-            rawEntries.forEach(entry => {
-                if(!entry.trim()) return; // Üres részek kihagyása
-
-                const docObj = { title: "", keywords: "", desc: "", code: "" };
-                
-                // Regex-szerű keresés a blokkokra
-                const titleMatch = entry.match(/\[TITLE\]([\s\S]*?)(\[|$)/);
-                const keysMatch = entry.match(/\[KEYWORDS\]([\s\S]*?)(\[|$)/);
-                const descMatch = entry.match(/\[DESC\]([\s\S]*?)(\[|$)/);
-                const codeMatch = entry.match(/\[CODE\]([\s\S]*?)(\[|$)/);
-
-                if(titleMatch) docObj.title = titleMatch[1].trim();
-                if(keysMatch) docObj.keywords = keysMatch[1].trim();
-                if(descMatch) docObj.desc = descMatch[1].trim();
-                if(codeMatch) docObj.code = codeMatch[1].trim();
-
-                if(docObj.title) {
-                    DOC_DATABASE.push(docObj);
-                }
-            });
-        }
-
-        // Initialize Docs loading on startup
-        loadDocsDatabase();
-
-        // --- 4. SMART SEARCH LOGIC ---
-        function openDocs() {
-            document.getElementById('docsModal').style.display = 'flex';
-            document.getElementById('docSearch').focus();
-            searchDocs(); // Show all or popular initially
-        }
-
-        function searchDocs() {
-            const input = document.getElementById('docSearch').value.toLowerCase().trim();
-            const resultsContainer = document.getElementById('docResults');
-            resultsContainer.innerHTML = "";
-
-            if (input.length === 0) {
-                // Ha üres, mutassuk az első 5 elemet
-                renderResults(DOC_DATABASE.slice(0, 5), resultsContainer);
-                return;
-            }
-
-            const searchTokens = input.split(" ");
-            
-            // Calculate scores
-            const scoredResults = DOC_DATABASE.map(entry => {
-                let score = 0;
-                const content = (entry.title + " " + entry.keywords + " " + entry.desc).toLowerCase();
-                
-                searchTokens.forEach(token => {
-                    if (entry.title.toLowerCase().includes(token)) score += 10;
-                    else if (entry.keywords.toLowerCase().includes(token)) score += 5;
-                    else if (entry.desc.toLowerCase().includes(token)) score += 1;
-                });
-
-                return { ...entry, score: score };
-            });
-
-            // Filter matches (score > 0) and Sort
-            const matches = scoredResults.filter(r => r.score > 0).sort((a, b) => b.score - a.score);
-
-            if (matches.length === 0) {
-                resultsContainer.innerHTML = `<div style="text-align:center; padding:20px; color:#666;">Nincs találat. Próbálj más kulcsszavakat!</div>`;
-            } else {
-                renderResults(matches, resultsContainer);
-            }
-        }
-
-        function renderResults(list, container) {
-            list.forEach(item => {
-                const card = document.createElement('div');
-                card.className = "doc-card";
-                
-                // Syntax Highlight Simulation (Simple regex based)
-                let formattedCode = item.code
-                    .replace(/#.*/g, match => `<span class="cmt">${match}</span>`)
-                    .replace(/\b(def|class|return|if|else|elif|for|while|try|except|import|from|with|as)\b/g, '<span class="kw">$1</span>')
-                    .replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, '<span class="str">$&</span>')
-                    .replace(/\b(print|input|len|range|int|str|float|list|dict|set|open)\b/g, '<span class="func">$1</span>')
-                    .replace(/\b\d+\b/g, '<span class="num">$&</span>');
-
-                card.innerHTML = `
-                    <div class="doc-card-title">
-                        ${item.title}
-                        ${item.score ? `<span class="doc-card-match-score">Relevancia: ${item.score}</span>` : ''}
-                    </div>
-                    <div class="doc-card-desc">${item.desc}</div>
-                    <div class="code-block">
-                        <button class="copy-btn-mini" onclick="copyToClipboard(this)">Másolás</button>
-                        <pre>${formattedCode}</pre>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function copyToClipboard(btn) {
-            const codeBlock = btn.nextElementSibling.innerText;
-            navigator.clipboard.writeText(codeBlock);
-            const originalText = btn.innerText;
-            btn.innerText = "Másolva!";
-            setTimeout(() => btn.innerText = originalText, 1500);
-        }
-
-        // --- 5. LOGGING & UTILS ---
-        function addToOutput(text, cls="") {
-            const span = document.createElement("span"); span.textContent = text;
-            if(cls) span.className = cls; outputElement.appendChild(span);
-            outputElement.scrollTop = outputElement.scrollHeight;
-        }
-        function logSystem(msg) { addToOutput("> " + msg + "\n", "system-msg"); }
-        function logP2P(msg) { addToOutput("[P2P] " + msg + "\n", "p2p-msg"); }
-
-        // --- 6. PYODIDE LOGIC ---
-        let pyodide = null;
-        let pyodideReady = false;
-        let inputResolver = null;
-
-        async function initPyodide() {
-            try {
-                pyodide = await loadPyodide();
-                await pyodide.runPythonAsync(`
-                    import sys, js, asyncio
-                    class JSWriter:
-                        def write(self, text): js.printToTerminal(text)
-                        def flush(self): pass
-                    sys.stdout = JSWriter(); sys.stderr = JSWriter()
-                    async def custom_input(prompt=""):
-                        if prompt: print(prompt, end="")
-                        val = await js.waitForInput()
-                        print(val); return str(val)
-                `);
-                pyodideReady = true;
-                document.getElementById('loading-overlay').style.display = 'none';
-                logSystem("Python környezet betöltve (v" + pyodide.version + ")");
-                
-                // Restore user
-                const savedUser = localStorage.getItem('saved_username');
-                if(savedUser) { 
-                    currentUser = savedUser; 
-                    document.getElementById('user-btn').innerText = savedUser; 
-                }
-            } catch (e) { console.error(e); logSystem("Python Hiba: " + e); }
-        }
-        initPyodide();
-
-        window.printToTerminal = (text) => { addToOutput(text, ""); };
-        
-        // Input handling
-        const termInputDiv = document.getElementById("terminal-input-bar");
-        const termInput = document.getElementById("term-input");
-        
-        window.waitForInput = () => {
-            return new Promise(resolve => {
-                inputResolver = resolve;
-                termInputDiv.style.display = "flex"; termInput.value = ""; termInput.focus();
-                // Scroll terminal to bottom
-                setTimeout(() => outputElement.scrollTop = outputElement.scrollHeight, 10);
-            });
         };
 
-        termInput.addEventListener("keydown", (e) => {
-            if (e.key === "Enter" && inputResolver) {
-                const val = termInput.value;
-                termInputDiv.style.display = "none";
-                addToOutput(val + "\n", "user-input"); // Echo input
-                inputResolver(val); 
-                inputResolver = null;
-            }
-        });
+        // --- GLOBÁLIS VÁLTOZÓK ---
+        const canvasWrapper = document.getElementById('canvas-wrapper');
+        const bgLayer = document.getElementById('background-layer');
+        const bgCtx = bgLayer.getContext('2d');
+        const previewLayer = document.getElementById('preview-layer');
+        const previewCtx = previewLayer.getContext('2d');
+        const onionLayer = document.getElementById('onion-layer');
+        const onionCtx = onionLayer.getContext('2d');
+        
+        let layers = [];
+        let activeLayerId = null;
+        let layerCounter = 1;
+        
+        let isDrawing = false;
+        let startX = 0, startY = 0; 
+        let lastX = 0, lastY = 0;
+        let currentTool = 'brush'; // brush, eraser, rect, circle, fill
+        let penColor = '#ffffff';
+        let penWidth = 5;
+        let canvasBgColor = '#000000';
 
-        async function runPython() {
-            if(!pyodideReady) return;
-            const sidePanel = document.getElementById('sidePanel');
-            sidePanel.classList.add('open');
-            outputElement.innerHTML = ""; // Clear
+        // --- ANIMÁCIÓS VÁLTOZÓK ---
+        let isAnimationMode = false;
+        let frames = [];
+        let currentFrameIndex = 0;
+        let isOnionSkin = true;
+        let isPlaying = false;
+        let playbackInterval = null;
+
+        // --- UNDO / REDO ---
+        const MAX_HISTORY = 30; 
+        let undoStack = [];
+        let redoStack = [];
+
+        function saveStateForUndo() {
+            if (!activeLayerId) return;
+            const activeLayer = layers.find(l => l.id === activeLayerId);
+            if (!activeLayer) return;
+
+            const currentState = {
+                layerId: activeLayerId,
+                imageData: activeLayer.ctx.getImageData(0, 0, activeLayer.canvas.width, activeLayer.canvas.height)
+            };
+            undoStack.push(currentState);
+            if (undoStack.length > MAX_HISTORY) undoStack.shift();
+            redoStack = [];
+            updateUndoRedoButtons();
+        }
+
+        function undoLastAction() {
+            if (undoStack.length === 0) return;
+            const previousState = undoStack.pop();
+            const targetLayer = layers.find(l => l.id === previousState.layerId);
+
+            if (targetLayer) {
+                const redoState = {
+                    layerId: previousState.layerId,
+                    imageData: targetLayer.ctx.getImageData(0, 0, targetLayer.canvas.width, targetLayer.canvas.height)
+                };
+                redoStack.push(redoState);
+                targetLayer.ctx.putImageData(previousState.imageData, 0, 0);
+            }
+            updateUndoRedoButtons();
+            if(isAnimationMode) saveFrameToMemory(currentFrameIndex);
+        }
+
+        function redoLastAction() {
+            if (redoStack.length === 0) return;
+            const nextState = redoStack.pop();
+            const targetLayer = layers.find(l => l.id === nextState.layerId);
+
+            if (targetLayer) {
+                const undoState = {
+                    layerId: nextState.layerId,
+                    imageData: targetLayer.ctx.getImageData(0, 0, targetLayer.canvas.width, targetLayer.canvas.height)
+                };
+                undoStack.push(undoState);
+                targetLayer.ctx.putImageData(nextState.imageData, 0, 0);
+            }
+            updateUndoRedoButtons();
+            if(isAnimationMode) saveFrameToMemory(currentFrameIndex);
+        }
+
+        function updateUndoRedoButtons() {
+            document.getElementById('btn-undo').disabled = undoStack.length === 0;
+            document.getElementById('btn-redo').disabled = redoStack.length === 0;
+        }
+
+        // --- RÉTEGKEZELÉS ---
+        function initLayers() {
+            addNewLayer("Réteg 1");
+            resizeCanvases();
+            updateUndoRedoButtons(); 
+        }
+
+        function createLayerCanvas(id) {
+            const cvs = document.createElement('canvas');
+            cvs.id = `layer-${id}`;
+            cvs.className = 'drawing-layer';
+            return cvs;
+        }
+        
+        // Eseménykezelő delegálás
+        canvasWrapper.addEventListener('mousedown', startDraw);
+        canvasWrapper.addEventListener('mousemove', draw);
+        canvasWrapper.addEventListener('mouseup', stopDraw);
+        canvasWrapper.addEventListener('mouseout', stopDraw);
+        canvasWrapper.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(new MouseEvent('mousedown', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); });
+        canvasWrapper.addEventListener('touchmove', (e) => { e.preventDefault(); draw(new MouseEvent('mousemove', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); });
+        canvasWrapper.addEventListener('touchend', (e) => { stopDraw(new MouseEvent('mouseup', { clientX: e.changedTouches[0]?.clientX, clientY: e.changedTouches[0]?.clientY })); });
+
+
+        function addNewLayer(nameOverride) {
+            const id = layerCounter++;
+            const name = nameOverride || `Réteg ${id}`;
+            const newCanvas = createLayerCanvas(id);
+            canvasWrapper.insertBefore(newCanvas, previewLayer);
             
-            let code = editor.getValue();
-            // Inject input wrapper
-            code = code.replace(/\binput\s*\(/g, "await custom_input(");
+            const layerObj = { id: id, canvas: newCanvas, ctx: newCanvas.getContext('2d', {willReadFrequently: true}), name: name };
+            layers.push(layerObj);
+            setActiveLayer(id);
+            updateLayerListUI();
+            resizeCanvases(); 
+            if(isHost) broadcastLayerStructure(); 
+        }
+
+        function deleteLayer(id) {
+            if(layers.length <= 1) { alert("Legalább egy rétegnek maradnia kell!"); return; }
+            const index = layers.findIndex(l => l.id === id);
+            if(index > -1) {
+                undoStack = undoStack.filter(state => state.layerId !== id);
+                redoStack = redoStack.filter(state => state.layerId !== id);
+                updateUndoRedoButtons();
+
+                canvasWrapper.removeChild(layers[index].canvas);
+                layers.splice(index, 1);
+                if(id === activeLayerId) {
+                    setActiveLayer(layers[Math.max(0, index - 1)].id);
+                }
+                updateLayerListUI();
+                if(isHost) broadcastLayerStructure(); 
+            }
+        }
+
+        function setActiveLayer(id) {
+            activeLayerId = id;
+            layers.forEach(l => {
+                if(l.id === id) {
+                    l.canvas.classList.add('active');
+                } else {
+                    l.canvas.classList.remove('active');
+                }
+            });
+            updateLayerListUI();
+        }
+
+        function updateLayerListUI() {
+            const container = document.getElementById('layer-list-container');
+            container.innerHTML = "";
+            layers.forEach(layer => {
+                const item = document.createElement('div');
+                item.className = `layer-item ${layer.id === activeLayerId ? 'active' : ''}`;
+                item.onclick = () => setActiveLayer(layer.id);
+                item.innerHTML = `
+                    <span class="material-icons" style="font-size:16px; opacity:0.7;">layers</span>
+                    <span class="layer-name">${layer.name}</span>
+                    <div class="layer-actions">
+                        <button onclick="event.stopPropagation(); deleteLayer(${layer.id})" title="Törlés">✕</button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function clearCurrentLayer() {
+            const activeLayer = layers.find(l => l.id === activeLayerId);
+            if(activeLayer) {
+                saveStateForUndo();
+                activeLayer.ctx.clearRect(0, 0, activeLayer.canvas.width, activeLayer.canvas.height);
+                broadcastDrawEvent({ type: 'clear_layer', layerId: activeLayerId });
+                if(isAnimationMode) saveFrameToMemory(currentFrameIndex);
+            }
+        }
+
+        function changeCanvasBg(color) {
+            canvasBgColor = color;
+            bgCtx.fillStyle = color;
+            bgCtx.fillRect(0, 0, bgLayer.width, bgLayer.height);
+            document.getElementById('canvas-bg-picker').value = color;
+            if(isHost || (conn && conn.open)) broadcastDrawEvent({ type: 'bg_change', color: color });
+        }
+
+        // --- RAJZOLÓ LOGIKA ---
+        function resizeCanvases() {
+            let width, height;
+            if (isAnimationMode) {
+                const rect = canvasWrapper.getBoundingClientRect();
+                width = rect.width;
+                height = rect.height;
+            } else {
+                width = canvasWrapper.offsetWidth;
+                height = canvasWrapper.offsetHeight;
+            }
+            
+            function resizeCtx(ctx, cvs) {
+                const tempCvs = document.createElement('canvas'); 
+                tempCvs.width = cvs.width; tempCvs.height = cvs.height; 
+                tempCvs.getContext('2d').drawImage(cvs,0,0);
+                cvs.width = width; cvs.height = height;
+                ctx.drawImage(tempCvs, 0, 0);
+            }
+
+            bgLayer.width = width; bgLayer.height = height;
+            changeCanvasBg(canvasBgColor);
+
+            previewLayer.width = width; previewLayer.height = height;
+            onionLayer.width = width; onionLayer.height = height;
+
+            layers.forEach(layer => {
+                resizeCtx(layer.ctx, layer.canvas);
+            });
+            
+            undoStack = []; redoStack = []; updateUndoRedoButtons();
+        }
+        window.addEventListener('resize', () => setTimeout(resizeCanvases, 100));
+
+        function startDraw(e) {
+            if(!activeLayerId) return;
+            const rect = canvasWrapper.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // KITÖLTÉS (FILL TOOL)
+            if (currentTool === 'fill') {
+                saveStateForUndo();
+                const activeLayer = layers.find(l => l.id === activeLayerId);
+                if (activeLayer) {
+                    floodFill(activeLayer.ctx, Math.floor(x), Math.floor(y), penColor);
+                    // P2P
+                    if(isHost || (conn && conn.open)) {
+                         broadcastDrawEvent({ type: 'fill', layerId: activeLayerId, x: Math.floor(x), y: Math.floor(y), color: penColor });
+                    }
+                    if(isAnimationMode) saveFrameToMemory(currentFrameIndex);
+                }
+                return; // Nem folytatjuk a "húzást"
+            }
+
+            isDrawing = true;
+            startX = x; startY = y;
+            [lastX, lastY] = [x, y];
+            saveStateForUndo();
+        }
+
+        function draw(e) {
+            if (!isDrawing || !activeLayerId) return;
+            const rect = canvasWrapper.getBoundingClientRect();
+            const newX = e.clientX - rect.left;
+            const newY = e.clientY - rect.top;
+            
+            const activeLayer = layers.find(l => l.id === activeLayerId);
+            if(!activeLayer) return;
+
+            let colorToUse = penColor;
+            let isEraser = currentTool === 'eraser';
+            if (isEraser) colorToUse = 'rgba(0,0,0,1)';
+
+            if (currentTool === 'brush' || currentTool === 'eraser') {
+                drawLine(activeLayer.ctx, lastX, lastY, newX, newY, colorToUse, penWidth, isEraser);
+                broadcastDrawEvent({ type: 'draw', layerId: activeLayerId, x0: lastX, y0: lastY, x1: newX, y1: newY, color: colorToUse, width: penWidth, isEraser: isEraser });
+                [lastX, lastY] = [newX, newY];
+            } 
+            else if (currentTool === 'rect' || currentTool === 'circle') {
+                previewCtx.clearRect(0, 0, previewLayer.width, previewLayer.height);
+                drawShape(previewCtx, startX, startY, newX, newY, currentTool, penColor, penWidth);
+            }
+        }
+
+        function stopDraw(e) { 
+            if (!isDrawing) return;
+            isDrawing = false;
+            
+            if (currentTool === 'rect' || currentTool === 'circle') {
+                const rect = canvasWrapper.getBoundingClientRect();
+                let endX = lastX;
+                let endY = lastY;
+                if(e.clientX) { endX = e.clientX - rect.left; endY = e.clientY - rect.top; }
+
+                const activeLayer = layers.find(l => l.id === activeLayerId);
+                if(activeLayer) {
+                    drawShape(activeLayer.ctx, startX, startY, endX, endY, currentTool, penColor, penWidth);
+                    previewCtx.clearRect(0, 0, previewLayer.width, previewLayer.height);
+                    if(isHost || (conn && conn.open)) {
+                        broadcastDrawEvent({ type: 'shape', tool: currentTool, x0: startX, y0: startY, x1: endX, y1: endY, color: penColor, width: penWidth, layerId: activeLayerId });
+                    }
+                }
+            }
+            if(isAnimationMode) saveFrameToMemory(currentFrameIndex);
+        }
+
+        function drawLine(targetCtx, x0, y0, x1, y1, color, width, isEraser) {
+            targetCtx.beginPath(); targetCtx.moveTo(x0, y0); targetCtx.lineTo(x1, y1);
+            targetCtx.strokeStyle = color; targetCtx.lineWidth = width;
+            targetCtx.lineCap = 'round'; targetCtx.lineJoin = 'round';
+            if(isEraser) targetCtx.globalCompositeOperation = 'destination-out';
+            targetCtx.stroke();
+            targetCtx.closePath();
+            if(isEraser) targetCtx.globalCompositeOperation = 'source-over';
+        }
+
+        function drawShape(ctx, x0, y0, x1, y1, type, color, width) {
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            const w = x1 - x0;
+            const h = y1 - y0;
+
+            if (type === 'rect') {
+                ctx.rect(x0, y0, w, h);
+            } else if (type === 'circle') {
+                const centerX = x0 + w/2;
+                const centerY = y0 + h/2;
+                const radiusX = Math.abs(w/2);
+                const radiusY = Math.abs(h/2);
+                ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+            }
+            ctx.stroke();
+            ctx.closePath();
+        }
+
+        // --- FLOOD FILL LOGIKA (Stack-based) ---
+        function floodFill(ctx, startX, startY, fillColorHex) {
+            // Hex to RGBA
+            const r = parseInt(fillColorHex.slice(1, 3), 16);
+            const g = parseInt(fillColorHex.slice(3, 5), 16);
+            const b = parseInt(fillColorHex.slice(5, 7), 16);
+            const a = 255;
+            
+            const w = ctx.canvas.width;
+            const h = ctx.canvas.height;
+            // Ha a koordináta kívül esik
+            if(startX < 0 || startY < 0 || startX >= w || startY >= h) return;
+
+            const imgData = ctx.getImageData(0, 0, w, h);
+            const data = imgData.data;
+            const startPos = (startY * w + startX) * 4;
+            
+            const startR = data[startPos];
+            const startG = data[startPos + 1];
+            const startB = data[startPos + 2];
+            const startA = data[startPos + 3];
+
+            // Ha a szín megegyezik, ne csináljunk semmit
+            if (startR === r && startG === g && startB === b && startA === a) return;
+
+            const stack = [[startX, startY]];
+            
+            while (stack.length) {
+                const [x, y] = stack.pop();
+                const pos = (y * w + x) * 4;
+
+                // Ellenőrizzük, hogy ez a pixel illik-e a kiinduló színhez
+                // (Egyszerű egyezés, anti-aliasingnál lehetnek gondok, de canvasnél ez a leggyorsabb natív megoldás nélkül)
+                if (data[pos] === startR && data[pos+1] === startG && data[pos+2] === startB && data[pos+3] === startA) {
+                    // Színezzük át
+                    data[pos] = r;
+                    data[pos+1] = g;
+                    data[pos+2] = b;
+                    data[pos+3] = a;
+
+                    // Szomszédok
+                    if (x > 0) stack.push([x - 1, y]);
+                    if (x < w - 1) stack.push([x + 1, y]);
+                    if (y > 0) stack.push([x, y - 1]);
+                    if (y < h - 1) stack.push([x, y + 1]);
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        // --- ANIMÁCIÓS LOGIKA ---
+        function toggleAnimationMode() {
+            isAnimationMode = !isAnimationMode;
+            const btn = document.getElementById('btn-anim-toggle');
+            const panel = document.getElementById('animation-panel');
+            const layerPanel = document.querySelector('.layer-panel-right');
+
+            if (isAnimationMode) {
+                btn.classList.add('active-mode');
+                canvasWrapper.classList.add('square-mode');
+                panel.classList.add('active');
+                layerPanel.classList.add('hidden'); 
+                initAnimation();
+            } else {
+                stopAnimation(); // Biztos ami biztos
+                btn.classList.remove('active-mode');
+                canvasWrapper.classList.remove('square-mode');
+                panel.classList.remove('active');
+                layerPanel.classList.remove('hidden');
+                onionCtx.clearRect(0,0,onionLayer.width, onionLayer.height);
+                resizeCanvases();
+            }
+            setTimeout(resizeCanvases, 50); 
+        }
+
+        function initAnimation() {
+            layers.forEach(l => { if(l.id !== activeLayerId) deleteLayer(l.id); }); 
+            if(layers.length === 0) addNewLayer("FrameLayer");
+            const activeLayer = layers[0];
+            activeLayer.ctx.clearRect(0,0,activeLayer.canvas.width, activeLayer.canvas.height);
+            
+            frames = [];
+            currentFrameIndex = 0;
+            animAddFrame(true); 
+            updateTimelineUI();
+        }
+
+        function animAddFrame(isInit = false) {
+            if (!isInit) saveFrameToMemory(currentFrameIndex);
+            const width = Math.floor(bgLayer.width);
+            const height = Math.floor(bgLayer.height);
+            const emptyData = new ImageData(width > 0 ? width : 100, height > 0 ? height : 100); 
+            
+            if (frames.length > 0) {
+                 frames.splice(currentFrameIndex + 1, 0, { imageData: emptyData });
+                 currentFrameIndex++;
+            } else {
+                frames.push({ imageData: emptyData });
+                currentFrameIndex = 0;
+            }
+
+            const activeLayer = layers.find(l => l.id === activeLayerId);
+            if(activeLayer) activeLayer.ctx.clearRect(0, 0, activeLayer.canvas.width, activeLayer.canvas.height);
+            
+            undoStack = []; redoStack = []; updateUndoRedoButtons();
+            updateTimelineUI();
+            updateOnionSkin();
+        }
+
+        function saveFrameToMemory(index) {
+            const activeLayer = layers.find(l => l.id === activeLayerId);
+            if(!activeLayer || !frames[index]) return;
+            frames[index].imageData = activeLayer.ctx.getImageData(0, 0, activeLayer.canvas.width, activeLayer.canvas.height);
+        }
+
+        function loadFrameFromMemory(index) {
+            const activeLayer = layers.find(l => l.id === activeLayerId);
+            if(!activeLayer || !frames[index]) return;
+            activeLayer.ctx.putImageData(frames[index].imageData, 0, 0);
+            currentFrameIndex = index;
+            updateTimelineUI();
+            updateOnionSkin();
+        }
+
+        function animNextFrame() {
+            if(isPlaying) return; // Lejátszás közben ne piszkáljuk
+            saveFrameToMemory(currentFrameIndex);
+            if (currentFrameIndex < frames.length - 1) {
+                loadFrameFromMemory(currentFrameIndex + 1);
+            }
+        }
+
+        function animPrevFrame() {
+            if(isPlaying) return;
+            saveFrameToMemory(currentFrameIndex);
+            if (currentFrameIndex > 0) {
+                loadFrameFromMemory(currentFrameIndex - 1);
+            }
+        }
+        
+        function animDeleteFrame() {
+            if (frames.length <= 1) return;
+            frames.splice(currentFrameIndex, 1);
+            if (currentFrameIndex >= frames.length) currentFrameIndex = frames.length - 1;
+            loadFrameFromMemory(currentFrameIndex);
+        }
+
+        function animToggleOnion() {
+            isOnionSkin = !isOnionSkin;
+            document.getElementById('onion-icon').style.opacity = isOnionSkin ? '1' : '0.4';
+            updateOnionSkin();
+        }
+
+        function updateOnionSkin() {
+            onionCtx.clearRect(0, 0, onionLayer.width, onionLayer.height);
+            if (isPlaying || !isOnionSkin || currentFrameIndex === 0) return; // Lejátszásnál nincs onion
+
+            const prevFrame = frames[currentFrameIndex - 1];
+            if (prevFrame) {
+                const tempCvs = document.createElement('canvas');
+                tempCvs.width = onionLayer.width;
+                tempCvs.height = onionLayer.height;
+                tempCvs.getContext('2d').putImageData(prevFrame.imageData, 0, 0);
+                onionCtx.globalAlpha = 0.3;
+                onionCtx.drawImage(tempCvs, 0, 0);
+                onionCtx.globalAlpha = 1.0;
+            }
+        }
+
+        // --- ANIMÁCIÓ LEJÁTSZÁS (PLAYBACK) ---
+        function togglePlayAnimation() {
+            if (isPlaying) {
+                stopAnimation();
+            } else {
+                playAnimation();
+            }
+        }
+
+        function playAnimation() {
+            if (frames.length < 2) return;
+            
+            // Mentjük az aktuális állapotot, hogy stop-nál ide térjünk vissza
+            saveFrameToMemory(currentFrameIndex);
+            const savedIndex = currentFrameIndex;
+
+            isPlaying = true;
+            document.getElementById('btn-play').innerHTML = '<span class="material-icons">stop</span> Stop';
+            document.getElementById('btn-play').classList.add('playing');
+            
+            // Onion skin kikapcsolása lejátszás alatt
+            onionCtx.clearRect(0, 0, onionLayer.width, onionLayer.height);
+
+            let playIndex = 0;
+            const fps = parseInt(document.getElementById('fps-input').value) || 5;
+            const intervalTime = 1000 / fps;
+
+            playbackInterval = setInterval(() => {
+                const activeLayer = layers.find(l => l.id === activeLayerId);
+                if(activeLayer && frames[playIndex]) {
+                    activeLayer.ctx.putImageData(frames[playIndex].imageData, 0, 0);
+                    // UI update (de nem scrollolunk, hogy ne legyen zavaró)
+                    document.getElementById('frame-counter').innerText = `${playIndex + 1} / ${frames.length}`;
+                }
+                
+                playIndex++;
+                if (playIndex >= frames.length) playIndex = 0;
+            }, intervalTime);
+        }
+
+        function stopAnimation() {
+            isPlaying = false;
+            clearInterval(playbackInterval);
+            document.getElementById('btn-play').innerHTML = '<span class="material-icons">play_arrow</span> Lejátszás';
+            document.getElementById('btn-play').classList.remove('playing');
+            
+            // Visszatöltjük azt a frame-et, ahol a user volt
+            loadFrameFromMemory(currentFrameIndex);
+        }
+
+        function updateTimelineUI() {
+            const container = document.getElementById('timeline-container');
+            container.innerHTML = '';
+            document.getElementById('frame-counter').innerText = `${currentFrameIndex + 1} / ${frames.length}`;
+
+            frames.forEach((frame, idx) => {
+                const div = document.createElement('div');
+                div.className = `frame-thumb ${idx === currentFrameIndex ? 'active' : ''}`;
+                div.onclick = () => { if(!isPlaying) { saveFrameToMemory(currentFrameIndex); loadFrameFromMemory(idx); } };
+                
+                const miniCvs = document.createElement('canvas');
+                miniCvs.width = bgLayer.width; miniCvs.height = bgLayer.height;
+                const ctx = miniCvs.getContext('2d');
+                ctx.fillStyle = canvasBgColor; ctx.fillRect(0,0, miniCvs.width, miniCvs.height);
+                ctx.putImageData(frame.imageData, 0, 0);
+                
+                div.appendChild(miniCvs);
+                div.innerHTML += `<div class="frame-number">${idx + 1}</div>`;
+                container.appendChild(div);
+            });
+            const activeThumb = container.children[currentFrameIndex];
+            if(activeThumb) activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+
+        // --- GIF EXPORT ---
+        function renderGIF() {
+            if(frames.length === 0) return;
+            if(isPlaying) stopAnimation(); // Ha megy a lejátszás, állítsuk meg
+            saveFrameToMemory(currentFrameIndex);
+
+            const overlay = document.getElementById('loading-overlay');
+            overlay.style.display = 'flex';
+            document.getElementById('loading-text').innerText = "GIF Generálása...";
 
             try {
-                await pyodide.runPythonAsync(`
-                    import asyncio
-                    async def main_wrapper():
-                        try:
-${code.split('\n').map(l => '                            ' + l).join('\n')}
-                        except Exception as e: print(f"Hiba: {e}")
-                    await main_wrapper()
-                `);
-            } catch(e) { addToOutput(e.toString() + "\n", "error"); }
-        }
-
-        // --- 7. UI FUNCTIONS (SIDE PANEL) ---
-        const sidePanel = document.getElementById('sidePanel');
-        const trigger = document.getElementById('panel-trigger');
-        let hideTimer;
-
-        function closeSidePanel() { sidePanel.classList.remove('open'); }
-        trigger.addEventListener('mouseenter', () => { 
-            sidePanel.classList.add('open'); 
-            if(hideTimer) clearTimeout(hideTimer);
-        });
-        sidePanel.addEventListener('mouseenter', () => { if(hideTimer) clearTimeout(hideTimer); });
-        sidePanel.addEventListener('mouseleave', () => { 
-            // Optional: Auto hide logic if wanted
-            // hideTimer = setTimeout(closeSidePanel, 3000); 
-        });
-
-        // --- 8. AUTH & P2P ---
-        function openLoginModal() { document.getElementById('loginModal').style.display = 'flex'; }
-        function performLogin() {
-            const name = document.getElementById('loginNameInput').value;
-            if(name) {
-                currentUser = name;
-                localStorage.setItem('saved_username', name);
-                document.getElementById('user-btn').innerText = name;
-                document.getElementById('loginModal').style.display = 'none';
-                logSystem(`Bejelentkezve mint: ${name}`);
-            }
-        }
-
-        // --- 9. THEME & SETTINGS ---
-        function toggleTheme() {
-            document.body.classList.toggle('light-mode');
-            const isDark = !document.body.classList.contains('light-mode');
-            editor.setOption("theme", isDark ? "dracula" : "eclipse");
-        }
-        
-        function openSettings() { document.getElementById('settingsModal').style.display='flex'; }
-        function saveSettings() {
-            const fs = document.getElementById('fontSizeInput').value;
-            document.querySelector('.CodeMirror').style.fontSize = fs + 'px';
-            document.getElementById('settingsModal').style.display='none';
-            toggleMatrix();
-        }
-
-        // --- 10. DOWNLOAD ---
-        function downloadCode() {
-            const blob = new Blob([editor.getValue()], {type:'text/plain'});
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = (currentUser || "program") + ".py";
-            a.click();
-        }
-
-        // --- 11. GEMINI AI ---
-        async function askGemini() {
-            const key = document.getElementById('apiKeyInput').value;
-            if(!key) { alert("Add meg a Gemini API kulcsot a beállításokban!"); openSettings(); return; }
-            logSystem("AI gondolkodik...");
-            try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${key}`, {
-                    method:"POST", headers:{"Content-Type":"application/json"},
-                    body:JSON.stringify({contents:[{parts:[{text:"Magyarul elemezd és javítsd:\n"+editor.getValue()}]}]})
+                const gif = new GIF({
+                    workers: 2,
+                    quality: 10,
+                    width: bgLayer.width,
+                    height: bgLayer.height,
+                    workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js'
                 });
-                const d = await res.json();
-                addToOutput("\n[AI]: " + d.candidates[0].content.parts[0].text + "\n", "system-msg");
-            } catch(e) { logSystem("AI Hiba."); }
+
+                const fps = parseInt(document.getElementById('fps-input').value) || 5;
+                const delay = 1000 / fps;
+
+                frames.forEach(frame => {
+                    const tempCvs = document.createElement('canvas');
+                    tempCvs.width = bgLayer.width; tempCvs.height = bgLayer.height;
+                    const ctx = tempCvs.getContext('2d');
+                    ctx.fillStyle = canvasBgColor;
+                    ctx.fillRect(0, 0, tempCvs.width, tempCvs.height);
+                    ctx.putImageData(frame.imageData, 0, 0);
+                    gif.addFrame(tempCvs, {delay: delay});
+                });
+
+                gif.on('finished', function(blob) {
+                    overlay.style.display = 'none';
+                    const link = document.createElement('a');
+                    link.download = `AeroDraw_Anim_${Date.now()}.gif`;
+                    link.href = URL.createObjectURL(blob);
+                    link.click();
+                });
+
+                gif.render();
+
+            } catch (err) {
+                console.error(err);
+                alert("Hiba a GIF generálásakor.");
+                overlay.style.display = 'none';
+            }
         }
 
-        // --- 12. P2P LOGIC (SIMPLIFIED) ---
-        let peer = null;
-        let conn = null;
-        let isHost = false;
-
-        document.getElementById('channel-select').addEventListener('change', function() {
-            const isRandom = this.value === 'random';
-            document.getElementById('custom-code-ui').style.display = isRandom ? 'block' : 'none';
-            if(isRandom) {
-                document.getElementById('generated-room-id').value = Math.random().toString(36).substr(2,6);
-            }
-        });
-
-        function getRoomId() {
-            const val = document.getElementById('channel-select').value;
-            if(val === 'random') {
-                return isHost ? document.getElementById('generated-room-id').value : document.getElementById('input-room-id').value;
-            }
-            return "ac_pro_v16_room_" + val;
+        // --- UI ESEMÉNYEK ---
+        function pickColor(color, element) {
+            penColor = color;
+            document.getElementById('pen-color-input').value = color;
+            document.querySelectorAll('.color-swatch').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            if(currentTool === 'eraser') setTool('brush');
+        }
+        document.getElementById('pen-color-input').addEventListener('input', (e) => { penColor = e.target.value; document.querySelectorAll('.color-swatch').forEach(el => el.classList.remove('active')); if(currentTool === 'eraser') setTool('brush'); });
+        document.getElementById('pen-width').addEventListener('input', (e) => penWidth = e.target.value);
+        function setTool(tool) { 
+            currentTool = tool; 
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active')); 
+            document.getElementById(`btn-${tool}`).classList.add('active'); 
         }
 
-        function startAsHost() {
-            if(!currentUser) { openLoginModal(); return; }
-            if(peer) return;
-            isHost = true;
-            const id = getRoomId();
-            logSystem(`Szoba indítása: ${id}...`);
+        function downloadImage() {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = bgLayer.width; tempCanvas.height = bgLayer.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(bgLayer, 0, 0);
+            layers.forEach(layer => { tempCtx.drawImage(layer.canvas, 0, 0); });
             
-            peer = new Peer(id, { debug: 1 });
-            peer.on('open', (id) => {
-                logP2P("Szoba Létrehozva! ID: " + id);
-                document.getElementById('connect-ui').style.display='none';
-                document.getElementById('disconnect-ui').style.display='block';
-                updateUserList([currentUser + " (HOST)"]);
-            });
-            peer.on('connection', (c) => {
-                c.on('data', (d) => handleData(d));
-                c.on('open', () => {
-                    c.send({type:'welcome', msg:"Üdv a szerveren!"});
-                });
-            });
-            peer.on('error', (err) => logP2P("Hiba: " + err.type));
+            const link = document.createElement('a');
+            link.download = `AeroDraw_Pro_${new Date().getTime()}.png`;
+            link.href = tempCanvas.toDataURL('image/png');
+            link.click();
         }
 
-        function joinAsGuest() {
-            if(!currentUser) { openLoginModal(); return; }
-            if(peer) return;
-            isHost = false;
-            const id = getRoomId();
-            logSystem(`Csatlakozás: ${id}...`);
-
-            peer = new Peer();
-            peer.on('open', () => {
-                conn = peer.connect(id);
-                conn.on('open', () => {
-                    logP2P("Sikeres csatlakozás!");
-                    document.getElementById('connect-ui').style.display='none';
-                    document.getElementById('disconnect-ui').style.display='block';
-                    conn.send({type:'join', user:currentUser});
-                });
-                conn.on('data', (d) => handleData(d));
-                conn.on('close', () => disconnectPeer());
-            });
-            peer.on('error', (err) => logP2P("Hiba: Nem található a szoba (" + err.type + ")"));
-        }
-
-        function handleData(data) {
-            if(data.type === 'msg') {
-                const chat = document.getElementById('chat-history');
-                const d = document.createElement('div');
-                d.style.marginBottom = "5px";
-                d.style.borderBottom = "1px solid #333";
-                d.innerHTML = `<strong style="color:var(--accent-color)">${data.user}:</strong> ${data.text}`;
-                chat.appendChild(d);
-            }
-        }
-
-        function disconnectPeer() {
-            if(peer) peer.destroy();
-            peer = null; conn = null;
-            document.getElementById('connect-ui').style.display='block';
-            document.getElementById('disconnect-ui').style.display='none';
-            logP2P("Lecsatlakozva.");
-        }
+        // --- AUTH & P2P ALAPOK ---
+        let currentUser=null, tokenClient, gapiInited=false, gisInited=false;
+        let peer=null, conn=null, isHost=false, connectedUsers=[], maxParticipants=3;
+        const ROOM_MAPPING = {"1":"adp_v2_r1","2":"adp_v2_r2","3":"adp_v2_r3"};
         
-        function updateUserList(users) {
-            document.getElementById('active-users-list').innerHTML = users.map(u => 
-                `<div style="background:#222; padding:5px; border-radius:4px; font-size:12px; margin-bottom:2px;">${u}</div>`
-            ).join('');
-        }
-        
-        // Chat send
-        const chatIn = document.getElementById('chat-input');
-        chatIn.addEventListener('keydown', (e) => {
-            if(e.key === 'Enter') {
-                const txt = chatIn.value;
-                if(!txt) return;
-                // Local echo
-                handleData({type:'msg', user:currentUser || 'Én', text:txt});
-                // Send logic here if conn exists...
-                chatIn.value = "";
-            }
-        });
+        function openLoginModal() { document.getElementById('loginModal').style.display='flex'; }
+        function performLogin() { const name=document.getElementById('loginNameInput').value.trim(); if(!name)return; localStorage.setItem('saved_user',name); currentUser=name; document.getElementById('user-btn').innerText=name; document.getElementById('loginModal').style.display='none'; document.getElementById('login-warning').style.display='none'; if(gapiInited&&gisInited&&!gapi.client.getToken())tokenClient.requestAccessToken({prompt:''}); }
+        function gapiLoaded(){gapi.load('client',async()=>{await gapi.client.init({apiKey:API_KEY,discoveryDocs:[DISCOVERY_DOC]});gapiInited=true;});}
+        function gisLoaded(){tokenClient=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPES,callback:(resp)=>{}});gisInited=true;}
 
+        // --- P2P SZINKRONIZÁCIÓ ---
+        function broadcastDrawEvent(data) {
+            if(isHost) connectedUsers.forEach(u => u.conn.send(data));
+            else if(conn && conn.open) conn.send(data);
+        }
+
+        function broadcastLayerStructure() {
+            if(!isHost || isAnimationMode) return;
+            const structure = layers.map(l => ({ id: l.id, name: l.name }));
+            connectedUsers.forEach(u => u.conn.send({ type: 'layer_structure', layers: structure, bg: canvasBgColor }));
+        }
+
+        function sendFullSnapshot(targetConn) {
+            const snapshot = { type: 'full_snapshot', bg: canvasBgColor, layers: [] };
+            layers.forEach(l => {
+                snapshot.layers.push({ id: l.id, image: l.canvas.toDataURL() });
+            });
+            targetConn.send(snapshot);
+        }
+
+        function handleP2PData(data) {
+            if (data.type === 'draw') {
+                const targetLayer = layers.find(l => l.id === data.layerId);
+                if(targetLayer) drawLine(targetLayer.ctx, data.x0, data.y0, data.x1, data.y1, data.color, data.width, data.isEraser);
+            }
+            else if (data.type === 'shape') {
+                const targetLayer = layers.find(l => l.id === data.layerId);
+                if(targetLayer) drawShape(targetLayer.ctx, data.x0, data.y0, data.x1, data.y1, data.tool, data.color, data.width);
+            }
+            else if (data.type === 'fill') {
+                const targetLayer = layers.find(l => l.id === data.layerId);
+                if(targetLayer) floodFill(targetLayer.ctx, data.x, data.y, data.color);
+            }
+            else if(data.type === 'clear_layer') {
+                const targetLayer = layers.find(l => l.id === data.layerId);
+                if(targetLayer) targetLayer.ctx.clearRect(0,0,targetLayer.canvas.width, targetLayer.canvas.height);
+            }
+            else if(data.type === 'bg_change') { changeCanvasBg(data.color); }
+            else if(data.type === 'layer_structure') {
+                if(isAnimationMode) return;
+                canvasWrapper.innerHTML = '<canvas id="background-layer" class="drawing-layer"></canvas><canvas id="onion-layer" class="drawing-layer"></canvas><canvas id="preview-layer" class="drawing-layer"></canvas>'; 
+                const newBg = document.getElementById('background-layer'); bgCtx = newBg.getContext('2d');
+                layers = []; undoStack = []; redoStack = []; updateUndoRedoButtons();
+                changeCanvasBg(data.bg);
+                data.layers.forEach(lData => {
+                    const newCanvas = createLayerCanvas(lData.id);
+                    canvasWrapper.insertBefore(newCanvas, previewLayer);
+                    layers.push({ id: lData.id, canvas: newCanvas, ctx: newCanvas.getContext('2d'), name: lData.name });
+                });
+                resizeCanvases();
+                if(layers.length > 0) setActiveLayer(layers[0].id);
+            }
+            else if(data.type === 'full_snapshot') {
+                changeCanvasBg(data.bg);
+                data.layers.forEach(lData => {
+                    const targetLayer = layers.find(l => l.id === lData.id);
+                    if(targetLayer) {
+                        const img = new Image(); img.onload = () => targetLayer.ctx.drawImage(img, 0, 0); img.src = lData.image;
+                    }
+                });
+            }
+            else if(data.type==='user_list') { connectedUsers=data.users; updateActiveUsersUI(); }
+            else if(data.type==='kick') { alert("Kirúgtak."); disconnectPeer(); }
+        }
+
+        // --- P2P CORE ---
+        function startAsHost() { 
+            if(!currentUser){openLoginModal();return;} 
+            if(peer)return; 
+            isHost=true; connectedUsers=[]; maxParticipants=parseInt(document.getElementById('room-size-limit').value)||3; 
+            peer=new Peer(ROOM_MAPPING[document.getElementById('channel-select').value], peerConfig); 
+            peer.on('open',id=>{document.getElementById('live-indicator').style.display='block';updateP2PUI(true);}); 
+            peer.on('connection',c=>{if(connectedUsers.length+1>=maxParticipants){c.on('open',()=>{c.send({type:'error',message:'Tele'});setTimeout(()=>c.close(),500);});return;} c.on('data',d=>{if(d.type==='handshake'){connectedUsers.push({id:c.peer,conn:c,username:d.username}); broadcastUserList(); sendFullSnapshot(c); } else handleP2PData(d);}); c.on('close',()=>{connectedUsers=connectedUsers.filter(u=>u.id!==c.peer);broadcastUserList();updateActiveUsersUI();});}); 
+        }
+
+        function joinAsGuest() { 
+            if(!currentUser){openLoginModal();return;} 
+            if(peer)return; 
+            isHost=false; 
+            peer=new Peer(null, peerConfig); 
+            peer.on('open',()=>{conn=peer.connect(ROOM_MAPPING[document.getElementById('channel-select').value]); conn.on('open',()=>{conn.send({type:'handshake',username:currentUser}); document.getElementById('live-indicator').style.display='block';updateP2PUI(true);}); conn.on('data',handleP2PData); conn.on('close',resetP2PUI);}); 
+        }
+
+        function broadcastUserList(){if(!isHost)return; const list=connectedUsers.map(u=>({id:u.id,username:u.username})); list.unshift({id:'HOST',username:currentUser+' (HOST)'}); connectedUsers.forEach(u=>u.conn.send({type:'user_list',users:list})); updateActiveUsersUI();}
+        function updateActiveUsersUI(){const c=document.getElementById('active-users-list'); c.innerHTML=`<div class="user-chip self"><span class="username">${currentUser}</span></div>`; connectedUsers.forEach(u=>{c.innerHTML+=`<div class="user-chip"><span class="username">${u.username}</span>${isHost?`<button class="kick-btn" onclick="kickUser('${u.id}')">x</button>`:''}</div>`});}
+        function kickUser(id){const u=connectedUsers.find(x=>x.id===id);if(u){u.conn.send({type:'kick'});setTimeout(()=>u.conn.close(),100);}}
+        function disconnectPeer(){if(isHost)connectedUsers.forEach(u=>u.conn.close());if(conn)conn.close();if(peer)peer.destroy();resetP2PUI();}
+        function resetP2PUI(){peer=null;conn=null;isHost=false;connectedUsers=[];document.getElementById('live-indicator').style.display='none';updateP2PUI(false);}
+        function updateP2PUI(online){document.getElementById('connect-ui').style.display=online?'none':'block';document.getElementById('disconnect-ui').style.display=online?'block':'none';document.getElementById('p2p-log').innerText=online?(isHost?"HOST ONLINE":"ONLINE"):"Offline";document.getElementById('p2p-log').style.color=online?"#50fa7b":"#888";}
+
+        // --- DRIVE SAVE ---
+        async function handleDriveSave() { document.getElementById('loading-overlay').style.display='flex'; document.getElementById('loading-text').innerText="Felhő mentés..."; if(!currentUser||!gapi.client.getToken()){alert("Jelentkezz be!");document.getElementById('loading-overlay').style.display='none';return;}
+            const tempCanvas=document.createElement('canvas'); tempCanvas.width=bgLayer.width; tempCanvas.height=bgLayer.height; const ctx=tempCanvas.getContext('2d'); ctx.drawImage(bgLayer,0,0); layers.forEach(l=>ctx.drawImage(l.canvas,0,0));
+            tempCanvas.toBlob(async blob=>{ const meta={'name':`AeroDraw_${currentUser}_${Date.now()}.png`,'mimeType':'image/png'}; const form=new FormData(); form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'})); form.append('file',blob);
+            try{await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:new Headers({'Authorization':'Bearer '+gapi.client.getToken().access_token}),body:form});alert("Mentve!");}catch(e){alert("Hiba!");} document.getElementById('loading-overlay').style.display='none'; }); }
+
+        // UI & Egyéb
+        let isDark=true; function toggleTheme(){isDark=!isDark;document.body.className=isDark?"":"light-mode";}
+        function openSettings(){document.getElementById('settingsModal').style.display='flex';}
+        
+        const savedUser = localStorage.getItem('saved_user'); if(savedUser){currentUser=savedUser;document.getElementById('user-btn').innerText=savedUser;}
+        setTimeout(initLayers, 100); 
     </script>
 </body>
 </html>
