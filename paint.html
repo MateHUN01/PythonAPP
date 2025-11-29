@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroDraw PRO v3.7 - Export FIX</title>
+    <title>AeroDraw PRO v3.8 - Pentagon Tool</title>
     
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
@@ -231,7 +231,7 @@
         <div class="glass-bubble left-bubble">
             <div class="app-title">
                 <span class="material-icons" style="color:var(--accent-color)">draw</span>
-                AeroDraw PRO v3.7
+                AeroDraw PRO v3.8
             </div>
             <div class="vertical-divider"></div>
             
@@ -345,6 +345,7 @@
                 <div class="tool-row">
                     <button class="tool-btn" id="btn-rect" onclick="setTool('rect')" title="Kocka"><span class="material-icons">crop_square</span></button>
                     <button class="tool-btn" id="btn-circle" onclick="setTool('circle')" title="Kör"><span class="material-icons">radio_button_unchecked</span></button>
+                    <button class="tool-btn" id="btn-pentagon" onclick="setTool('pentagon')" title="Ötszög"><span class="material-icons">pentagon</span></button>
                 </div>
                 
                 <div style="padding:0 5px; margin-top:5px;">
@@ -698,7 +699,7 @@
                 broadcastDrawEvent({ type: 'draw', layerId: activeLayerId, x0: lastX, y0: lastY, x1: newX, y1: newY, color: colorToUse, width: penWidth, isEraser: isEraser });
                 [lastX, lastY] = [newX, newY];
             } 
-            else if (currentTool === 'rect' || currentTool === 'circle') {
+            else if (currentTool === 'rect' || currentTool === 'circle' || currentTool === 'pentagon') {
                 previewCtx.clearRect(0, 0, previewLayer.width, previewLayer.height);
                 drawShape(previewCtx, startX, startY, newX, newY, currentTool, penColor, penWidth);
             }
@@ -708,7 +709,7 @@
             if (!isDrawing) return;
             isDrawing = false;
             
-            if (currentTool === 'rect' || currentTool === 'circle') {
+            if (currentTool === 'rect' || currentTool === 'circle' || currentTool === 'pentagon') {
                 const rect = canvasWrapper.getBoundingClientRect();
                 let endX = lastX;
                 let endY = lastY;
@@ -742,18 +743,30 @@
             ctx.lineWidth = width;
             const w = x1 - x0;
             const h = y1 - y0;
+            const centerX = x0 + w/2;
+            const centerY = y0 + h/2;
 
             if (type === 'rect') {
                 ctx.rect(x0, y0, w, h);
             } else if (type === 'circle') {
-                const centerX = x0 + w/2;
-                const centerY = y0 + h/2;
                 const radiusX = Math.abs(w/2);
                 const radiusY = Math.abs(h/2);
                 ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+            } else if (type === 'pentagon') {
+                const sides = 5;
+                const radiusX = w/2;
+                const radiusY = h/2;
+                for (let i = 0; i < sides; i++) {
+                    const angle = (i * 2 * Math.PI / sides) - Math.PI / 2;
+                    const x = centerX + radiusX * Math.cos(angle);
+                    const y = centerY + radiusY * Math.sin(angle);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
             }
             ctx.stroke();
-            ctx.closePath();
+            // ...
         }
 
         // --- FLOOD FILL ---
