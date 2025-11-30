@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroDraw PRO v4.0 - GIF Import & Duplication</title>
+    <title>AeroDraw PRO v4.2 - Stabil P2P</title>
     
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
@@ -162,7 +162,7 @@
         <div class="glass-bubble left-bubble">
             <div class="app-title">
                 <span class="material-icons" style="color:var(--accent-color)">draw</span>
-                AeroDraw PRO v4.0
+                AeroDraw PRO v4.2
             </div>
             <div class="vertical-divider"></div>
             
@@ -188,12 +188,14 @@
                 <div class="dropdown-content">
                     <h4 style="margin:0 0 10px 0; border-bottom:1px solid #444; padding-bottom:5px;">Közös Rajzolás</h4>
                     <div id="connect-ui">
-                        <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Válassz egy csatornát:</div>
+                        <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Válassz szobát:</div>
+                        
                         <select id="channel-select" style="width:100%; padding:8px; background:var(--input-field-bg); border:1px solid var(--border-color); color:var(--text-color); border-radius:4px; margin-bottom:10px; font-family:'Inter'">
-                            <option value="1">1. Csatorna (Alpha)</option>
-                            <option value="2">2. Csatorna (Beta)</option>
-                            <option value="3">3. Csatorna (Gamma)</option>
+                            <option value="1">Szoba 1 (Alpha)</option>
+                            <option value="2">Szoba 2 (Beta)</option>
+                            <option value="3">Szoba 3 (Gamma)</option>
                         </select>
+                        
                         <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:10px;">
                             <span style="font-size:11px; opacity:0.7;">Max létszám:</span>
                             <input type="number" id="room-size-limit" min="2" max="10" value="3" style="width:60px; padding:4px; font-size:11px; margin-bottom:0;">
@@ -208,6 +210,11 @@
                         <div style="background:rgba(80, 250, 123, 0.1); color:#50fa7b; padding:8px; border-radius:4px; margin-bottom:10px; text-align:center; font-size:12px;">
                             <span class="material-icons" style="font-size:12px; vertical-align:middle;">link</span> Kapcsolódva
                         </div>
+                        
+                        <div id="host-id-display" style="text-align:center; margin-bottom:10px; font-size:11px; opacity:0.8;">
+                             Szoba: <span id="current-room-name" style="font-weight:bold; color:var(--accent-color);"></span>
+                        </div>
+
                         <div id="active-users-list" class="user-chip-container"></div>
                         <button onclick="disconnectPeer()" style="width:100%; padding:8px; background:#ff5555; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Szétkapcsolás</button>
                     </div>
@@ -370,6 +377,19 @@
                     { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" }
                 ]
             }
+        };
+        
+        // --- FIX SZOBA AZONOSÍTÓK ---
+        // Ezek az egyedi kódok, hogy ne kelljen kézzel beírni, de a szerveren egyediek legyenek
+        const FIXED_ROOMS = {
+            "1": "aerodraw_v4_fixed_room_alpha_x9",
+            "2": "aerodraw_v4_fixed_room_beta_y2",
+            "3": "aerodraw_v4_fixed_room_gamma_z5"
+        };
+        const ROOM_NAMES = {
+            "1": "Szoba 1 (Alpha)",
+            "2": "Szoba 2 (Beta)",
+            "3": "Szoba 3 (Gamma)"
         };
 
         // --- GLOBÁLIS VÁLTOZÓK ---
@@ -670,9 +690,9 @@
                 const halfW = selectionObj.width / 2; const halfH = selectionObj.height / 2;
 
                 if (localX > halfW - 15 && localX < halfW + 15 && localY > halfH - 15 && localY < halfH + 15) {
-                     isDrawing = true; transformMode = 'resize';
-                     transformStartData = { startX: x, startY: y, startW: selectionObj.width, startH: selectionObj.height };
-                     return;
+                      isDrawing = true; transformMode = 'resize';
+                      transformStartData = { startX: x, startY: y, startW: selectionObj.width, startH: selectionObj.height };
+                      return;
                 }
                 if (localX >= -halfW && localX <= halfW && localY >= -halfH && localY <= halfH) {
                     isDrawing = true; transformMode = 'move';
@@ -867,8 +887,8 @@
                 activeLayer.ctx.drawImage(selectionObj.canvas, -selectionObj.width/2, -selectionObj.height/2, selectionObj.width, selectionObj.height);
                 activeLayer.ctx.restore();
                 if (isHost || (conn && conn.open)) {
-                     const imgDataUrl = selectionObj.canvas.toDataURL();
-                     broadcastDrawEvent({ type: 'paste_image', layerId: activeLayerId, image: imgDataUrl, x: cx, y: cy, w: selectionObj.width, h: selectionObj.height, r: selectionObj.rotation });
+                      const imgDataUrl = selectionObj.canvas.toDataURL();
+                      broadcastDrawEvent({ type: 'paste_image', layerId: activeLayerId, image: imgDataUrl, x: cx, y: cy, w: selectionObj.width, h: selectionObj.height, r: selectionObj.rotation });
                 }
             }
             previewCtx.clearRect(0, 0, previewLayer.width, previewLayer.height);
@@ -1286,7 +1306,6 @@
         // --- AUTH & P2P ALAPOK ---
         let currentUser=null, tokenClient, gapiInited=false, gisInited=false;
         let peer=null, conn=null, isHost=false, connectedUsers=[], maxParticipants=3;
-        const ROOM_MAPPING = {"1":"adp_v2_r1","2":"adp_v2_r2","3":"adp_v2_r3"};
         
         function openLoginModal() { document.getElementById('loginModal').style.display='flex'; }
         function performLogin() { const name=document.getElementById('loginNameInput').value.trim(); if(!name)return; localStorage.setItem('saved_user',name); currentUser=name; document.getElementById('user-btn').innerText=name; document.getElementById('loginModal').style.display='none'; document.getElementById('login-warning').style.display='none'; if(gapiInited&&gisInited&&!gapi.client.getToken())tokenClient.requestAccessToken({prompt:''}); }
@@ -1369,33 +1388,119 @@
                 });
             }
             else if(data.type==='user_list') { connectedUsers=data.users; updateActiveUsersUI(); }
-            else if(data.type==='kick') { alert("Kirúgtak."); disconnectPeer(); }
+            else if(data.type==='kick') { alert("A Host megszakította a kapcsolatot vagy kirúgott."); disconnectPeer(); }
         }
 
-        // --- P2P CORE ---
+        // --- P2P CORE (JAVÍTOTT: FIX SZOBAKEZELÉS) ---
         function startAsHost() { 
             if(!currentUser){openLoginModal();return;} 
             if(peer)return; 
+            
             isHost=true; connectedUsers=[]; maxParticipants=parseInt(document.getElementById('room-size-limit').value)||3; 
-            peer=new Peer(ROOM_MAPPING[document.getElementById('channel-select').value], peerConfig); 
-            peer.on('open',id=>{document.getElementById('live-indicator').style.display='block';updateP2PUI(true);}); 
-            peer.on('connection',c=>{if(connectedUsers.length+1>=maxParticipants){c.on('open',()=>{c.send({type:'error',message:'Tele'});setTimeout(()=>c.close(),500);});return;} c.on('data',d=>{if(d.type==='handshake'){connectedUsers.push({id:c.peer,conn:c,username:d.username}); broadcastUserList(); sendFullSnapshot(c); } else handleP2PData(d);}); c.on('close',()=>{connectedUsers=connectedUsers.filter(u=>u.id!==c.peer);broadcastUserList();updateActiveUsersUI();});}); 
+            
+            // JAVÍTÁS: A kiválasztott szoba fix azonosítóját használjuk
+            const selectedRoomKey = document.getElementById('channel-select').value;
+            const fixedRoomId = FIXED_ROOMS[selectedRoomKey];
+            
+            peer = new Peer(fixedRoomId, peerConfig); 
+            
+            peer.on('open', id => {
+                document.getElementById('live-indicator').style.display='block';
+                document.getElementById('current-room-name').innerText = ROOM_NAMES[selectedRoomKey];
+                updateP2PUI(true);
+            }); 
+            
+            // JAVÍTÁS: Ha a szoba foglalt, nem dobunk hibát, hanem szólunk
+            peer.on('error', (err) => {
+                console.error(err);
+                if(err.type === 'unavailable-id') {
+                    alert("Ez a szoba már FOGLALT (más a Host). Kérlek kattints a 'JOIN' gombra, ha csatlakozni szeretnél!");
+                } else {
+                    alert("Kapcsolódási hiba: " + err.type);
+                }
+                resetP2PUI();
+            });
+
+            peer.on('connection', c => {
+                if(connectedUsers.length+1 >= maxParticipants){
+                    c.on('open',()=>{ c.send({type:'error',message:'Tele a szoba'}); setTimeout(()=>c.close(),500); });
+                    return;
+                } 
+                c.on('data', d => {
+                    if(d.type==='handshake'){
+                        connectedUsers.push({id:c.peer,conn:c,username:d.username}); 
+                        broadcastUserList(); 
+                        sendFullSnapshot(c); 
+                    } else handleP2PData(d);
+                }); 
+                c.on('close',()=>{
+                    connectedUsers=connectedUsers.filter(u=>u.id!==c.peer);
+                    broadcastUserList();
+                    updateActiveUsersUI();
+                });
+            }); 
         }
 
         function joinAsGuest() { 
             if(!currentUser){openLoginModal();return;} 
             if(peer)return; 
+            
+            // JAVÍTÁS: A vendégnek nem kell fix ID, de a fix szobához csatlakozik
+            const selectedRoomKey = document.getElementById('channel-select').value;
+            const targetId = FIXED_ROOMS[selectedRoomKey];
+
             isHost=false; 
-            peer=new Peer(null, peerConfig); 
-            peer.on('open',()=>{conn=peer.connect(ROOM_MAPPING[document.getElementById('channel-select').value]); conn.on('open',()=>{conn.send({type:'handshake',username:currentUser}); document.getElementById('live-indicator').style.display='block';updateP2PUI(true);}); conn.on('data',handleP2PData); conn.on('close',resetP2PUI);}); 
+            peer = new Peer(null, peerConfig); // Random ID a vendégnek
+            
+            peer.on('open', () => {
+                // Itt csatlakozunk a fix ID-hoz
+                conn = peer.connect(targetId); 
+                
+                conn.on('open', () => {
+                    conn.send({type:'handshake',username:currentUser}); 
+                    document.getElementById('live-indicator').style.display='block';
+                    document.getElementById('current-room-name').innerText = ROOM_NAMES[selectedRoomKey];
+                    updateP2PUI(true);
+                }); 
+                
+                conn.on('data', handleP2PData); 
+                conn.on('close', () => {
+                    alert("A kapcsolat megszakadt a szerverrel.");
+                    resetP2PUI();
+                });
+                
+                // Kapcsolódási hiba kezelése
+                setTimeout(() => {
+                    if(!conn.open) {
+                        alert("Nem sikerült kapcsolódni a '" + ROOM_NAMES[selectedRoomKey] + "' szobához. Lehet, hogy nincs online Host.");
+                        resetP2PUI();
+                    }
+                }, 5000);
+            }); 
+
+            peer.on('error', (err) => {
+                console.error("PeerJS Error:", err);
+                alert("Hiba: " + err.type);
+                resetP2PUI();
+            });
         }
 
         function broadcastUserList(){if(!isHost)return; const list=connectedUsers.map(u=>({id:u.id,username:u.username})); list.unshift({id:'HOST',username:currentUser+' (HOST)'}); connectedUsers.forEach(u=>u.conn.send({type:'user_list',users:list})); updateActiveUsersUI();}
         function updateActiveUsersUI(){const c=document.getElementById('active-users-list'); c.innerHTML=`<div class="user-chip self"><span class="username">${currentUser}</span></div>`; connectedUsers.forEach(u=>{c.innerHTML+=`<div class="user-chip"><span class="username">${u.username}</span>${isHost?`<button class="kick-btn" onclick="kickUser('${u.id}')">x</button>`:''}</div>`});}
         function kickUser(id){const u=connectedUsers.find(x=>x.id===id);if(u){u.conn.send({type:'kick'});setTimeout(()=>u.conn.close(),100);}}
         function disconnectPeer(){if(isHost)connectedUsers.forEach(u=>u.conn.close());if(conn)conn.close();if(peer)peer.destroy();resetP2PUI();}
-        function resetP2PUI(){peer=null;conn=null;isHost=false;connectedUsers=[];document.getElementById('live-indicator').style.display='none';updateP2PUI(false);}
-        function updateP2PUI(online){document.getElementById('connect-ui').style.display=online?'none':'block';document.getElementById('disconnect-ui').style.display=online?'block':'none';document.getElementById('p2p-log').innerText=online?(isHost?"HOST ONLINE":"ONLINE"):"Offline";document.getElementById('p2p-log').style.color=online?"#50fa7b":"#888";}
+        function resetP2PUI(){
+            peer=null;conn=null;isHost=false;connectedUsers=[];
+            document.getElementById('live-indicator').style.display='none';
+            document.getElementById('host-id-display').style.display='none'; // Töröljük a kiírást
+            updateP2PUI(false);
+        }
+        function updateP2PUI(online){
+            document.getElementById('connect-ui').style.display=online?'none':'block';
+            document.getElementById('disconnect-ui').style.display=online?'block':'none';
+            document.getElementById('p2p-log').innerText=online?(isHost?"HOST ONLINE":"ONLINE"):"Offline";
+            document.getElementById('p2p-log').style.color=online?"#50fa7b":"#888";
+        }
 
         // --- DRIVE SAVE ---
         async function handleDriveSave() { 
