@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroDraw PRO v4.3 - Fixed GIF Import (565x565)</title>
+    <title>AeroDraw PRO v4.1 - Fixed P2P</title>
     
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
@@ -52,19 +52,13 @@
         #canvas-wrapper {
             position: relative; width: 100%; height: 100%; background: var(--bg-color); overflow: hidden; cursor: crosshair;
             transition: all 0.3s ease;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
-        /* JAVÍTÁS: A .square-mode mostantól nem csak 1:1 arányt kényszerít,
-           hanem vizuálisan is igazodik, de a belső felbontást a JS állítja 565x565-re.
-        */
-        #canvas-wrapper.square-mode canvas {
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
-            border: 2px solid var(--accent-color);
+        #canvas-wrapper.square-mode {
+            width: auto; aspect-ratio: 1 / 1; margin: 0 auto; border: 2px solid var(--accent-color);
+            box-shadow: 0 0 50px rgba(0,0,0,0.5); max-height: calc(100vh - 160px); margin-top: 80px;
         }
 
-        .drawing-layer { position: absolute; top: 0; left: 0; pointer-events: none; } /* width/height removed from CSS to respect canvas attributes */
+        .drawing-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         .drawing-layer.active { pointer-events: auto; }
         #background-layer { z-index: 0; background-color: #000000; transition: background-color 0.3s; }
         #preview-layer { z-index: 50; pointer-events: none; }
@@ -168,7 +162,7 @@
         <div class="glass-bubble left-bubble">
             <div class="app-title">
                 <span class="material-icons" style="color:var(--accent-color)">draw</span>
-                AeroDraw PRO v4.3
+                AeroDraw PRO v4.1
             </div>
             <div class="vertical-divider"></div>
             
@@ -178,7 +172,7 @@
             
             <button class="icon-btn" onclick="clearCurrentLayer()" title="Réteg Törlése"><span class="material-icons">delete</span></button>
             <button class="icon-btn" onclick="downloadImage()" title="Mentés képként"><span class="material-icons">image</span></button>
-            <button class="icon-btn" onclick="document.getElementById('gif-upload').click()" title="GIF Betöltés (565px)"><span class="material-icons">upload_file</span></button>
+            <button class="icon-btn" onclick="document.getElementById('gif-upload').click()" title="GIF Betöltés"><span class="material-icons">upload_file</span></button>
             <input type="file" id="gif-upload" accept="image/gif" style="display:none" onchange="handleGifUpload(event)">
             
             <div class="vertical-divider" style="height: 16px; margin: 0 2px; opacity: 0.5;"></div>
@@ -194,13 +188,8 @@
                 <div class="dropdown-content">
                     <h4 style="margin:0 0 10px 0; border-bottom:1px solid #444; padding-bottom:5px;">Közös Rajzolás</h4>
                     <div id="connect-ui">
-                        <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Válassz szobát:</div>
-                        
-                        <select id="channel-select" style="width:100%; padding:8px; background:var(--input-field-bg); border:1px solid var(--border-color); color:var(--text-color); border-radius:4px; margin-bottom:10px; font-family:'Inter'">
-                            <option value="1">Szoba 1 (Alpha)</option>
-                            <option value="2">Szoba 2 (Beta)</option>
-                            <option value="3">Szoba 3 (Gamma)</option>
-                        </select>
+                        <div style="font-size:11px; opacity:0.7; margin-bottom:5px">Csatlakozáshoz írd be a kódot:</div>
+                        <input type="text" id="join-id-input" placeholder="pl: adp-1234" style="width:100%; padding:8px; background:var(--input-field-bg); border:1px solid var(--border-color); color:var(--text-color); border-radius:4px; margin-bottom:10px; font-family:'Inter'">
                         
                         <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:10px;">
                             <span style="font-size:11px; opacity:0.7;">Max létszám:</span>
@@ -208,17 +197,16 @@
                         </div>
                         <div style="font-size:10px; color:#ff5555; margin-bottom:10px; display:none;" id="login-warning">Jelentkezz be a csatlakozáshoz!</div>
                         <div style="display:flex; gap:5px;">
-                            <button onclick="startAsHost()" style="flex:1; padding:8px; background:var(--run-color); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">HOST</button>
-                            <button onclick="joinAsGuest()" style="flex:1; padding:8px; background:#50fa7b; color:#222; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">JOIN</button>
+                            <button onclick="startAsHost()" style="flex:1; padding:8px; background:var(--run-color); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">HOST LÉTREHOZÁS</button>
+                            <button onclick="joinAsGuest()" style="flex:1; padding:8px; background:#50fa7b; color:#222; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">CSATLAKOZÁS</button>
                         </div>
                     </div>
                     <div id="disconnect-ui" style="display:none;">
                         <div style="background:rgba(80, 250, 123, 0.1); color:#50fa7b; padding:8px; border-radius:4px; margin-bottom:10px; text-align:center; font-size:12px;">
                             <span class="material-icons" style="font-size:12px; vertical-align:middle;">link</span> Kapcsolódva
                         </div>
-                        
-                        <div id="host-id-display" style="text-align:center; margin-bottom:10px; font-size:11px; opacity:0.8;">
-                             Szoba: <span id="current-room-name" style="font-weight:bold; color:var(--accent-color);"></span>
+                        <div id="host-id-display" style="display:none; text-align:center; margin-bottom:10px; font-size:12px; background:rgba(255,255,255,0.05); padding:5px; border-radius:4px; border:1px dashed #555;">
+                            Szoba ID: <span id="current-room-id" style="font-weight:bold; color:var(--accent-color); user-select: text;">-</span>
                         </div>
 
                         <div id="active-users-list" class="user-chip-container"></div>
@@ -371,7 +359,7 @@
         const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
         const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
-        // --- PEER CONFIG ---
+        // --- PEER CONFIG (JAVÍTOTT: OpenRelay használatával) ---
         const peerConfig = {
             debug: 1,
             config: {
@@ -383,18 +371,6 @@
                     { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" }
                 ]
             }
-        };
-        
-        // --- FIX SZOBA AZONOSÍTÓK ---
-        const FIXED_ROOMS = {
-            "1": "aerodraw_v4_fixed_room_alpha_x9",
-            "2": "aerodraw_v4_fixed_room_beta_y2",
-            "3": "aerodraw_v4_fixed_room_gamma_z5"
-        };
-        const ROOM_NAMES = {
-            "1": "Szoba 1 (Alpha)",
-            "2": "Szoba 2 (Beta)",
-            "3": "Szoba 3 (Gamma)"
         };
 
         // --- GLOBÁLIS VÁLTOZÓK ---
@@ -433,10 +409,6 @@
         let isOnionSkin = true;
         let isPlaying = false;
         let playbackInterval = null;
-        
-        // JAVÍTÁS: Külön változó, hogy tudjuk, fix méretben vagyunk-e (GIF mód)
-        let isGifImportMode = false;
-        const GIF_SIZE = 565;
 
         // --- UNDO / REDO ---
         const MAX_HISTORY = 30; 
@@ -640,43 +612,22 @@
             if(isHost || (conn && conn.open)) broadcastDrawEvent({ type: 'bg_change', color: color });
         }
 
-        // --- RAJZOLÓ LOGIKA (JAVÍTOTT: FIX MÉRET KEZELÉS) ---
+        // --- RAJZOLÓ LOGIKA ---
         function resizeCanvases() {
             let width, height;
-            
-            // Ha GIF import módban vagyunk, akkor a méret FIX 565x565
-            if (isAnimationMode && isGifImportMode) {
-                width = GIF_SIZE;
-                height = GIF_SIZE;
-                // Vászon wrapper stílus beállítása, hogy középen legyen
-                canvasWrapper.style.width = width + "px";
-                canvasWrapper.style.height = height + "px";
-            } 
-            else if (isAnimationMode) {
-                // Normál animáció mód (ablak méret)
-                const rect = canvasWrapper.parentElement.getBoundingClientRect(); // A szülő méretét nézzük
-                // De mivel a wrapper mostantól flexes, ez trükkös lehet, ezért inkább a window
-                width = Math.min(window.innerWidth - 40, 800);
-                height = width; // Square
-                canvasWrapper.style.width = width + "px";
-                canvasWrapper.style.height = height + "px";
+            if (isAnimationMode) {
+                const rect = canvasWrapper.getBoundingClientRect();
+                width = rect.width;
+                height = rect.height;
             } else {
-                // Normál teljes képernyős mód
-                canvasWrapper.style.width = "100%";
-                canvasWrapper.style.height = "100%";
                 width = canvasWrapper.offsetWidth;
                 height = canvasWrapper.offsetHeight;
             }
             
             function resizeCtx(ctx, cvs) {
-                // Csak akkor méretezzük át a tartalmat, ha nem GIF módban vagyunk (ott fix)
-                // Vagy ha a vászon mérete tényleg változott
-                if(cvs.width === width && cvs.height === height) return;
-
                 const tempCvs = document.createElement('canvas'); 
                 tempCvs.width = cvs.width; tempCvs.height = cvs.height; 
                 tempCvs.getContext('2d').drawImage(cvs,0,0);
-                
                 cvs.width = width; cvs.height = height;
                 ctx.drawImage(tempCvs, 0, 0);
             }
@@ -693,17 +644,13 @@
             
             undoStack = []; redoStack = []; updateUndoRedoButtons();
         }
-        window.addEventListener('resize', () => { if(!isGifImportMode) setTimeout(resizeCanvases, 100); });
+        window.addEventListener('resize', () => setTimeout(resizeCanvases, 100));
 
         function startDraw(e) {
             if(!activeLayerId) return;
             const rect = canvasWrapper.getBoundingClientRect();
-            // JAVÍTÁS: A pontos koordinátákhoz a canvas scale-jét figyelembe kell venni
-            const scaleX = bgLayer.width / rect.width;
-            const scaleY = bgLayer.height / rect.height;
-            
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
 
             if (currentTool === 'select' && isSelectionActive && selectionObj) {
                 const cx = selectionObj.x + selectionObj.width/2;
@@ -770,11 +717,8 @@
         function draw(e) {
             if (!isDrawing) return;
             const rect = canvasWrapper.getBoundingClientRect();
-            const scaleX = bgLayer.width / rect.width;
-            const scaleY = bgLayer.height / rect.height;
-
-            const newX = (e.clientX - rect.left) * scaleX;
-            const newY = (e.clientY - rect.top) * scaleY;
+            const newX = e.clientX - rect.left;
+            const newY = e.clientY - rect.top;
 
             if (currentTool === 'select' && isSelectionActive && selectionObj) {
                 if (transformMode === 'move') {
@@ -849,15 +793,9 @@
 
             if (['rect', 'circle', 'hexagon', 'line'].includes(currentTool)) {
                 const rect = canvasWrapper.getBoundingClientRect();
-                const scaleX = bgLayer.width / rect.width;
-                const scaleY = bgLayer.height / rect.height;
-
                 let endX = lastX;
                 let endY = lastY;
-                if(e.clientX) { 
-                    endX = (e.clientX - rect.left) * scaleX; 
-                    endY = (e.clientY - rect.top) * scaleY; 
-                }
+                if(e.clientX) { endX = e.clientX - rect.left; endY = e.clientY - rect.top; }
 
                 const activeLayer = layers.find(l => l.id === activeLayerId);
                 if(activeLayer) {
@@ -1010,10 +948,6 @@
         function toggleAnimationMode() {
             if(isSelectionActive) commitSelection(); 
             isAnimationMode = !isAnimationMode;
-            
-            // Ha kikapcsoljuk az animációt, a GIF mód is kikapcsol
-            if(!isAnimationMode) isGifImportMode = false;
-
             const btn = document.getElementById('btn-anim-toggle');
             const panel = document.getElementById('animation-panel');
             const layerPanel = document.querySelector('.layer-panel-right');
@@ -1182,7 +1116,7 @@
             if(activeThumb) activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
         }
 
-        // --- GIF IMPORT (JAVÍTOTT: 565x565 pixel) ---
+        // --- GIF IMPORT (LOGIKA) ---
         function handleGifUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -1194,66 +1128,68 @@
                 const rawFrames = gif.decompressFrames(true);
 
                 if (rawFrames.length > 0) {
-                    processGifFrames(rawFrames);
+                    processGifFrames(rawFrames, rawFrames[0].dims.width, rawFrames[0].dims.height);
                 }
             };
             reader.readAsArrayBuffer(file);
         }
 
-        function processGifFrames(rawFrames) {
-            // 1. Animáció módba váltás
+        function processGifFrames(rawFrames, width, height) {
+            // Animáció módba váltás
             if (!isAnimationMode) toggleAnimationMode();
             
-            // 2. GIF mód bekapcsolása (kényszeríti az 565x565 felbontást)
-            isGifImportMode = true;
-            resizeCanvases(); // Ez most már beállítja a canvas.width = 565, height = 565-öt
-            
+            // Vászon méret igazítása (opcionális, de ajánlott)
+            // Itt most feltételezzük, hogy a vászon méret megfelelő, vagy torzítjuk
+            const canvasW = bgLayer.width;
+            const canvasH = bgLayer.height;
+
             frames = []; // Töröljük a jelenlegi frame-eket
 
-            // Ideiglenes canvas a frame-ek összefűzéséhez (disposal handling - eredeti GIF méret)
-            const gifW = rawFrames[0].dims.width;
-            const gifH = rawFrames[0].dims.height;
+            // Ideiglenes canvas a frame-ek összefűzéséhez (disposal handling)
             const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = gifW;
-            tempCanvas.height = gifH;
+            tempCanvas.width = width;
+            tempCanvas.height = height;
             const tempCtx = tempCanvas.getContext('2d');
             
-            // Iterálunk a frameken
+            // Frame Data előállítás
+            const frameImageData = tempCtx.createImageData(width, height);
+
             rawFrames.forEach((frame) => {
+                // Patch adatok másolása a temp canvasra
                 const dims = frame.dims;
                 
-                // Patch (változás) kirajzolása a temp canvasra
-                if(frame.patch) {
-                    const patchData = new ImageData(new Uint8ClampedArray(frame.patch), dims.width, dims.height);
-                    const patchCanvas = document.createElement('canvas');
-                    patchCanvas.width = dims.width;
-                    patchCanvas.height = dims.height;
-                    patchCanvas.getContext('2d').putImageData(patchData, 0, 0);
-                    tempCtx.drawImage(patchCanvas, dims.left, dims.top);
-                }
-
-                // 3. SKÁLÁZÁS 565x565-re
-                const scaledCanvas = document.createElement('canvas');
-                scaledCanvas.width = GIF_SIZE;
-                scaledCanvas.height = GIF_SIZE;
-                const scaledCtx = scaledCanvas.getContext('2d');
+                // Mivel a gifuct-js patch-et ad, azt először ImageDatává kell konvertálni
+                const patchData = new ImageData(new Uint8ClampedArray(frame.patch), dims.width, dims.height);
                 
-                // Rárajzoljuk az eredeti méretű képet a fix méretűre (stretch/fill)
-                scaledCtx.drawImage(tempCanvas, 0, 0, gifW, gifH, 0, 0, GIF_SIZE, GIF_SIZE);
+                // Rárajzoljuk a patch-et a megfelelő helyre
+                const patchCanvas = document.createElement('canvas');
+                patchCanvas.width = dims.width;
+                patchCanvas.height = dims.height;
+                patchCanvas.getContext('2d').putImageData(patchData, 0, 0);
+                
+                // Disposal method kezelése (egyszerűsített: draw over)
+                // A 'restore to background' bonyolultabb lenne, de rajzprogramban a draw-over a standard import.
+                tempCtx.drawImage(patchCanvas, dims.left, dims.top);
+                
+                // Most méretezzük át a fő vászon méretére és mentsük el
+                const finalFrameCvs = document.createElement('canvas');
+                finalFrameCvs.width = canvasW;
+                finalFrameCvs.height = canvasH;
+                const finalCtx = finalFrameCvs.getContext('2d');
+                
+                // Középre igazítva, méretarányosan rajzoljuk ki
+                // Vagy egyszerűen nyújtsuk ki (egyszerűbb implementáció)
+                finalCtx.drawImage(tempCanvas, 0, 0, width, height, 0, 0, canvasW, canvasH);
                 
                 frames.push({
-                    imageData: scaledCtx.getImageData(0, 0, GIF_SIZE, GIF_SIZE)
+                    imageData: finalCtx.getImageData(0, 0, canvasW, canvasH)
                 });
-                
-                // Disposal kezelés (egyszerűsített "restore to background" ha kellene, de rajzprogramban általában draw-over marad)
-                // Ha a GIF "restore to previous" típusú, itt kellene visszaállítani, de a tempCtx.save/restore bonyolult lenne itt.
-                // A gifuct-js 'drawPatch' logikája általában elég lineáris lejátszáshoz.
             });
 
             currentFrameIndex = 0;
             loadFrameFromMemory(0);
             updateTimelineUI();
-            alert("GIF sikeresen betöltve és 565x565 méretre igazítva!");
+            alert("GIF sikeresen betöltve!");
         }
 
         // --- GIF EXPORT ---
@@ -1352,6 +1288,8 @@
         let currentUser=null, tokenClient, gapiInited=false, gisInited=false;
         let peer=null, conn=null, isHost=false, connectedUsers=[], maxParticipants=3;
         
+        // JAVÍTÁS: Nincs többé globális szoba mapping (ROOM_MAPPING), mert az ütközést okoz.
+        
         function openLoginModal() { document.getElementById('loginModal').style.display='flex'; }
         function performLogin() { const name=document.getElementById('loginNameInput').value.trim(); if(!name)return; localStorage.setItem('saved_user',name); currentUser=name; document.getElementById('user-btn').innerText=name; document.getElementById('loginModal').style.display='none'; document.getElementById('login-warning').style.display='none'; if(gapiInited&&gisInited&&!gapi.client.getToken())tokenClient.requestAccessToken({prompt:''}); }
         function gapiLoaded(){gapi.load('client',async()=>{await gapi.client.init({apiKey:API_KEY,discoveryDocs:[DISCOVERY_DOC]});gapiInited=true;});}
@@ -1380,8 +1318,6 @@
         function handleP2PData(data) {
             if (data.type === 'draw') {
                 const targetLayer = layers.find(l => l.id === data.layerId);
-                // JAVÍTÁS: Rajzoláskor figyelembe vesszük, hogy a másik fél canvas mérete eltérhet-e?
-                // Most feltételezzük, hogy egyezik. P2P-nél ideális, ha mindenki ugyanakkora vásznon van.
                 if(targetLayer) drawLine(targetLayer.ctx, data.x0, data.y0, data.x1, data.y1, data.color, data.width, data.isEraser);
             }
             else if (data.type === 'shape') {
@@ -1438,27 +1374,28 @@
             else if(data.type==='kick') { alert("A Host megszakította a kapcsolatot vagy kirúgott."); disconnectPeer(); }
         }
 
-        // --- P2P CORE ---
+        // --- P2P CORE (JAVÍTOTT: Dinamikus ID kezelés) ---
         function startAsHost() { 
             if(!currentUser){openLoginModal();return;} 
             if(peer)return; 
-            
             isHost=true; connectedUsers=[]; maxParticipants=parseInt(document.getElementById('room-size-limit').value)||3; 
-            const selectedRoomKey = document.getElementById('channel-select').value;
-            const fixedRoomId = FIXED_ROOMS[selectedRoomKey];
             
-            peer = new Peer(fixedRoomId, peerConfig); 
+            // Véletlenszerű ID generálása az ütközés elkerülésére
+            const randomId = "adp-" + Math.floor(Math.random() * 9000 + 1000); 
+            
+            peer = new Peer(randomId, peerConfig); 
             
             peer.on('open', id => {
                 document.getElementById('live-indicator').style.display='block';
-                document.getElementById('current-room-name').innerText = ROOM_NAMES[selectedRoomKey];
+                document.getElementById('current-room-id').innerText = id;
+                document.getElementById('host-id-display').style.display = 'block';
                 updateP2PUI(true);
             }); 
             
             peer.on('error', (err) => {
                 console.error(err);
                 if(err.type === 'unavailable-id') {
-                    alert("Ez a szoba már FOGLALT (más a Host). Kérlek kattints a 'JOIN' gombra, ha csatlakozni szeretnél!");
+                    alert("Ez az azonosító foglalt. Próbáld újra.");
                 } else {
                     alert("Kapcsolódási hiba: " + err.type);
                 }
@@ -1489,18 +1426,19 @@
             if(!currentUser){openLoginModal();return;} 
             if(peer)return; 
             
-            const selectedRoomKey = document.getElementById('channel-select').value;
-            const targetId = FIXED_ROOMS[selectedRoomKey];
+            const targetId = document.getElementById('join-id-input').value.trim();
+            if(!targetId) { alert("Írd be a szoba azonosítót!"); return; }
 
             isHost=false; 
+            // A Guestnek nem kell fix ID, a PeerJS ad egyet
             peer = new Peer(null, peerConfig); 
             
             peer.on('open', () => {
                 conn = peer.connect(targetId); 
+                
                 conn.on('open', () => {
                     conn.send({type:'handshake',username:currentUser}); 
                     document.getElementById('live-indicator').style.display='block';
-                    document.getElementById('current-room-name').innerText = ROOM_NAMES[selectedRoomKey];
                     updateP2PUI(true);
                 }); 
                 
@@ -1510,9 +1448,10 @@
                     resetP2PUI();
                 });
                 
+                // Kapcsolódási hiba kezelése
                 setTimeout(() => {
                     if(!conn.open) {
-                        alert("Nem sikerült kapcsolódni a '" + ROOM_NAMES[selectedRoomKey] + "' szobához. Lehet, hogy nincs online Host.");
+                        alert("Nem sikerült kapcsolódni. Ellenőrizd az ID-t vagy a hálózatot.");
                         resetP2PUI();
                     }
                 }, 5000);
@@ -1532,7 +1471,7 @@
         function resetP2PUI(){
             peer=null;conn=null;isHost=false;connectedUsers=[];
             document.getElementById('live-indicator').style.display='none';
-            document.getElementById('host-id-display').style.display='none'; 
+            document.getElementById('host-id-display').style.display='none';
             updateP2PUI(false);
         }
         function updateP2PUI(online){
