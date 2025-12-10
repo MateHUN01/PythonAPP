@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Orosz Szótanuló - Kék Téma</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #121212;
+            --card-bg: #1e1e1e;
+            --text-main: #ffffff;
+            --text-sub: #b0b0b0;
+            --accent: #2979ff; /* Élénk kék */
+            --accent-dark: #1565c0;
+            --success: #00e676;
+            --danger: #ff1744;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Montserrat', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* HEADER */
+        header {
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1f1f1f;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+        h1 { margin: 0; font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: 1px; }
+        .reset-btn {
+            background: transparent; border: 1px solid #444;
+            color: #888; padding: 6px 14px; border-radius: 20px;
+            font-size: 11px; cursor: pointer; text-transform: uppercase;
+        }
+
+        /* PROGRESS BAR */
+        .progress-container { width: 100%; height: 4px; background: #333; }
+        .progress-bar { height: 100%; background: var(--success); width: 0%; transition: width 0.3s ease; }
+
+        /* MAIN AREA */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            perspective: 1000px;
+            position: relative; /* For overlays */
+        }
+
+        /* CARD FLIP EFFECT */
+        .scene {
+            width: 100%;
+            max-width: 340px;
+            height: 420px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+            transform-style: preserve-3d;
+            border-radius: 24px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+        }
+
+        .card.is-flipped { transform: rotateY(180deg); }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            text-align: center;
+            background: var(--card-bg);
+            border: 1px solid #333;
+        }
+
+        .card-face.front {
+            background: linear-gradient(145deg, #1e1e1e, #252525);
+        }
+
+        .card-face.back {
+            background: linear-gradient(145deg, #2a2a2a, #222);
+            transform: rotateY(180deg);
+            border: 2px solid var(--accent);
+        }
+
+        /* TEXT STYLES */
+        .word-main {
+            font-size: 38px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: var(--text-main);
+            letter-spacing: 0.5px;
+        }
+        
+        .pronunciation {
+            font-size: 20px;
+            color: var(--accent);
+            font-style: italic;
+            font-weight: 500;
+            margin-top: 10px;
+            opacity: 0.9;
+        }
+        
+        .word-meaning {
+            font-size: 32px;
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .hint-text {
+            position: absolute;
+            bottom: 25px;
+            font-size: 11px;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* CONTROLS CONTAINER */
+        .controls-container {
+            width: 100%;
+            padding-bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* LEARN MODE CONTROLS */
+        .nav-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px; /* Középre igazítás térközzel */
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .nav-btn {
+            background: #333;
+            border: none;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            transition: transform 0.1s, background 0.2s;
+        }
+        .nav-btn:active { transform: scale(0.92); }
+        .nav-btn:hover { background: #444; }
+
+        .counter {
+            font-size: 14px;
+            color: #777;
+            font-weight: 600;
+            letter-spacing: 1px;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        /* MARK KNOWN BUTTON */
+        .mark-known-btn {
+            background: rgba(41, 121, 255, 0.1);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            margin-top: 5px;
+        }
+        .mark-known-btn.active {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 0 15px rgba(41, 121, 255, 0.4);
+        }
+        .mark-known-btn:active { transform: scale(0.96); }
+
+        /* QUIZ MODE CONTROLS */
+        .quiz-controls {
+            display: none; /* Alapból rejtve */
+            flex-direction: row;
+            gap: 20px;
+            width: 100%;
+            justify-content: center;
+            padding: 20px;
+        }
+        .quiz-btn {
+            flex: 1;
+            max-width: 140px;
+            padding: 15px;
+            border-radius: 16px;
+            border: none;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            color: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .quiz-btn.fail { background: #d32f2f; }
+        .quiz-btn.pass { background: #388e3c; }
+        .quiz-btn:active { transform: translateY(2px); }
+
+        /* RESULT OVERLAY */
+        .result-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(18, 18, 18, 0.95);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            text-align: center;
+            padding: 20px;
+            backdrop-filter: blur(5px);
+        }
+        .result-score { font-size: 60px; font-weight: 800; color: var(--accent); margin-bottom: 10px; }
+        .result-text { font-size: 18px; color: #ccc; margin-bottom: 30px; }
+        .action-btn {
+            background: var(--text-main); color: var(--bg);
+            border: none; padding: 15px 30px; border-radius: 30px;
+            font-weight: 700; cursor: pointer; font-size: 16px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 id="header-title">OROSZ 100</h1>
+        <button class="reset-btn" onclick="resetProgress()">Újrakezdés</button>
+    </header>
+
+    <div class="progress-container">
+        <div class="progress-bar" id="progress-bar"></div>
+    </div>
+
+    <main>
+        <!-- KÁRTYA -->
+        <div class="scene" id="card-scene" onclick="flipCard()">
+            <div class="card" id="card">
+                <div class="card-face front">
+                    <div class="word-main" id="word-ru">Загрузка...</div>
+                    <div class="pronunciation" id="word-pron">...</div>
+                    <div class="hint-text">Érintsd meg a fordításhoz</div>
+                </div>
+                <div class="card-face back">
+                    <div class="word-meaning" id="word-hu">...</div>
+                    <div class="hint-text">Érintsd meg a visszafordításhoz</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- EREDMÉNYEK -->
+        <div class="result-overlay" id="result-view">
+            <div class="result-score" id="final-score">0%</div>
+            <div class="result-text" id="final-msg">A megtanult szavakból ennyit tudtál biztosan.</div>
+            <button class="action-btn" onclick="restartApp()">Újra az elejéről</button>
+        </div>
+    </main>
+
+    <div class="controls-container">
+        
+        <!-- TANULÁS GOMBOK -->
+        <div class="nav-controls" id="learn-controls">
+            <button class="nav-btn prev" onclick="prevCard()">
+                <span class="material-icons">arrow_back</span>
+            </button>
+            <div class="counter" id="counter">1 / 100</div>
+            <button class="nav-btn next" onclick="nextCard()">
+                <span class="material-icons">arrow_forward</span>
+            </button>
+        </div>
+
+        <button class="mark-known-btn" id="mark-btn" onclick="toggleKnown()">
+            <span class="material-icons">check_circle_outline</span>
+            MÁR TUDOM
+        </button>
+
+        <!-- VIZSGA GOMBOK -->
+        <div class="quiz-controls" id="quiz-controls">
+            <button class="quiz-btn fail" onclick="handleQuiz(false)">
+                <span class="material-icons">close</span>
+                NEM TUDTAM
+            </button>
+            <button class="quiz-btn pass" onclick="handleQuiz(true)">
+                <span class="material-icons">check</span>
+                TUDTAM
+            </button>
+        </div>
+
+    </div>
+
+<script>
+    // 100 Gyakori Orosz szó (Cirill - Kiejtés - Magyar)
+    const words = [
+        { ru: "Привет", pron: "(Privet)", hu: "Szia / Helló" },
+        { ru: "Здравствуйте", pron: "(Zdrasztvujtye)", hu: "Jónapot (Hivatalos)" },
+        { ru: "Пока", pron: "(Paka)", hu: "Viszlát (Baráti)" },
+        { ru: "Спасибо", pron: "(Szpasziba)", hu: "Köszönöm" },
+        { ru: "Пожалуйста", pron: "(Pazsaluszta)", hu: "Kérem / Szívesen" },
+        { ru: "Да", pron: "(Da)", hu: "Igen" },
+        { ru: "Нет", pron: "(Nyet)", hu: "Nem" },
+        { ru: "Извините", pron: "(Izvinyitye)", hu: "Elnézést" },
+        { ru: "Хорошо", pron: "(Haraso)", hu: "Jól / Rendben" },
+        { ru: "Плохо", pron: "(Ploha)", hu: "Rosszul" },
+        { ru: "Как дела?", pron: "(Kak gyela?)", hu: "Hogy vagy?" },
+        { ru: "Меня зовут...", pron: "(Menya zavut...)", hu: "A nevem..." },
+        { ru: "Я", pron: "(Ja)", hu: "Én" },
+        { ru: "Ты", pron: "(Ti)", hu: "Te" },
+        { ru: "Он", pron: "(On)", hu: "Ő (Hímnem)" },
+        { ru: "Она", pron: "(Ana)", hu: "Ő (Nőnem)" },
+        { ru: "Мы", pron: "(Mi)", hu: "Mi" },
+        { ru: "Они", pron: "(Anyi)", hu: "Ők" },
+        { ru: "Друг", pron: "(Drug)", hu: "Barát" },
+        { ru: "Семья", pron: "(Szemja)", hu: "Család" },
+        { ru: "Дом", pron: "(Dom)", hu: "Ház / Otthon" },
+        { ru: "Машина", pron: "(Masina)", hu: "Autó" },
+        { ru: "Работа", pron: "(Rabota)", hu: "Munka" },
+        { ru: "Школа", pron: "(Skola)", hu: "Iskola" },
+        { ru: "Магазин", pron: "(Magazin)", hu: "Bolt" },
+        { ru: "Улица", pron: "(Ulica)", hu: "Utca" },
+        { ru: "Город", pron: "(Gorad)", hu: "Város" },
+        { ru: "Деньги", pron: "(Gyengi)", hu: "Pénz" },
+        { ru: "Время", pron: "(Vremja)", hu: "Idő" },
+        { ru: "Сегодня", pron: "(Szivodnya)", hu: "Ma" },
+        { ru: "Завтра", pron: "(Zavtra)", hu: "Holnap" },
+        { ru: "Вчера", pron: "(Vcsera)", hu: "Tegnap" },
+        { ru: "День", pron: "(Gyeny)", hu: "Nap" },
+        { ru: "Ночь", pron: "(Nocs)", hu: "Éjszaka" },
+        { ru: "Утро", pron: "(Utra)", hu: "Reggel" },
+        { ru: "Вечер", pron: "(Vecser)", hu: "Este" },
+        { ru: "Вода", pron: "(Vada)", hu: "Víz" },
+        { ru: "Еда", pron: "(Jeda)", hu: "Étel" },
+        { ru: "Хлеб", pron: "(Hleb)", hu: "Kenyér" },
+        { ru: "Чай", pron: "(Csáj)", hu: "Tea" },
+        { ru: "Кофе", pron: "(Kofe)", hu: "Kávé" },
+        { ru: "Пиво", pron: "(Pivo)", hu: "Sör" },
+        { ru: "Большой", pron: "(Bolsoj)", hu: "Nagy" },
+        { ru: "Маленький", pron: "(Malenykij)", hu: "Kicsi" },
+        { ru: "Новый", pron: "(Novij)", hu: "Új" },
+        { ru: "Старый", pron: "(Sztarij)", hu: "Régi" },
+        { ru: "Красивый", pron: "(Kraszivij)", hu: "Szép" },
+        { ru: "Вкусный", pron: "(Vkuszni)", hu: "Finom" },
+        { ru: "Интересный", pron: "(Intyeresznij)", hu: "Érdekes" },
+        { ru: "Трудный", pron: "(Trudni)", hu: "Nehéz" },
+        { ru: "Лёгкий", pron: "(Ljohkij)", hu: "Könnyű" },
+        { ru: "Быть", pron: "(Bity)", hu: "Lenni" },
+        { ru: "Идти", pron: "(Idtyi)", hu: "Menni (gyalog)" },
+        { ru: "Ехать", pron: "(Jehaty)", hu: "Menni (járművel)" },
+        { ru: "Знать", pron: "(Znaty)", hu: "Tudni" },
+        { ru: "Думать", pron: "(Dumaty)", hu: "Gondolni" },
+        { ru: "Видеть", pron: "(Vigyet)", hu: "Látni" },
+        { ru: "Слышать", pron: "(Szlisaty)", hu: "Hallani" },
+        { ru: "Любить", pron: "(Ljubity)", hu: "Szeretni" },
+        { ru: "Хотеть", pron: "(Hatyety)", hu: "Akarni" },
+        { ru: "Делать", pron: "(Gyelaty)", hu: "Csinálni" },
+        { ru: "Говорить", pron: "(Gavarit)", hu: "Beszélni" },
+        { ru: "Понимать", pron: "(Panyimaty)", hu: "Érteni" },
+        { ru: "Кто", pron: "(Kto)", hu: "Ki?" },
+        { ru: "Что", pron: "(Sto)", hu: "Mi?" },
+        { ru: "Где", pron: "(Ggye)", hu: "Hol?" },
+        { ru: "Когда", pron: "(Kagda)", hu: "Mikor?" },
+        { ru: "Почему", pron: "(Pacsemu)", hu: "Miért?" },
+        { ru: "Сколько", pron: "(Szkolka)", hu: "Mennyi?" },
+        { ru: "Один", pron: "(Agyin)", hu: "Egy" },
+        { ru: "Два", pron: "(Dva)", hu: "Kettő" },
+        { ru: "Три", pron: "(Tri)", hu: "Három" },
+        { ru: "Четыре", pron: "(Csetire)", hu: "Négy" },
+        { ru: "Пять", pron: "(Pjaty)", hu: "Öt" },
+        { ru: "Десять", pron: "(Gyeszjaty)", hu: "Tíz" },
+        { ru: "Сто", pron: "(Szto)", hu: "Száz" },
+        { ru: "Мир", pron: "(Mir)", hu: "Világ / Béke" },
+        { ru: "Человек", pron: "(Cselavek)", hu: "Ember" },
+        { ru: "Женщина", pron: "(Zsencsina)", hu: "Nő" },
+        { ru: "Мужчина", pron: "(Muscsina)", hu: "Férfi" },
+        { ru: "Ребёнок", pron: "(Ribjonak)", hu: "Gyerek" },
+        { ru: "Девушка", pron: "(Gyevuska)", hu: "Lány / Hölgy" },
+        { ru: "Парень", pron: "(Paren)", hu: "Srác / Fiú" },
+        { ru: "Книга", pron: "(Knyiga)", hu: "Könyv" },
+        { ru: "Стол", pron: "(Sztol)", hu: "Asztal" },
+        { ru: "Стул", pron: "(Sztul)", hu: "Szék" },
+        { ru: "Дверь", pron: "(Dver)", hu: "Ajtó" },
+        { ru: "Окно", pron: "(Akno)", hu: "Ablak" },
+        { ru: "Комната", pron: "(Komnata)", hu: "Szoba" },
+        { ru: "Кровать", pron: "(Kravaty)", hu: "Ágy" },
+        { ru: "Собака", pron: "(Szabaka)", hu: "Kutya" },
+        { ru: "Кошка", pron: "(Koska)", hu: "Macska" },
+        { ru: "Россия", pron: "(Rasszija)", hu: "Oroszország" },
+        { ru: "Венгрия", pron: "(Vengrija)", hu: "Magyarország" },
+        { ru: "Язык", pron: "(Jazik)", hu: "Nyelv" },
+        { ru: "Слово", pron: "(Szlovo)", hu: "Szó" },
+        { ru: "Здесь", pron: "(Zgyesz)", hu: "Itt" },
+        { ru: "Там", pron: "(Tam)", hu: "Ott" }
+    ];
+
+    // STATE
+    let currentIndex = 0;
+    let knownWords = new Set(); // Indexek tárolása
+    let mode = 'learn'; // 'learn' | 'quiz' | 'result'
+    
+    // Quiz State
+    let quizList = [];
+    let quizIndex = 0;
+    let quizScore = 0;
+
+    // INIT
+    window.onload = function() {
+        const saved = localStorage.getItem('ru_progress_v2');
+        if(saved) {
+            const data = JSON.parse(saved);
+            currentIndex = data.idx || 0;
+            if(data.known) knownWords = new Set(data.known);
+        }
+        updateUI();
+    };
+
+    function updateUI() {
+        if(mode === 'learn') {
+            document.getElementById('learn-controls').style.display = 'flex';
+            document.getElementById('mark-btn').style.display = 'flex';
+            document.getElementById('quiz-controls').style.display = 'none';
+            document.getElementById('result-view').style.display = 'none';
+            document.getElementById('card-scene').style.display = 'block';
+            document.getElementById('header-title').innerText = "OROSZ 100";
+            
+            updateCard(words[currentIndex], currentIndex, words.length);
+            updateMarkBtn();
+
+        } else if(mode === 'quiz') {
+            document.getElementById('learn-controls').style.display = 'none';
+            document.getElementById('mark-btn').style.display = 'none';
+            document.getElementById('quiz-controls').style.display = 'flex';
+            document.getElementById('result-view').style.display = 'none';
+            document.getElementById('card-scene').style.display = 'block';
+            document.getElementById('header-title').innerText = "VIZSGA";
+
+            // Quiz kártya
+            const wordIndex = quizList[quizIndex];
+            updateCard(words[wordIndex], quizIndex, quizList.length);
+
+        } else if(mode === 'result') {
+            document.getElementById('result-view').style.display = 'flex';
+            document.getElementById('header-title').innerText = "EREDMÉNY";
+        }
+    }
+
+    function updateCard(data, idx, total) {
+        const card = document.getElementById('card');
+        card.classList.remove('is-flipped');
+
+        setTimeout(() => {
+            document.getElementById('word-ru').innerText = data.ru;
+            document.getElementById('word-pron').innerText = data.pron;
+            document.getElementById('word-hu').innerText = data.hu;
+            
+            document.getElementById('counter').innerText = `${idx + 1} / ${total}`;
+            const pct = ((idx + 1) / total) * 100;
+            document.getElementById('progress-bar').style.width = `${pct}%`;
+        }, 150);
+    }
+
+    function updateMarkBtn() {
+        const btn = document.getElementById('mark-btn');
+        const icon = btn.querySelector('.material-icons');
+        
+        if(knownWords.has(currentIndex)) {
+            btn.classList.add('active');
+            btn.innerHTML = '<span class="material-icons">check_circle</span> MÁR TUDOM (JELÖLVE)';
+        } else {
+            btn.classList.remove('active');
+            btn.innerHTML = '<span class="material-icons">check_circle_outline</span> MÁR TUDOM';
+        }
+        saveProgress();
+    }
+
+    function toggleKnown() {
+        if(knownWords.has(currentIndex)) {
+            knownWords.delete(currentIndex);
+        } else {
+            knownWords.add(currentIndex);
+        }
+        updateMarkBtn();
+    }
+
+    function nextCard() {
+        if(currentIndex < words.length - 1) {
+            currentIndex++;
+            updateUI();
+        } else {
+            // Vége a paklinak
+            if(knownWords.size > 0) {
+                if(confirm(`Végigértél! Megjelöltél ${knownWords.size} szót, amit már tudsz.\nIndulhat a kikérdező vizsga?`)) {
+                    startQuiz();
+                } else {
+                    currentIndex = 0;
+                    updateUI();
+                }
+            } else {
+                alert("Végigértél, de nem jelöltél be egy szót sem, hogy már tudnád. Kezdjük újra!");
+                currentIndex = 0;
+                updateUI();
+            }
+        }
+    }
+
+    function prevCard() {
+        if(currentIndex > 0) {
+            currentIndex--;
+            updateUI();
+        }
+    }
+
+    // --- QUIZ LOGIC ---
+
+    function startQuiz() {
+        mode = 'quiz';
+        quizList = Array.from(knownWords);
+        // Opcionális: Keverés
+        quizList.sort(() => Math.random() - 0.5);
+        quizIndex = 0;
+        quizScore = 0;
+        updateUI();
+    }
+
+    function handleQuiz(known) {
+        if(known) quizScore++;
+        
+        if(quizIndex < quizList.length - 1) {
+            quizIndex++;
+            updateUI();
+        } else {
+            finishQuiz();
+        }
+    }
+
+    function finishQuiz() {
+        mode = 'result';
+        updateUI();
+        
+        const pct = Math.round((quizScore / quizList.length) * 100);
+        document.getElementById('final-score').innerText = `${pct}%`;
+        document.getElementById('final-msg').innerText = 
+            `A(z) ${quizList.length} tanult szóból ${quizScore}-re emlékeztél helyesen.`;
+    }
+
+    function flipCard() {
+        document.getElementById('card').classList.toggle('is-flipped');
+    }
+
+    function saveProgress() {
+        const data = {
+            idx: currentIndex,
+            known: Array.from(knownWords)
+        };
+        localStorage.setItem('ru_progress_v2', JSON.stringify(data));
+    }
+
+    function resetProgress() {
+        if(confirm("Törlöd a haladást és a megtanult szavakat?")) {
+            currentIndex = 0;
+            knownWords.clear();
+            localStorage.removeItem('ru_progress_v2');
+            mode = 'learn';
+            updateUI();
+        }
+    }
+
+    function restartApp() {
+        currentIndex = 0;
+        mode = 'learn';
+        updateUI();
+    }
+
+    // Billentyűzet
+    document.addEventListener('keydown', (e) => {
+        if(mode === 'learn') {
+            if(e.key === "ArrowRight") nextCard();
+            if(e.key === "ArrowLeft") prevCard();
+        }
+        if(e.key === " " || e.key === "Enter") flipCard();
+    });
+
+</script>
+</body>
+</html>
