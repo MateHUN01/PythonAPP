@@ -7,10 +7,11 @@ const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 let editor, pyodide, tokenClient;
 let gapiInited = false, gisInited = false;
 let currentUser = null, currentFileId = null;
-let userFolderId = null;
+let userFolderId = null;     // A fő mappa ID-ja (User_aerocode)
+let configFolderId = null;   // A config mappa ID-ja (User_aerocode/config)
+let configFileId = null;     // A config.txt ID-ja
 let isDriveConnected = false;
 let inputResolver = null;
-let configId = null;
 
 // ALAPÉRTELMEZETT BEÁLLÍTÁSOK
 let appSettings = {
@@ -36,7 +37,7 @@ window.onload = function() {
         enableLiveAutocompletion: true
     });
 
-    // 2. Dropdown Event Listeners
+    // 2. Dropdown
     document.addEventListener('click', function(e) {
         const dd = document.getElementById("main-dropdown");
         const btn = document.getElementById("menu-trigger-btn");
@@ -66,7 +67,7 @@ window.onload = function() {
     });
 };
 
-// --- SETTINGS LOGIC ---
+// --- SETTINGS UI ---
 function openSettings() {
     document.getElementById('set-theme').value = appSettings.theme;
     document.getElementById('set-fontsize').value = appSettings.fontSize;
@@ -82,22 +83,41 @@ function closeSettings() {
 }
 
 async function saveSettingsToDrive() {
+    // UI értékek mentése memóriába
     appSettings.theme = document.getElementById('set-theme').value;
     appSettings.fontSize = document.getElementById('set-fontsize').value;
     appSettings.completionKey = document.getElementById('set-keybind').value;
 
     applySettingsToEditor();
 
-    if(isDriveConnected && userFolderId) {
-        const content = JSON.stringify(appSettings, null, 2);
+    if(isDriveConnected) {
         try {
-            if(configId) {
-                await saveFile(configId, null, content, null, 'application/json');
+            // 1. Biztosítjuk a fő mappát
+            const mainFolder = await getMainFolderId();
+            if(!mainFolder) throw new Error("Fő mappa hiba");
+
+            // 2. Biztosítjuk a config mappát a fő mappán belül
+            const confFolder = await ensureFolder("config", mainFolder);
+            if(!confFolder) throw new Error("Config mappa hiba");
+
+            // 3. Mentés a config.txt-be
+            const content = JSON.stringify(appSettings, null, 2);
+            
+            // Megnézzük létezik-e már a fájl, ha nem, akkor a loadConfig már beállította volna, de biztosra megyünk
+            if(configFileId) {
+                await saveFile(configFileId, null, content, null, 'text/plain');
             } else {
-                await saveFile(null, 'config.json', content, userFolderId, 'application/json');
+                // Keresés név alapján a config mappában
+                const existing = await findFileInFolder("config.txt", confFolder);
+                if(existing) {
+                    configFileId = existing.id;
+                    await saveFile(configFileId, null, content, null, 'text/plain');
+                } else {
+                    await saveFile(null, 'config.txt', content, confFolder, 'text/plain');
+                }
             }
             alert("Beállítások mentve a felhőbe! ☁️");
-        } catch(e) { console.error("Config save err", e); }
+        } catch(e) { console.error("Config save err", e); alert("Hiba a beállítások mentésekor."); }
     } else {
         alert("Beállítások alkalmazva (Offline).");
     }
@@ -143,26 +163,99 @@ function applySettingsToEditor() {
     editor.resize();
 }
 
-// --- CONFIG FILE MANAGEMENT ---
-async function loadConfigFromDrive() {
-    if(!isDriveConnected || !userFolderId) return;
+// --- DRIVE FOLDER MANAGEMENT (JAVÍTOTT LOGIKA) ---
 
+// Univerzális mappa kereső/létrehozó
+// Ha parentId null, akkor a gyökérben keres
+async function ensureFolder(folderName, parentId = null) {
     try {
-        const q = `'${userFolderId}' in parents and name='config.json' and trashed=false`;
+        let q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
+        if (parentId) {
+            q += ` and '${parentId}' in parents`;
+        }
+
         const res = await gapi.client.drive.files.list({q: q, fields: 'files(id)'});
         
-        if(res.result.files.length > 0) {
-            configId = res.result.files[0].id;
-            const fileRes = await gapi.client.drive.files.get({fileId: configId, alt: 'media'});
+        if (res.result.files.length > 0) {
+            // Ha már létezik, visszaadjuk az ELSŐ találat ID-ját (így nem lesz duplikáció)
+            console.log(`Mappa megtalálva: ${folderName} -> ${res.result.files[0].id}`);
+            return res.result.files[0].id;
+        } else {
+            // Ha nem létezik, létrehozzuk
+            const fileMetadata = {
+                'name': folderName,
+                'mimeType': 'application/vnd.google-apps.folder'
+            };
+            if (parentId) {
+                fileMetadata.parents = [parentId];
+            }
+            
+            const createRes = await gapi.client.drive.files.create({
+                resource: fileMetadata,
+                fields: 'id'
+            });
+            console.log(`Új mappa létrehozva: ${folderName} -> ${createRes.result.id}`);
+            return createRes.result.id;
+        }
+    } catch (e) {
+        console.error(`Hiba a mappa kezelésekor (${folderName}):`, e);
+        return null;
+    }
+}
+
+// Fájl keresése adott mappában név alapján
+async function findFileInFolder(fileName, folderId) {
+    try {
+        const q = `'${folderId}' in parents and name='${fileName}' and trashed=false`;
+        const res = await gapi.client.drive.files.list({q: q, fields: 'files(id, name)'});
+        if(res.result.files.length > 0) return res.result.files[0];
+        return null;
+    } catch(e) { return null; }
+}
+
+async function getMainFolderId() {
+    if(userFolderId) return userFolderId;
+    await ensureAuth();
+    // Itt hívjuk a javított ensureFoldert a gyökérben
+    userFolderId = await ensureFolder(`${currentUser}_aerocode`, null);
+    return userFolderId;
+}
+
+// --- CONFIG LOADING ---
+
+async function loadConfigFromDrive() {
+    if(!isDriveConnected) return;
+
+    try {
+        // 1. Fő mappa
+        const mainId = await getMainFolderId();
+        if(!mainId) return;
+
+        // 2. Config mappa
+        const confId = await ensureFolder("config", mainId);
+        configFolderId = confId;
+
+        // 3. Config fájl keresése
+        const file = await findFileInFolder("config.txt", confId);
+
+        if(file) {
+            configFileId = file.id;
+            const fileRes = await gapi.client.drive.files.get({fileId: configFileId, alt: 'media'});
+            // JSON parse, de ha stringként jön, kezeljük
             if(typeof fileRes.result === 'object') appSettings = fileRes.result;
             else appSettings = JSON.parse(fileRes.body);
+            console.log("Config betöltve:", appSettings);
         } else {
-            const content = JSON.stringify(appSettings);
-            await saveFile(null, 'config.json', content, userFolderId, 'application/json');
+            console.log("Nincs config fájl, alapértelmezett marad.");
+            // Opcionális: létrehozhatjuk most azonnal az alapértelmezettet
         }
         applySettingsToEditor();
-    } catch(e) { console.error("Config load error", e); }
+    } catch(e) {
+        console.error("Config load error", e);
+        applySettingsToEditor(); // Hiba esetén is alkalmazzuk az alapokat
+    }
 }
+
 
 function toggleSidePanel() { 
     document.getElementById("sidePanel").classList.toggle("open");
@@ -178,7 +271,7 @@ function switchView(id) {
 }
 
 async function backToDashboard() {
-    if (currentFileId && isDriveConnected && document.getElementById('current-filename').textContent !== 'config.json') {
+    if (currentFileId && isDriveConnected && document.getElementById('current-filename').textContent !== 'config.txt') {
         try {
             await saveFile(currentFileId, null, editor.getValue(), null);
         } catch(e) { console.error("Auto-save failed", e); }
@@ -261,8 +354,7 @@ function logout() {
     }
 }
 
-// --- DRIVE LOGIKA ---
-
+// --- DRIVE AUTH ---
 async function ensureAuth() {
     return new Promise((resolve, reject) => {
         if (gapi.client.getToken() === null) {
@@ -281,79 +373,26 @@ async function connectGoogleDrive() {
     try {
         await ensureAuth();
         document.getElementById('drive-connect-btn').style.display = 'none';
+        // Reseteljük a mappákat, hogy újra megkeresse őket
         userFolderId = null;
+        configFolderId = null;
+        
         loadDashboardFiles();
         loadConfigFromDrive();
         setupDashboard();
     } catch(e) { throw e; }
 }
 
-async function getFolderId() {
-    if(userFolderId) return userFolderId;
-    await ensureAuth();
-    const folderName = `${currentUser}_aerocode`; 
-    try {
-        const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
-        const res = await gapi.client.drive.files.list({q: q, fields: 'files(id)'});
-        if(res.result.files.length > 0) {
-            userFolderId = res.result.files[0].id;
-        } else {
-            const c = await gapi.client.drive.files.create({ 
-                resource: { name: folderName, mimeType: 'application/vnd.google-apps.folder' }, 
-                fields: 'id' 
-            });
-            userFolderId = c.result.id;
-        }
-        return userFolderId;
-    } catch(e) { console.error("Folder error:", e); return null; }
-}
-
-// --- ÁTNEVEZÉS FUNKCIÓK ---
-
-async function promptRename(fileId, currentName, event) {
-    // Megállítjuk a kattintást, hogy ne nyissa meg a fájlt
-    event.stopPropagation();
-    
-    const newName = prompt("Add meg az új nevet:", currentName);
-    if(newName && newName !== currentName) {
-        // Hozzáadjuk a .py-t ha nincs
-        const finalName = newName.endsWith(".py") ? newName : newName + ".py";
-        
-        try {
-            await apiRenameFile(fileId, finalName);
-            // Ha sikerült, frissítjük a listát
-            loadDashboardFiles();
-        } catch(e) {
-            alert("Hiba az átnevezéskor!");
-            console.error(e);
-        }
-    }
-}
-
-async function apiRenameFile(fileId, newName) {
-    const meta = { name: newName };
-    const token = gapi.client.getToken().access_token;
-    
-    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
-        method: 'PATCH',
-        headers: {
-            'Authorization': 'Bearer ' + token,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(meta)
-    });
-}
-
-// ---------------------------
-
 async function loadDashboardFiles() {
     if(!isDriveConnected) return;
     const grid = document.getElementById('project-grid');
     grid.innerHTML = '';
-    const folderId = await getFolderId();
+    
+    const folderId = await getMainFolderId();
     if(!folderId) return;
     
-    const q = `'${folderId}' in parents and trashed=false and name != 'config.json'`;
+    // Lekérjük a fájlokat, de KIZÁRJUK a "config" mappát a listából
+    const q = `'${folderId}' in parents and trashed=false and mimeType != 'application/vnd.google-apps.folder'`;
     
     try {
         const res = await gapi.client.drive.files.list({
@@ -366,7 +405,6 @@ async function loadDashboardFiles() {
                 let dName = f.name;
                 const d = document.createElement('div');
                 d.className = 'project-card';
-                // Átnevezés gomb hozzáadása
                 d.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                         <div style="font-size:30px;">📄</div>
@@ -386,6 +424,30 @@ async function loadDashboardFiles() {
     } catch(e){ console.error(e); }
 }
 
+// --- FILE OPERATIONS ---
+
+async function promptRename(fileId, currentName, event) {
+    event.stopPropagation();
+    const newName = prompt("Add meg az új nevet:", currentName);
+    if(newName && newName !== currentName) {
+        const finalName = newName.endsWith(".py") ? newName : newName + ".py";
+        try {
+            await apiRenameFile(fileId, finalName);
+            loadDashboardFiles();
+        } catch(e) { alert("Hiba az átnevezéskor!"); }
+    }
+}
+
+async function apiRenameFile(fileId, newName) {
+    const meta = { name: newName };
+    const token = gapi.client.getToken().access_token;
+    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(meta)
+    });
+}
+
 async function promptSaveDrive() {
     document.getElementById("main-dropdown").classList.remove("show");
     if(!isDriveConnected) { 
@@ -393,7 +455,7 @@ async function promptSaveDrive() {
             await connectGoogleDrive();
         } else { return; }
     }
-    const folderId = await getFolderId();
+    const folderId = await getMainFolderId();
     if(!folderId) return alert("Hiba: Nem sikerült elérni a mappát.");
     let dName = document.getElementById('current-filename').textContent;
     if(!currentFileId || dName === "Névtelen.py") {
@@ -427,8 +489,9 @@ async function saveFile(id, name, content, folderId, mimeType = 'text/plain') {
     const res = await fetch(url, { method: method, headers: { 'Authorization': 'Bearer '+token }, body: form });
     const data = await res.json();
     
-    if(!id && name !== 'config.json') currentFileId = data.id;
-    if(!id && name === 'config.json') configId = data.id;
+    // Csak akkor mentjük a currentFileId-t, ha ez egy PROJEKT fájl (nem a config)
+    if(!id && name !== 'config.txt') currentFileId = data.id;
+    if(!id && name === 'config.txt') configFileId = data.id;
 }
 
 async function loadFile(id, name) {
@@ -450,11 +513,10 @@ function openEditorNew() {
 
 function refreshDashboard() { loadDashboardFiles(); }
 
-// --- PYODIDE OKOS HIBAKEZELÉSSEL ---
+// --- PYODIDE ---
 async function initPyodide() {
     try {
         pyodide = await loadPyodide();
-        
         await pyodide.runPythonAsync(`
             import sys, js, ast, traceback
             
@@ -586,7 +648,6 @@ async function runPython() {
     document.getElementById("sidePanel").classList.add("open");
     setTimeout(() => editor.resize(), 100);
     document.getElementById("output").innerText="";
-    
     try { 
         pyodide.globals.set("user_code_str", editor.getValue());
         await pyodide.runPythonAsync("await run_wrapper(user_code_str)"); 
