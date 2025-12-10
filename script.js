@@ -34,20 +34,19 @@ window.onload = function() {
         document.getElementById("main-dropdown").classList.toggle("show");
     });
 
-    // 3. Start Skip Timer immediately (Független szálon)
+    // 3. Start Skip Timer immediately
     setTimeout(() => {
         const skipBtn = document.getElementById('skip-login-btn');
         if(skipBtn) skipBtn.style.display = 'block';
     }, 3000);
 
-    // 4. Try Async Pyodide Load (Non-blocking)
+    // 4. Try Async Pyodide Load
     initPyodide();
 
     // 5. Check LocalStorage User
     const savedUser = localStorage.getItem('ac_user');
     if(savedUser) {
         document.getElementById('loginNameInput').value = savedUser;
-        // Ha van mentett user, elrejtjük a loadert, de hagyjuk, hogy kattintson a belépésre
         document.getElementById('loading-overlay').style.display = 'none';
     }
 
@@ -67,10 +66,7 @@ function switchView(id) {
 
 // --- AUTO-SAVE ON BACK ---
 async function backToDashboard() {
-    // Ha van megnyitott fájl (van ID) és van kapcsolat, mentsünk csendben
     if (currentFileId && isDriveConnected) {
-        // Opcionális: mutathatsz egy kis "Mentés..." feliratot, vagy csak spinner-t
-        // De mivel háttérben kérted:
         try {
             await saveFile(currentFileId, null, editor.getValue(), null);
             console.log("Auto-saved on back");
@@ -78,8 +74,6 @@ async function backToDashboard() {
             console.error("Auto-save failed", e);
         }
     }
-    
-    // Frissítsük a listát és lépjünk vissza
     loadDashboardFiles();
     switchView('view-dashboard');
 }
@@ -136,7 +130,8 @@ function logout() {
     }
 }
 
-// --- DRIVE ---
+// --- DRIVE LOGIKA (FRISSÍTVE) ---
+
 async function ensureAuth() {
     return new Promise((resolve, reject) => {
         if (gapi.client.getToken() === null) {
@@ -156,42 +151,70 @@ async function connectGoogleDrive() {
         await ensureAuth();
         alert("Sikeres csatolás!");
         document.getElementById('drive-connect-btn').style.display = 'none';
+        userFolderId = null; // Reseteljük, hogy az új user mappáját kérje le
         loadDashboardFiles();
-    } catch(e) { alert("Hiba a csatoláskor."); }
+    } catch(e) { 
+        console.error(e);
+        alert("Hiba a csatoláskor."); 
+    }
 }
 
 async function getFolderId() {
+    // Ha már megvan, visszaadjuk
     if(userFolderId) return userFolderId;
+    
     await ensureAuth();
-    const folderName = "AeroCode_Pro_Files";
+    
+    // Mappa név a user alapján
+    const folderName = `${currentUser}_aerocode`; 
+    
     try {
         const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
         const res = await gapi.client.drive.files.list({q: q, fields: 'files(id)'});
-        if(res.result.files.length > 0) userFolderId = res.result.files[0].id;
-        else {
-            const c = await gapi.client.drive.files.create({ resource: { name: folderName, mimeType: 'application/vnd.google-apps.folder' }, fields: 'id' });
+        
+        if(res.result.files.length > 0) {
+            userFolderId = res.result.files[0].id;
+        } else {
+            // Létrehozás ha nincs
+            const c = await gapi.client.drive.files.create({ 
+                resource: { 
+                    name: folderName, 
+                    mimeType: 'application/vnd.google-apps.folder' 
+                }, 
+                fields: 'id' 
+            });
             userFolderId = c.result.id;
         }
         return userFolderId;
-    } catch(e) { return null; }
+    } catch(e) { 
+        console.error("Folder error:", e);
+        return null; 
+    }
 }
 
 async function loadDashboardFiles() {
     if(!isDriveConnected) return;
     const grid = document.getElementById('project-grid');
     grid.innerHTML = '';
+    
     const folderId = await getFolderId();
     if(!folderId) return;
     
-    const prefix = currentUser + "_";
-    const q = `'${folderId}' in parents and trashed=false and name contains '${prefix}'`;
+    // Csak az adott mappában lévő fájlokat listázzuk
+    const q = `'${folderId}' in parents and trashed=false`;
+    
     try {
-        const res = await gapi.client.drive.files.list({q: q, fields: 'files(id, name)', orderBy: 'createdTime desc'});
+        const res = await gapi.client.drive.files.list({
+            q: q, 
+            fields: 'files(id, name)', 
+            orderBy: 'createdTime desc'
+        });
+        
         const files = res.result.files;
         if(files && files.length > 0) {
             document.getElementById('empty-state').style.display='none';
             files.forEach(f => {
-                let dName = f.name.replace(prefix, "");
+                let dName = f.name; // Tiszta név
                 const d = document.createElement('div');
                 d.className = 'project-card';
                 d.innerHTML = `<div style="font-size:30px; margin-bottom:10px;">📄</div><div class="project-name">${dName}</div>`;
@@ -200,29 +223,43 @@ async function loadDashboardFiles() {
             });
         } else {
             document.getElementById('empty-state').style.display='block';
-            document.getElementById('offline-msg').textContent = "Üres mappa.";
+            document.getElementById('offline-msg').textContent = "A mappa üres.";
         }
     } catch(e){ console.error(e); }
 }
 
 async function promptSaveDrive() {
     document.getElementById("main-dropdown").classList.remove("show");
-    if(!isDriveConnected) { if(confirm("Csatolod a Drive-ot?")) await connectGoogleDrive(); else return; }
+    
+    if(!isDriveConnected) { 
+        if(confirm("A mentéshez csatolni kell a Drive-ot. Csatolod most?")) {
+            await connectGoogleDrive();
+        } else {
+            return; 
+        }
+    }
     
     const folderId = await getFolderId();
-    if(!folderId) return;
+    if(!folderId) return alert("Hiba: Nem sikerült elérni a mappát.");
 
     let dName = document.getElementById('current-filename').textContent;
+    
+    // Ha új fájl (Névtelen.py) VAGY még nincs ID-ja
     if(!currentFileId || dName === "Névtelen.py") {
-        const input = prompt("Fájlnév:", "projekt");
+        const input = prompt("Add meg a fájl nevét:", "program");
         if(!input) return;
-        dName = input.endsWith(".py") ? input : input+".py";
-        await saveFile(null, currentUser+"_"+dName, editor.getValue(), folderId);
+        
+        dName = input.endsWith(".py") ? input : input + ".py";
+        
+        // Mentés a mappába, tiszta névvel
+        await saveFile(null, dName, editor.getValue(), folderId);
+        
         document.getElementById('current-filename').textContent = dName;
     } else {
+        // Meglévő fájl frissítése
         await saveFile(currentFileId, null, editor.getValue(), null);
     }
-    alert("Mentve!");
+    alert("Sikeres mentés a felhőbe! ☁️");
 }
 
 async function saveFile(id, name, content, folderId) {
@@ -237,10 +274,13 @@ async function saveFile(id, name, content, folderId) {
     
     const token = gapi.client.getToken().access_token;
     const method = id ? 'PATCH' : 'POST';
-    const url = id ? `https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=multipart` : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+    const url = id ? 
+        `https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=multipart` : 
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
     
     const res = await fetch(url, { method: method, headers: { 'Authorization': 'Bearer '+token }, body: form });
     const data = await res.json();
+    
     if(!id) currentFileId = data.id;
 }
 
@@ -251,7 +291,7 @@ async function loadFile(id, name) {
         currentFileId = id;
         document.getElementById('current-filename').textContent = name;
         switchView('view-editor');
-    } catch(e){ alert("Hiba"); }
+    } catch(e){ alert("Hiba a betöltéskor."); }
 }
 
 function openEditorNew() {
