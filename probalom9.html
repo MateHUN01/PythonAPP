@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AeroCode PRO - Offline Ready</title>
+    <title>AeroCode PRO - Clean</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
@@ -22,16 +22,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/python-hint.min.js"></script>
     
     <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
+     crossorigin="anonymous"></script>
 </head>
 <body>
 
     <div id="loading-overlay">
         <div class="spinner"></div>
-        <div class="loading-text" id="loading-text">Rendszer indítása...</div>
+        <div class="loading-text">Rendszer indítása...</div>
         <button id="skip-login-btn" class="secondary-btn fade-in-btn" onclick="skipLogin()" style="display:none; margin-top:20px;">
             Folytatás bejelentkezés nélkül
         </button>
@@ -44,16 +46,13 @@
                 <h1>AeroCode PRO</h1>
             </div>
             <div class="login-box">
-                <p>Add meg a neved a kezdéshez</p>
+                <p>Python IDE & Cloud Sync</p>
                 <input type="text" id="loginNameInput" placeholder="Írd be a neved..." autocomplete="off">
-                
                 <button class="primary-btn" onclick="performLocalLogin()">BELÉPÉS</button>
-                
                 <div class="divider">vagy</div>
-                
                 <button class="google-btn" onclick="performGoogleLogin()">
                     <span class="material-icons" style="font-size:18px;">cloud_queue</span> 
-                    Belépés és Drive Csatolás
+                    Belépés Drive Csatolással
                 </button>
             </div>
         </div>
@@ -79,7 +78,7 @@
             
             <div id="empty-state" style="display:none;">
                 <span class="material-icons" style="font-size:48px; color:#333;">cloud_off</span>
-                <p>Nincs mentett projekt a felhőben.</p>
+                <p>Nincs mentett projekt.</p>
                 <p style="font-size:12px; color:#666;" id="offline-msg"></p>
             </div>
         </div>
@@ -98,11 +97,10 @@
 
             <div class="header-right-actions">
                 <div class="dropdown-wrapper">
-                    <button class="icon-btn" onclick="toggleDropdown()" id="menu-btn"><span class="material-icons">more_vert</span></button>
+                    <button class="icon-btn" id="menu-trigger-btn"><span class="material-icons">more_vert</span></button>
                     <div id="main-dropdown" class="dropdown-content">
                         <a onclick="promptSaveDrive()"><span class="material-icons">save</span> Mentés Drive-ra</a>
                         <a onclick="askGemini()"><span class="material-icons">auto_awesome</span> AI Segítség</a>
-                        <a onclick="openP2PModal()"><span class="material-icons">group</span> Közös munka</a>
                         <a onclick="downloadCode()"><span class="material-icons">download</span> Letöltés</a>
                     </div>
                 </div>
@@ -112,54 +110,31 @@
 
         <div class="main-split">
             <div class="editor-area">
-                <div id="live-indicator">● LIVE</div>
                 <textarea id="code-editor"></textarea>
             </div>
             
-            <button class="panel-toggle-btn" onclick="toggleSidePanel()"><span class="material-icons">notes</span></button>
+            <button class="panel-toggle-btn" onclick="toggleSidePanel()"><span class="material-icons">terminal</span></button>
             
             <div class="side-panel" id="sidePanel">
-                <div class="panel-section">
+                <div class="panel-section" style="flex:1; display:flex; flex-direction:column;">
                     <div class="panel-title">TERMINAL</div>
                     <div class="terminal-box">
                         <div id="output"></div>
-                        <div id="terminal-input-bar">
-                            <span>></span>
-                            <input type="text" id="term-input">
+                        
+                        <div id="terminal-input-container">
+                            <span class="prompt-sign">>>></span>
+                            <input type="text" id="term-input" autocomplete="off" placeholder="Parancs...">
+                            <button id="term-enter-btn"><span class="material-icons">keyboard_return</span></button>
                         </div>
                     </div>
                 </div>
-                <div class="panel-section" style="flex:1;">
-                    <div class="panel-title">CHAT / P2P</div>
-                    <div class="chat-box">
-                        <div id="chat-history"></div>
-                        <div class="chat-input-row">
-                            <input type="text" id="chat-input" placeholder="Üzenet...">
-                            <button onclick="sendChatMessage()"><span class="material-icons">send</span></button>
-                        </div>
+                
+                <div id="ad-container" class="panel-section" style="height: 250px; background: #000; display:flex; align-items:center; justify-content:center; border-top:1px solid #333;">
+                    <div style="color:#444; font-size:12px; text-align:center;">
+                        GOOGLE ADS SPACE<br>(Responsive)
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <div id="p2p-modal" class="modal-overlay">
-        <div class="modal">
-            <h3>Közös Munka</h3>
-            <select id="channel-select">
-                <option value="1">Szoba 1</option>
-                <option value="2">Szoba 2</option>
-                <option value="random">Random</option>
-            </select>
-            <div id="custom-code-ui" style="display:none; margin-bottom:10px;">
-                <input type="text" id="generated-room-id" readonly placeholder="ID">
-                <input type="text" id="input-room-id" placeholder="Írd be a kódot...">
-            </div>
-            <div class="p2p-actions">
-                <button class="btn-host" onclick="startAsHost()">HOST</button>
-                <button class="btn-join" onclick="joinAsGuest()">JOIN</button>
-            </div>
-            <button class="btn-close" onclick="closeModal('p2p-modal')">Bezárás</button>
         </div>
     </div>
 

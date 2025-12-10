@@ -9,6 +9,7 @@ let gapiInited = false, gisInited = false;
 let currentUser = null, currentFileId = null;
 let userFolderId = null;
 let isDriveConnected = false;
+let inputResolver = null;
 
 // --- AUTH INIT ---
 function gapiLoaded() {
@@ -25,52 +26,56 @@ function gisLoaded() {
     gisInited = true;
 }
 
-// --- APP STARTUP & LOADING SCREEN ---
+// --- APP STARTUP ---
 window.onload = function() {
+    // CodeMirror
     editor = CodeMirror.fromTextArea(document.getElementById("code-editor"), {
         mode: { name: "python", version: 3 },
         theme: "dracula",
         lineNumbers: true, smartIndent: true, matchBrackets: true
     });
     
-    // Dropdown bezárás
-    window.onclick = function(event) {
-        if (!event.target.closest('.dropdown-wrapper')) {
-            document.getElementById("main-dropdown").classList.remove("show");
+    // Dropdown eseménykezelő (kívülre kattintás)
+    document.addEventListener('click', function(event) {
+        const dropdown = document.getElementById("main-dropdown");
+        const trigger = document.getElementById("menu-trigger-btn");
+        if (!trigger.contains(event.target) && !dropdown.contains(event.target)) {
+            dropdown.classList.remove("show");
         }
-    }
+    });
+
+    // Dropdown nyitó gomb
+    document.getElementById("menu-trigger-btn").addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.getElementById("main-dropdown").classList.toggle("show");
+    });
     
+    // Pyodide indítása
     initPyodide();
     
-    // 3 másodperc után megjelenik a Skip gomb
+    // Skip gomb időzítő
     setTimeout(() => {
         const skipBtn = document.getElementById('skip-login-btn');
-        if(skipBtn) {
-            skipBtn.style.display = 'block';
-        }
+        if(skipBtn) skipBtn.style.display = 'block';
     }, 3000);
 
-    // Auto-login check (csak ha van mentett user)
+    // Auto-login check
     const savedUser = localStorage.getItem('ac_user');
     if(savedUser) {
         document.getElementById('loginNameInput').value = savedUser;
-        // Nem léptetjük be automatikusan, hogy választhasson a Drive opciók közül,
-        // vagy beállíthatjuk, hogy offline módban lépjen be:
-        // performLocalLogin(true); // Ha akarod, vedd ki a kommentet az auto-loginhez
         document.getElementById('loading-overlay').style.display = 'none';
     } else {
         document.getElementById('loading-overlay').style.display = 'none';
     }
+
+    // Terminál Input Enter gomb
+    document.getElementById("term-enter-btn").addEventListener("click", submitTerminalInput);
+    document.getElementById("term-input").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") submitTerminalInput();
+    });
 };
 
-// UI Toggles
-function toggleDropdown() { document.getElementById("main-dropdown").classList.toggle("show"); }
 function toggleSidePanel() { document.getElementById("sidePanel").classList.toggle("open"); }
-function closeModal(id) { document.getElementById(id).style.display='none'; }
-function openP2PModal() { 
-    document.getElementById("main-dropdown").classList.remove("show");
-    document.getElementById('p2p-modal').style.display='flex'; 
-}
 
 function switchView(id) {
     document.querySelectorAll('.app-view').forEach(e => e.classList.remove('active'));
@@ -79,56 +84,48 @@ function switchView(id) {
 }
 
 // --- LOGIN LOGIC ---
-
-// 1. Skip Login (Vendég mód)
 function skipLogin() {
     currentUser = "Vendég";
     isDriveConnected = false;
     setupDashboard();
 }
 
-// 2. Sima név alapú belépés (Offline/Local)
-function performLocalLogin(auto = false) {
+function performLocalLogin() {
     const name = document.getElementById('loginNameInput').value.trim();
-    if(!name && !auto) return alert("Adj meg egy nevet!");
-    currentUser = name || localStorage.getItem('ac_user');
+    if(!name) return alert("Adj meg egy nevet!");
+    currentUser = name;
     localStorage.setItem('ac_user', currentUser);
-    isDriveConnected = false; // Alapból nincs Drive
+    isDriveConnected = false;
     setupDashboard();
 }
 
-// 3. Google Login (Név + Drive)
 async function performGoogleLogin() {
     const name = document.getElementById('loginNameInput').value.trim();
     if(!name) return alert("Adj meg egy nevet!");
     currentUser = name;
     localStorage.setItem('ac_user', currentUser);
-    
     await connectGoogleDrive();
     setupDashboard();
 }
 
-// Dashboard beállítása belépés után
 function setupDashboard() {
     document.getElementById('loading-overlay').style.display='none';
     document.getElementById('dash-username').textContent = currentUser;
     document.getElementById('dash-avatar').textContent = currentUser.substring(0,1).toUpperCase();
     
-    // Drive gomb kezelése a fejlécben
     const driveBtn = document.getElementById('drive-connect-btn');
     const emptyMsg = document.getElementById('empty-state');
     const offlineMsg = document.getElementById('offline-msg');
 
     if(isDriveConnected) {
-        driveBtn.style.display = 'none'; // Már csatolva van
+        driveBtn.style.display = 'none';
         loadDashboardFiles();
     } else {
-        driveBtn.style.display = 'block'; // Lehetőséget adunk csatolni
+        driveBtn.style.display = 'block';
         emptyMsg.style.display = 'block';
-        offlineMsg.textContent = "Offline módban vagy. Csatold a Drive-ot a mentéshez!";
+        offlineMsg.textContent = "Offline mód. Csatold a Drive-ot a mentéshez!";
         document.getElementById('project-grid').innerHTML = '';
     }
-    
     switchView('view-dashboard');
 }
 
@@ -161,12 +158,10 @@ async function ensureAuth() {
 async function connectGoogleDrive() {
     try {
         await ensureAuth();
-        alert("Google Drive sikeresen csatolva!");
+        alert("Google Drive csatolva!");
         document.getElementById('drive-connect-btn').style.display = 'none';
         loadDashboardFiles();
-    } catch(e) {
-        alert("A csatolás nem sikerült.");
-    }
+    } catch(e) { alert("Sikertelen csatolás."); }
 }
 
 async function getFolderId() {
@@ -220,13 +215,14 @@ async function loadDashboardFiles() {
 }
 
 async function promptSaveDrive() {
+    // Dropdown bezárása
+    document.getElementById("main-dropdown").classList.remove("show");
+
     if(!isDriveConnected) {
-        if(confirm("Ehhez csatolnod kell a Google Fiókodat. Szeretnéd most?")) {
-            await connectGoogleDrive();
-        } else return;
+        if(confirm("Csatolod a Drive-ot a mentéshez?")) await connectGoogleDrive();
+        else return;
     }
 
-    document.getElementById("main-dropdown").classList.remove("show");
     const folderId = await getFolderId();
     if(!folderId) return;
 
@@ -236,8 +232,6 @@ async function promptSaveDrive() {
         if(!input) return;
         dName = input.endsWith(".py") ? input : input+".py";
         const saveName = `${currentUser}_${dName}`;
-        
-        // Show Spinner manually if needed, or rely on await
         await saveFile(null, saveName, editor.getValue(), folderId);
         document.getElementById('current-filename').textContent = dName;
     } else {
@@ -290,38 +284,84 @@ function refreshDashboard() {
     loadDashboardFiles();
 }
 
-// --- PYODIDE & P2P STUBS ---
+// --- PYTHON ENGINE & TERMINAL ---
 async function initPyodide() {
     try {
         pyodide = await loadPyodide();
         await pyodide.runPythonAsync(`
-            import sys, js
-            class W:
-                def write(self,t): js.printTerm(t)
+            import sys, js, asyncio
+            class JSWriter:
+                def write(self, text): js.printToTerminal(text)
                 def flush(self): pass
-            sys.stdout=W(); sys.stderr=W()
+            sys.stdout = JSWriter(); sys.stderr = JSWriter()
+            async def custom_input(prompt=""):
+                if prompt: print(prompt, end="")
+                val = await js.waitForInput()
+                print(val); return str(val)
         `);
-    } catch(e){}
+    } catch(e) { console.log("Pyodide init fail", e); }
 }
-window.printTerm = (t) => {
-    const d=document.getElementById('output'); d.innerText+=t; d.scrollTop=d.scrollHeight;
-    document.getElementById('sidePanel').classList.add('open');
+
+window.printToTerminal = (text) => {
+    const out = document.getElementById("output");
+    out.innerText += text;
+    out.scrollTop = out.scrollHeight;
+    document.getElementById("sidePanel").classList.add("open");
 };
-async function runPython() {
-    document.getElementById('sidePanel').classList.add('open');
-    document.getElementById('output').innerText="";
-    try { await pyodide.runPythonAsync(editor.getValue()); } 
-    catch(e){ window.printTerm(e); }
-}
-function startAsHost(){ alert("Host Mode"); closeModal('p2p-modal'); }
-function joinAsGuest(){ alert("Join Mode"); closeModal('p2p-modal'); }
-function sendChatMessage(){ 
-    const v = document.getElementById('chat-input').value; 
-    if(v) { 
-        const d=document.createElement('div'); d.innerText=currentUser+": "+v; 
-        document.getElementById('chat-history').appendChild(d);
-        document.getElementById('chat-input').value="";
+
+window.waitForInput = () => {
+    return new Promise(resolve => {
+        inputResolver = resolve;
+        const bar = document.getElementById("terminal-input-container");
+        bar.classList.add("visible");
+        document.getElementById("term-input").focus();
+        // Megnyitjuk a panelt, ha nem lenne nyitva
+        document.getElementById("sidePanel").classList.add("open");
+    });
+};
+
+function submitTerminalInput() {
+    if(inputResolver) {
+        const inputField = document.getElementById("term-input");
+        const val = inputField.value;
+        inputField.value = "";
+        
+        // Kiírjuk a terminálra, hogy mit írt be a user (mintha echo lenne)
+        const out = document.getElementById("output");
+        out.innerText += val + "\n";
+        
+        document.getElementById("terminal-input-container").classList.remove("visible");
+        
+        inputResolver(val);
+        inputResolver = null;
     }
 }
-function askGemini(){ alert("AI funkció"); }
-function downloadCode(){ alert("Letöltés..."); }
+
+async function runPython() {
+    document.getElementById("sidePanel").classList.add("open");
+    document.getElementById("output").innerText = ""; // Clear output
+    
+    let code = editor.getValue();
+    code = code.replace(/\binput\s*\(/g, "await custom_input(");
+
+    try {
+        await pyodide.runPythonAsync(`
+            import asyncio
+            async def main_wrapper():
+                try:
+${code.split('\n').map(l => '                    ' + l).join('\n')}
+                except Exception as e: print(e)
+            await main_wrapper()
+        `);
+    } catch(e) { window.printToTerminal(e); }
+}
+
+function askGemini(){ alert("AI funkció hamarosan!"); document.getElementById("main-dropdown").classList.remove("show"); }
+function downloadCode(){ 
+    const blob = new Blob([editor.getValue()], {type:'text/plain'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = document.getElementById('current-filename').textContent;
+    a.click();
+    document.getElementById("main-dropdown").classList.remove("show");
+}
