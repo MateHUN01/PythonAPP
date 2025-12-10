@@ -21,8 +21,29 @@ let appSettings = {
 };
 
 // --- INIT ---
-function gapiLoaded() { gapi.load('client', async () => { await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC] }); gapiInited = true; }); }
-function gisLoaded() { tokenClient = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPES, callback: (resp) => { if(!resp.error) isDriveConnected=true; } }); gisInited = true; }
+function gapiLoaded() { 
+    gapi.load('client', async () => { 
+        await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC] }); 
+        gapiInited = true; 
+        console.log("GAPI Loaded");
+    }); 
+}
+
+function gisLoaded() { 
+    tokenClient = google.accounts.oauth2.initTokenClient({ 
+        client_id: CLIENT_ID, 
+        scope: SCOPES, 
+        callback: (resp) => { 
+            if(resp.error) {
+                console.error("Auth Error:", resp);
+            } else {
+                isDriveConnected = true; 
+            }
+        } 
+    }); 
+    gisInited = true; 
+    console.log("GIS Loaded");
+}
 
 window.onload = function() {
     // 1. ACE EDITOR INIT
@@ -92,27 +113,27 @@ async function saveSettingsToDrive() {
     if(isDriveConnected) {
         try {
             const mainFolder = await getMainFolderId();
-            if(!mainFolder) throw new Error("Fő mappa hiba");
+            if(!mainFolder) throw new Error("Nem sikerült elérni a fő mappát.");
 
             const confFolder = await ensureFolder("config", mainFolder);
-            if(!confFolder) throw new Error("Config mappa hiba");
+            if(!confFolder) throw new Error("Nem sikerült létrehozni a config mappát.");
 
             const content = JSON.stringify(appSettings, null, 2);
             
-            // Szigorú ellenőrzés: létezik-e már?
             const existingFile = await findFileInFolder("config.txt", confFolder);
             
             if(existingFile) {
-                // Ha létezik, FELÜLÍRJUK (PATCH)
                 configFileId = existingFile.id;
                 await updateFileContent(configFileId, content);
             } else {
-                // Ha nem létezik, LÉTREHOZZUK (CREATE)
                 const newId = await createFileInFolder("config.txt", confFolder, content, 'text/plain');
                 configFileId = newId;
             }
             alert("Beállítások mentve a felhőbe! ☁️");
-        } catch(e) { console.error("Config save err", e); alert("Hiba a beállítások mentésekor."); }
+        } catch(e) { 
+            console.error("Config save err", e); 
+            alert("Hiba a beállítások mentésekor: " + e.message); 
+        }
     } else {
         alert("Beállítások alkalmazva (Offline).");
     }
@@ -158,9 +179,8 @@ function applySettingsToEditor() {
     editor.resize();
 }
 
-// --- DRIVE FOLDER & FILE HELPERS (ROBUSZTUS LOGIKA) ---
+// --- DRIVE HELPER FUNCTIONS ---
 
-// 1. Mappa keresése vagy létrehozása (Soha nem duplikál)
 async function ensureFolder(folderName, parentId = null) {
     try {
         let q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
@@ -169,7 +189,7 @@ async function ensureFolder(folderName, parentId = null) {
         const res = await gapi.client.drive.files.list({q: q, fields: 'files(id)'});
         
         if (res.result.files.length > 0) {
-            return res.result.files[0].id; // Visszaadja a meglévőt
+            return res.result.files[0].id;
         } else {
             const fileMetadata = {
                 'name': folderName,
@@ -183,12 +203,10 @@ async function ensureFolder(folderName, parentId = null) {
             return createRes.result.id;
         }
     } catch (e) {
-        console.error(`Hiba a mappa kezelésekor (${folderName}):`, e);
-        return null;
+        throw new Error(`Mappa hiba (${folderName}): ${e.message}`);
     }
 }
 
-// 2. Fájl keresése (ID-t ad vissza vagy null-t)
 async function findFileInFolder(fileName, folderId) {
     try {
         const q = `'${folderId}' in parents and name='${fileName}' and trashed=false`;
@@ -198,21 +216,17 @@ async function findFileInFolder(fileName, folderId) {
     } catch(e) { return null; }
 }
 
-// 3. Fájl tartalmának FRISSÍTÉSE (PATCH - Nem hoz létre újat!)
 async function updateFileContent(fileId, content) {
     const file = new Blob([content], {type: 'text/plain'});
     const token = gapi.client.getToken().access_token;
     
-    // PATCH metódus: csak a tartalmat cseréli
     await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
         method: 'PATCH',
         headers: { 'Authorization': 'Bearer ' + token },
         body: file
     });
-    console.log(`Fájl frissítve (ID: ${fileId})`);
 }
 
-// 4. Új fájl LÉTREHOZÁSA (CREATE - Csak ha biztos nincs még)
 async function createFileInFolder(name, folderId, content, mimeType='text/plain') {
     const meta = { 
         name: name,
@@ -233,7 +247,6 @@ async function createFileInFolder(name, folderId, content, mimeType='text/plain'
         body: form 
     });
     const data = await res.json();
-    console.log(`Új fájl létrehozva: ${name} (ID: ${data.id})`);
     return data.id;
 }
 
@@ -244,52 +257,41 @@ async function getMainFolderId() {
     return userFolderId;
 }
 
-// --- FŐ MENTÉSI FOLYAMAT (DUPLIKÁCIÓ JAVÍTVA) ---
+// --- SAVE / RENAME LOGIC ---
 
 async function promptSaveDrive() {
     document.getElementById("main-dropdown").classList.remove("show");
     
     if(!isDriveConnected) { 
-        if(confirm("A mentéshez csatolni kell a Drive-ot. Csatolod most?")) {
+        if(confirm("Csatlakozás szükséges. Csatlakozol?")) {
             await connectGoogleDrive();
         } else { return; }
     }
     
     const folderId = await getMainFolderId();
-    if(!folderId) return alert("Hiba: Nem sikerült elérni a mappát.");
+    if(!folderId) return alert("Hiba: Mappa nem elérhető.");
 
     let dName = document.getElementById('current-filename').textContent;
     let fileToSaveId = currentFileId;
 
-    // 1. Eset: "Névtelen.py" vagy még nincs ID-ja (pl. frissítés után)
     if(!fileToSaveId || dName === "Névtelen.py") {
-        const input = prompt("Add meg a fájl nevét:", dName === "Névtelen.py" ? "program" : dName.replace(".py", ""));
+        const input = prompt("Fájl neve:", dName === "Névtelen.py" ? "program" : dName.replace(".py", ""));
         if(!input) return;
         
         dName = input.endsWith(".py") ? input : input + ".py";
         
-        // FONTOS: Megnézzük, hogy létezik-e már ilyen fájl!
         const existingFile = await findFileInFolder(dName, folderId);
         
         if(existingFile) {
-            // HA LÉTEZIK: Átveszszük az ID-ját és FRISSÍTJÜK
             fileToSaveId = existingFile.id;
-            console.log(`Fájl megtalálva, felülírás: ${dName} (${fileToSaveId})`);
+            await updateFileContent(fileToSaveId, editor.getValue());
         } else {
-            // HA NEM LÉTEZIK: Létrehozzuk
-            console.log(`Fájl nem létezik, létrehozás: ${dName}`);
             fileToSaveId = await createFileInFolder(dName, folderId, editor.getValue());
         }
         
-        // UI frissítés
         document.getElementById('current-filename').textContent = dName;
-        currentFileId = fileToSaveId; // Globális ID beállítása
-    } 
-    
-    // 2. Eset: Már van ID-nk és nem változtattunk nevet
-    else {
-        // Egyszerű frissítés
-        console.log(`Gyorsmentés ID alapján: ${fileToSaveId}`);
+        currentFileId = fileToSaveId;
+    } else {
         await updateFileContent(fileToSaveId, editor.getValue());
     }
     
@@ -306,21 +308,19 @@ async function apiRenameFile(fileId, newName) {
     });
 }
 
-// Átnevezés a Dashboardon
 async function promptRename(fileId, currentName, event) {
     event.stopPropagation();
-    const newName = prompt("Add meg az új nevet:", currentName);
+    const newName = prompt("Új név:", currentName);
     if(newName && newName !== currentName) {
         const finalName = newName.endsWith(".py") ? newName : newName + ".py";
         try {
-            // Itt is ellenőrizhetnénk duplikációt, de a Drive engedi az átnevezést
             await apiRenameFile(fileId, finalName);
             loadDashboardFiles();
-        } catch(e) { alert("Hiba az átnevezéskor!"); }
+        } catch(e) { alert("Hiba az átnevezéskor."); }
     }
 }
 
-// --- EGYÉB FUNKCIÓK ---
+// --- DASHBOARD & UTILS ---
 
 async function loadDashboardFiles() {
     if(!isDriveConnected) return;
@@ -330,7 +330,8 @@ async function loadDashboardFiles() {
     const folderId = await getMainFolderId();
     if(!folderId) return;
     
-    const q = `'${folderId}' in parents and trashed=false and mimeType != 'application/vnd.google-apps.folder'`;
+    // Szűrés: nem mappa és nem config fájl
+    const q = `'${folderId}' in parents and trashed=false and mimeType != 'application/vnd.google-apps.folder' and name != 'config.txt'`;
     
     try {
         const res = await gapi.client.drive.files.list({
@@ -381,7 +382,7 @@ async function loadConfigFromDrive() {
         }
         applySettingsToEditor();
     } catch(e) {
-        console.error("Config load error", e);
+        console.error("Config load warning:", e);
         applySettingsToEditor();
     }
 }
@@ -397,7 +398,6 @@ async function loadFile(id, name) {
 }
 
 async function backToDashboard() {
-    // Automata mentés kilépéskor
     if (currentFileId && isDriveConnected && document.getElementById('current-filename').textContent !== 'config.txt') {
         try {
             await updateFileContent(currentFileId, editor.getValue());
@@ -407,7 +407,7 @@ async function backToDashboard() {
     switchView('view-dashboard');
 }
 
-// --- BOILERPLATE ---
+// --- BOILERPLATE UI ---
 function toggleSidePanel() { 
     document.getElementById("sidePanel").classList.toggle("open");
     setTimeout(() => editor.resize(), 300);
@@ -434,13 +434,15 @@ function downloadCode(){
     document.getElementById("main-dropdown").classList.remove("show");
 }
 
-// --- LOGIN ---
+// --- LOGIN LOGIC (JAVÍTOTT) ---
+
 function skipLogin() {
     const inputName = document.getElementById('loginNameInput').value.trim();
     currentUser = inputName ? inputName : "Vendég";
     isDriveConnected = false;
     setupDashboard();
 }
+
 function performLocalLogin() {
     const name = document.getElementById('loginNameInput').value.trim();
     if(!name) return alert("Név kötelező!");
@@ -448,37 +450,92 @@ function performLocalLogin() {
     localStorage.setItem('ac_user', currentUser);
     setupDashboard();
 }
+
 async function performGoogleLogin() {
     const name = document.getElementById('loginNameInput').value.trim();
     if(!name) return alert("Név kötelező!");
+    
+    // 1. Ellenőrzés: Betöltődtek a könyvtárak?
+    if(!gapiInited || !gisInited) {
+        return alert("A Google rendszer még töltődik. Kérlek várj 2 másodpercet és próbáld újra!");
+    }
+
     currentUser = name;
     localStorage.setItem('ac_user', currentUser);
+
     const overlay = document.getElementById('loading-overlay');
     const skipBtn = document.getElementById('skip-login-btn');
     const loadingText = overlay.querySelector('.loading-text');
+
     overlay.style.display = 'flex';
     skipBtn.style.display = 'none';
     loadingText.textContent = "Kapcsolódás a Google Fiókhoz...";
+
     setTimeout(() => { if(overlay.style.display !== 'none') skipBtn.style.display = 'block'; }, 3000);
-    try { await connectGoogleDrive(); setupDashboard(); } 
-    catch (e) { console.error("Login error", e); overlay.style.display = 'none'; alert("Sikertelen Google belépés."); }
+
+    try {
+        await connectGoogleDrive();
+        setupDashboard();
+    } catch (e) {
+        console.error("Login Fatal Error:", e);
+        overlay.style.display = 'none';
+        
+        // JAVÍTÁS: Pontos hibaüzenet megjelenítése
+        let msg = "Sikertelen Google belépés.";
+        if(e.error) msg += " (API Error: " + e.error + ")";
+        else if(e.message) msg += " (" + e.message + ")";
+        
+        alert(msg);
+    }
 }
-function logout() { if(confirm("Kijelentkezel?")) { localStorage.removeItem('ac_user'); location.reload(); } }
+
+function logout() {
+    if(confirm("Kijelentkezel?")) {
+        localStorage.removeItem('ac_user');
+        location.reload();
+    }
+}
+
+// --- AUTH HANDLER ---
+
 async function ensureAuth() {
     return new Promise((resolve, reject) => {
-        if (gapi.client.getToken() === null) {
-            tokenClient.callback = (resp) => { if (resp.error) reject(resp); else { isDriveConnected = true; resolve(resp); } };
-            tokenClient.requestAccessToken({prompt: ''});
-        } else { isDriveConnected = true; resolve(); }
+        // Ha nincs tokenClient, akkor baj van a betöltéssel
+        if(!tokenClient) {
+            return reject(new Error("TokenClient not initialized (GIS)"));
+        }
+
+        // Token kérés
+        tokenClient.callback = (resp) => {
+            if (resp.error) {
+                reject(resp);
+            } else {
+                isDriveConnected = true;
+                resolve(resp);
+            }
+        };
+
+        // Mindig kérjünk access tokent, ha belépünk
+        tokenClient.requestAccessToken({prompt: ''});
     });
 }
+
 async function connectGoogleDrive() {
     try {
         await ensureAuth();
         document.getElementById('drive-connect-btn').style.display = 'none';
-        userFolderId = null; configFolderId = null;
-        loadDashboardFiles(); loadConfigFromDrive(); setupDashboard();
-    } catch(e) { throw e; }
+        
+        // Reset state
+        userFolderId = null; 
+        configFolderId = null;
+        
+        await loadDashboardFiles();
+        await loadConfigFromDrive();
+        
+        // Nem hívjuk a setupDashboard-ot itt, mert a performGoogleLogin hívja majd
+    } catch(e) { 
+        throw e; 
+    }
 }
 
 // --- PYODIDE ---
@@ -511,16 +568,13 @@ async function initPyodide() {
                     elif "(" in msg and "was never closed" in msg: hu_msg = "Nem zártad be a ZÁRÓJELET."
                 elif err_type == "IndentationError":
                     hu_msg = "Behúzási hiba! A Pythonban fontos a szóközök/tabok rendje."
-                    if "expected an indented block" in msg: hu_msg = "A kettőspont utáni sornak beljebb kell kezdődnie!"
-                    elif "unexpected indent" in msg: hu_msg = "Ez a sor túl beljebb van, mint kéne."
                 elif err_type == "NameError":
                     parts = msg.split("'")
                     var_name = parts[1] if len(parts) > 1 else "???"
                     hu_msg = f"A '{var_name}' nem létezik. Elfelejtetted létrehozni?"
-                elif err_type == "TypeError": hu_msg = "Típus hiba! Nem összeillő dolgokat (pl. szöveg + szám) használsz."
+                elif err_type == "TypeError": hu_msg = "Típus hiba! Nem összeillő dolgokat használsz."
                 elif err_type == "ValueError": hu_msg = "Érték hiba! Rossz típusú adatot adtál meg."
                 elif err_type == "ZeroDivisionError": hu_msg = "Nullával nem lehet osztani!"
-                elif err_type == "IndexError": hu_msg = "Túl nagy sorszámra hivatkozol a listában."
                 return hu_msg
             async def run_wrapper(source):
                 try:
