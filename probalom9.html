@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AeroCode PRO - Offline Ready</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.css">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/python-hint.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+</head>
+<body>
+
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loading-text">Rendszer indítása...</div>
+        <button id="skip-login-btn" class="secondary-btn fade-in-btn" onclick="skipLogin()" style="display:none; margin-top:20px;">
+            Folytatás bejelentkezés nélkül
+        </button>
+    </div>
+
+    <div id="view-login" class="app-view active">
+        <div class="login-wrapper">
+            <div class="logo-area">
+                <div class="logo-icon">AC</div>
+                <h1>AeroCode PRO</h1>
+            </div>
+            <div class="login-box">
+                <p>Add meg a neved a kezdéshez</p>
+                <input type="text" id="loginNameInput" placeholder="Írd be a neved..." autocomplete="off">
+                
+                <button class="primary-btn" onclick="performLocalLogin()">BELÉPÉS</button>
+                
+                <div class="divider">vagy</div>
+                
+                <button class="google-btn" onclick="performGoogleLogin()">
+                    <span class="material-icons" style="font-size:18px;">cloud_queue</span> 
+                    Belépés és Drive Csatolás
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-dashboard" class="app-view">
+        <header class="dash-header">
+            <div class="user-pill" onclick="logout()">
+                <div class="avatar-circle" id="dash-avatar">U</div>
+                <span id="dash-username">User</span>
+            </div>
+            <div class="header-right">
+                <button class="icon-btn" id="drive-connect-btn" onclick="connectGoogleDrive()" title="Drive Csatolása" style="display:none; color:#fbbc04;">
+                    <span class="material-icons">link_off</span>
+                </button>
+                <button class="icon-btn" onclick="refreshDashboard()"><span class="material-icons">refresh</span></button>
+            </div>
+        </header>
+        
+        <div class="dash-content">
+            <h2>Projektjeim</h2>
+            <div id="project-grid" class="project-grid"></div>
+            
+            <div id="empty-state" style="display:none;">
+                <span class="material-icons" style="font-size:48px; color:#333;">cloud_off</span>
+                <p>Nincs mentett projekt a felhőben.</p>
+                <p style="font-size:12px; color:#666;" id="offline-msg"></p>
+            </div>
+        </div>
+
+        <button class="fab-main" onclick="openEditorNew()">
+            <span class="material-icons">add</span>
+        </button>
+    </div>
+
+    <div id="view-editor" class="app-view">
+        <div class="editor-header">
+            <div class="header-left">
+                <button class="icon-btn" onclick="backToDashboard()"><span class="material-icons">arrow_back</span></button>
+                <div class="file-info" id="current-filename">Névtelen.py</div>
+            </div>
+
+            <div class="header-right-actions">
+                <div class="dropdown-wrapper">
+                    <button class="icon-btn" onclick="toggleDropdown()" id="menu-btn"><span class="material-icons">more_vert</span></button>
+                    <div id="main-dropdown" class="dropdown-content">
+                        <a onclick="promptSaveDrive()"><span class="material-icons">save</span> Mentés Drive-ra</a>
+                        <a onclick="askGemini()"><span class="material-icons">auto_awesome</span> AI Segítség</a>
+                        <a onclick="openP2PModal()"><span class="material-icons">group</span> Közös munka</a>
+                        <a onclick="downloadCode()"><span class="material-icons">download</span> Letöltés</a>
+                    </div>
+                </div>
+                <button class="run-btn" onclick="runPython()"><span class="material-icons">play_arrow</span></button>
+            </div>
+        </div>
+
+        <div class="main-split">
+            <div class="editor-area">
+                <div id="live-indicator">● LIVE</div>
+                <textarea id="code-editor"></textarea>
+            </div>
+            
+            <button class="panel-toggle-btn" onclick="toggleSidePanel()"><span class="material-icons">notes</span></button>
+            
+            <div class="side-panel" id="sidePanel">
+                <div class="panel-section">
+                    <div class="panel-title">TERMINAL</div>
+                    <div class="terminal-box">
+                        <div id="output"></div>
+                        <div id="terminal-input-bar">
+                            <span>></span>
+                            <input type="text" id="term-input">
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-section" style="flex:1;">
+                    <div class="panel-title">CHAT / P2P</div>
+                    <div class="chat-box">
+                        <div id="chat-history"></div>
+                        <div class="chat-input-row">
+                            <input type="text" id="chat-input" placeholder="Üzenet...">
+                            <button onclick="sendChatMessage()"><span class="material-icons">send</span></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="p2p-modal" class="modal-overlay">
+        <div class="modal">
+            <h3>Közös Munka</h3>
+            <select id="channel-select">
+                <option value="1">Szoba 1</option>
+                <option value="2">Szoba 2</option>
+                <option value="random">Random</option>
+            </select>
+            <div id="custom-code-ui" style="display:none; margin-bottom:10px;">
+                <input type="text" id="generated-room-id" readonly placeholder="ID">
+                <input type="text" id="input-room-id" placeholder="Írd be a kódot...">
+            </div>
+            <div class="p2p-actions">
+                <button class="btn-host" onclick="startAsHost()">HOST</button>
+                <button class="btn-join" onclick="joinAsGuest()">JOIN</button>
+            </div>
+            <button class="btn-close" onclick="closeModal('p2p-modal')">Bezárás</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
