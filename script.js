@@ -7,8 +7,8 @@ const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 let editor, pyodide, tokenClient;
 let gapiInited = false, gisInited = false;
 let currentUser = null, currentFileId = null;
-let userFolderId = null;     // A fő mappa ID-ja (User_aerocode)
-let configFolderId = null;   // A config mappa ID-ja (User_aerocode/config)
+let userFolderId = null;     // A fő mappa ID-ja
+let configFolderId = null;   // A config mappa ID-ja
 let configFileId = null;     // A config.txt ID-ja
 let isDriveConnected = false;
 let inputResolver = null;
@@ -83,7 +83,6 @@ function closeSettings() {
 }
 
 async function saveSettingsToDrive() {
-    // UI értékek mentése memóriába
     appSettings.theme = document.getElementById('set-theme').value;
     appSettings.fontSize = document.getElementById('set-fontsize').value;
     appSettings.completionKey = document.getElementById('set-keybind').value;
@@ -92,22 +91,17 @@ async function saveSettingsToDrive() {
 
     if(isDriveConnected) {
         try {
-            // 1. Biztosítjuk a fő mappát
             const mainFolder = await getMainFolderId();
             if(!mainFolder) throw new Error("Fő mappa hiba");
 
-            // 2. Biztosítjuk a config mappát a fő mappán belül
             const confFolder = await ensureFolder("config", mainFolder);
             if(!confFolder) throw new Error("Config mappa hiba");
 
-            // 3. Mentés a config.txt-be
             const content = JSON.stringify(appSettings, null, 2);
             
-            // Megnézzük létezik-e már a fájl, ha nem, akkor a loadConfig már beállította volna, de biztosra megyünk
             if(configFileId) {
                 await saveFile(configFileId, null, content, null, 'text/plain');
             } else {
-                // Keresés név alapján a config mappában
                 const existing = await findFileInFolder("config.txt", confFolder);
                 if(existing) {
                     configFileId = existing.id;
@@ -163,38 +157,27 @@ function applySettingsToEditor() {
     editor.resize();
 }
 
-// --- DRIVE FOLDER MANAGEMENT (JAVÍTOTT LOGIKA) ---
+// --- DRIVE FOLDER MANAGEMENT ---
 
-// Univerzális mappa kereső/létrehozó
-// Ha parentId null, akkor a gyökérben keres
 async function ensureFolder(folderName, parentId = null) {
     try {
         let q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
-        if (parentId) {
-            q += ` and '${parentId}' in parents`;
-        }
+        if (parentId) { q += ` and '${parentId}' in parents`; }
 
         const res = await gapi.client.drive.files.list({q: q, fields: 'files(id)'});
         
         if (res.result.files.length > 0) {
-            // Ha már létezik, visszaadjuk az ELSŐ találat ID-ját (így nem lesz duplikáció)
-            console.log(`Mappa megtalálva: ${folderName} -> ${res.result.files[0].id}`);
-            return res.result.files[0].id;
+            return res.result.files[0].id; // Már létezik, visszaadjuk az ID-t
         } else {
-            // Ha nem létezik, létrehozzuk
             const fileMetadata = {
                 'name': folderName,
                 'mimeType': 'application/vnd.google-apps.folder'
             };
-            if (parentId) {
-                fileMetadata.parents = [parentId];
-            }
+            if (parentId) { fileMetadata.parents = [parentId]; }
             
             const createRes = await gapi.client.drive.files.create({
-                resource: fileMetadata,
-                fields: 'id'
+                resource: fileMetadata, fields: 'id'
             });
-            console.log(`Új mappa létrehozva: ${folderName} -> ${createRes.result.id}`);
             return createRes.result.id;
         }
     } catch (e) {
@@ -203,7 +186,6 @@ async function ensureFolder(folderName, parentId = null) {
     }
 }
 
-// Fájl keresése adott mappában név alapján
 async function findFileInFolder(fileName, folderId) {
     try {
         const q = `'${folderId}' in parents and name='${fileName}' and trashed=false`;
@@ -216,46 +198,33 @@ async function findFileInFolder(fileName, folderId) {
 async function getMainFolderId() {
     if(userFolderId) return userFolderId;
     await ensureAuth();
-    // Itt hívjuk a javított ensureFoldert a gyökérben
     userFolderId = await ensureFolder(`${currentUser}_aerocode`, null);
     return userFolderId;
 }
 
-// --- CONFIG LOADING ---
-
 async function loadConfigFromDrive() {
     if(!isDriveConnected) return;
-
     try {
-        // 1. Fő mappa
         const mainId = await getMainFolderId();
         if(!mainId) return;
 
-        // 2. Config mappa
         const confId = await ensureFolder("config", mainId);
         configFolderId = confId;
 
-        // 3. Config fájl keresése
         const file = await findFileInFolder("config.txt", confId);
 
         if(file) {
             configFileId = file.id;
             const fileRes = await gapi.client.drive.files.get({fileId: configFileId, alt: 'media'});
-            // JSON parse, de ha stringként jön, kezeljük
             if(typeof fileRes.result === 'object') appSettings = fileRes.result;
             else appSettings = JSON.parse(fileRes.body);
-            console.log("Config betöltve:", appSettings);
-        } else {
-            console.log("Nincs config fájl, alapértelmezett marad.");
-            // Opcionális: létrehozhatjuk most azonnal az alapértelmezettet
         }
         applySettingsToEditor();
     } catch(e) {
         console.error("Config load error", e);
-        applySettingsToEditor(); // Hiba esetén is alkalmazzuk az alapokat
+        applySettingsToEditor();
     }
 }
-
 
 function toggleSidePanel() { 
     document.getElementById("sidePanel").classList.toggle("open");
@@ -373,7 +342,6 @@ async function connectGoogleDrive() {
     try {
         await ensureAuth();
         document.getElementById('drive-connect-btn').style.display = 'none';
-        // Reseteljük a mappákat, hogy újra megkeresse őket
         userFolderId = null;
         configFolderId = null;
         
@@ -391,7 +359,7 @@ async function loadDashboardFiles() {
     const folderId = await getMainFolderId();
     if(!folderId) return;
     
-    // Lekérjük a fájlokat, de KIZÁRJUK a "config" mappát a listából
+    // Mappákat (application/vnd.google-apps.folder) és a config fájlokat kizárjuk
     const q = `'${folderId}' in parents and trashed=false and mimeType != 'application/vnd.google-apps.folder'`;
     
     try {
@@ -424,7 +392,7 @@ async function loadDashboardFiles() {
     } catch(e){ console.error(e); }
 }
 
-// --- FILE OPERATIONS ---
+// --- FILE OPERATIONS (JAVÍTOTT DUPLIKÁCIÓ KEZELÉS) ---
 
 async function promptRename(fileId, currentName, event) {
     event.stopPropagation();
@@ -448,24 +416,50 @@ async function apiRenameFile(fileId, newName) {
     });
 }
 
+// --- DUPLIKÁCIÓ JAVÍTÁS ITT: ---
 async function promptSaveDrive() {
     document.getElementById("main-dropdown").classList.remove("show");
+    
     if(!isDriveConnected) { 
         if(confirm("A mentéshez csatolni kell a Drive-ot. Csatolod most?")) {
             await connectGoogleDrive();
         } else { return; }
     }
+    
     const folderId = await getMainFolderId();
     if(!folderId) return alert("Hiba: Nem sikerült elérni a mappát.");
+
     let dName = document.getElementById('current-filename').textContent;
-    if(!currentFileId || dName === "Névtelen.py") {
+    
+    // Ha már van ID-ja (tehát egy megnyitott fájlt szerkesztünk), akkor egyszerű mentés
+    if(currentFileId && dName !== "Névtelen.py") {
+        await saveFile(currentFileId, null, editor.getValue(), null);
+    } 
+    // Ha ÚJ fájl, vagy Névtelen.py
+    else {
         const input = prompt("Add meg a fájl nevét:", "program");
         if(!input) return;
+        
         dName = input.endsWith(".py") ? input : input + ".py";
-        await saveFile(null, dName, editor.getValue(), folderId);
+        
+        // ELLENŐRZÉS: Létezik már ilyen fájl?
+        const existingFile = await findFileInFolder(dName, folderId);
+        
+        if(existingFile) {
+            // Ha létezik, rákérdezünk a felülírásra
+            if(confirm(`A "${dName}" nevű fájl már létezik. Felülírod?`)) {
+                // Átállítjuk a jelenlegi ID-t a létező fájléra, és frissítjük
+                currentFileId = existingFile.id;
+                await saveFile(currentFileId, null, editor.getValue(), null);
+            } else {
+                return; // Mégse
+            }
+        } else {
+            // Ha nem létezik, létrehozzuk
+            await saveFile(null, dName, editor.getValue(), folderId);
+        }
+        
         document.getElementById('current-filename').textContent = dName;
-    } else {
-        await saveFile(currentFileId, null, editor.getValue(), null);
     }
     alert("Sikeres mentés a felhőbe! ☁️");
 }
@@ -489,7 +483,6 @@ async function saveFile(id, name, content, folderId, mimeType = 'text/plain') {
     const res = await fetch(url, { method: method, headers: { 'Authorization': 'Bearer '+token }, body: form });
     const data = await res.json();
     
-    // Csak akkor mentjük a currentFileId-t, ha ez egy PROJEKT fájl (nem a config)
     if(!id && name !== 'config.txt') currentFileId = data.id;
     if(!id && name === 'config.txt') configFileId = data.id;
 }
