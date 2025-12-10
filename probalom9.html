@@ -3,23 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AeroCode PRO - Stable</title>
+    <title>AeroCode PRO - Configurable</title>
     
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.6/ace.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.6/ext-language_tools.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.6/theme-dracula.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.6/theme-monokai.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.6/theme-github.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.6/theme-tomorrow_night.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.6/theme-solarized_dark.min.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     
     <link rel="stylesheet" href="style.css">
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/python-hint.min.js"></script>
     
     <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
     
@@ -34,6 +31,51 @@
         <button id="skip-login-btn" class="secondary-btn fade-in-btn" onclick="skipLogin()" style="display:none; margin-top:20px;">
             Folytatás bejelentkezés nélkül
         </button>
+    </div>
+
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Beállítások</h3>
+                <button class="icon-btn" onclick="closeSettings()"><span class="material-icons">close</span></button>
+            </div>
+            <div class="modal-body">
+                
+                <div class="setting-group">
+                    <label>Téma (Színvilág)</label>
+                    <select id="set-theme">
+                        <option value="dracula">Dracula (Alapértelmezett)</option>
+                        <option value="monokai">Monokai</option>
+                        <option value="tomorrow_night">Tomorrow Night</option>
+                        <option value="solarized_dark">Solarized Dark</option>
+                        <option value="github">GitHub (Világos)</option>
+                    </select>
+                </div>
+
+                <div class="setting-group">
+                    <label>Betűméret</label>
+                    <div class="range-wrap">
+                        <input type="range" id="set-fontsize" min="10" max="30" step="1" value="14" oninput="document.getElementById('fs-val').innerText = this.value + 'px'">
+                        <span id="fs-val">14px</span>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label>Kódkiegészítés elfogadása</label>
+                    <select id="set-keybind">
+                        <option value="tab">TAB gomb (Ajánlott)</option>
+                        <option value="enter">ENTER gomb</option>
+                    </select>
+                    <p style="font-size:11px; color:#666; margin-top:5px;">
+                        Ha TAB-ra állítod, az Enter új sort kezd a javaslat közben is.
+                    </p>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button class="primary-btn" onclick="saveSettingsToDrive()">Mentés</button>
+            </div>
+        </div>
     </div>
 
     <div id="view-login" class="app-view active">
@@ -65,6 +107,7 @@
                 <button class="icon-btn" id="drive-connect-btn" onclick="connectGoogleDrive()" title="Drive Csatolása" style="display:none; color:#fbbc04;">
                     <span class="material-icons">link_off</span>
                 </button>
+                <button class="icon-btn" onclick="openSettings()"><span class="material-icons">settings</span></button>
                 <button class="icon-btn" onclick="refreshDashboard()"><span class="material-icons">refresh</span></button>
             </div>
         </header>
@@ -97,6 +140,7 @@
                     <button class="icon-btn" id="menu-trigger-btn"><span class="material-icons">more_vert</span></button>
                     <div id="main-dropdown" class="dropdown-content">
                         <a onclick="promptSaveDrive()"><span class="material-icons">save</span> Mentés Drive-ra</a>
+                        <a onclick="openSettings()"><span class="material-icons">settings</span> Beállítások</a>
                         <a onclick="askGemini()"><span class="material-icons">auto_awesome</span> AI Segítség</a>
                         <a onclick="downloadCode()"><span class="material-icons">download</span> Letöltés</a>
                     </div>
@@ -112,7 +156,7 @@
 
         <div class="main-split">
             <div class="editor-area">
-                <textarea id="code-editor"></textarea>
+                <div id="code-editor"></div>
             </div>
             
             <button class="panel-toggle-btn" onclick="toggleSidePanel()"><span class="material-icons">terminal</span></button>
